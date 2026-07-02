@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Cormorant_Garamond } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -72,7 +73,9 @@ export default function RootLayout({
         <Footer />
         <WhatsAppFAB />
         <InstallPromptModal />
-        <NavigationLoader />
+        <Suspense fallback={null}>
+          <NavigationLoader />
+        </Suspense>
         <GlobalModal />
       </body>
     </html>
