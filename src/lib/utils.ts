@@ -40,10 +40,14 @@ export function calculateStayTotal(
 ): { subtotal: number; nights: number; breakdown: { date: string; price: number; isWeekend: boolean }[] } {
   const breakdown = [];
   let subtotal = 0;
-  const current = new Date(checkIn);
+  
+  // Create a UTC copy of the checkIn/checkOut dates to avoid any host system local time shifts
+  const current = new Date(Date.UTC(checkIn.getUTCFullYear(), checkIn.getUTCMonth(), checkIn.getUTCDate()));
+  const end = new Date(Date.UTC(checkOut.getUTCFullYear(), checkOut.getUTCMonth(), checkOut.getUTCDate()));
 
-  while (current < checkOut) {
-    const weekend = isWeekend(current);
+  while (current.getTime() < end.getTime()) {
+    const day = current.getUTCDay();
+    const weekend = day === 0 || day === 6; // Sunday or Saturday
     const price = weekend ? weekendPrice : weekdayPrice;
     breakdown.push({
       date: current.toISOString().slice(0, 10),
@@ -51,7 +55,7 @@ export function calculateStayTotal(
       isWeekend: weekend,
     });
     subtotal += price * rooms;
-    current.setDate(current.getDate() + 1);
+    current.setUTCDate(current.getUTCDate() + 1);
   }
 
   return { subtotal, nights: breakdown.length, breakdown };

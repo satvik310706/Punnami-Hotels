@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import { Suspense } from 'react';
 import RoomsListClient from './RoomsListClient';
 import prisma from '@/lib/db';
+import { cleanupExpiredBookings } from '@/lib/booking-cleanup';
 
 export const metadata: Metadata = {
   title: 'Browse Rooms',
@@ -19,6 +20,13 @@ function normalizeTime(timeStr: string) {
 
 async function getRoomsWithInventory(checkIn?: string, checkOut?: string) {
   try {
+    // Run cleanup of expired pending bookings first to release locked inventory in real-time
+    try {
+      await cleanupExpiredBookings();
+    } catch (cleanupErr) {
+      console.error('[Rooms page SSR] Expired bookings cleanup failed:', cleanupErr);
+    }
+
     const includeObj: any = {
       hotel: {
         select: { name: true, address: true, checkInTime: true, checkOutTime: true },

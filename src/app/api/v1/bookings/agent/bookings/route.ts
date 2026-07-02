@@ -38,16 +38,19 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json(
-      bookings.map((b) => ({
-        ...b,
-        id: b.id.toString(),
-        roomTypeId: b.roomTypeId.toString(),
-        subtotalAmount: Number(b.subtotalAmount),
-        discountAmount: Number(b.discountAmount),
-        gstAmount: Number(b.gstAmount),
-        totalAmount: Number(b.totalAmount),
-        agentCommission: Number(b.agentCommission),
-      }))
+      bookings.map((b) => {
+        const { aadharEncrypted, aadharHash, aadharImageUrl, ...publicBooking } = b;
+        return {
+          ...publicBooking,
+          id: b.id.toString(),
+          roomTypeId: b.roomTypeId.toString(),
+          subtotalAmount: Number(b.subtotalAmount),
+          discountAmount: Number(b.discountAmount),
+          gstAmount: Number(b.gstAmount),
+          totalAmount: Number(b.totalAmount),
+          agentCommission: Number(b.agentCommission),
+        };
+      })
     );
   } catch (err) {
     console.error('[Agent Bookings API] Error:', err);

@@ -29,10 +29,11 @@ export default async function BookingPaymentPage({ params }: { params: Promise<{
   }
 
   if (booking.status === 'CONFIRMED') {
+    const { aadharEncrypted, aadharHash, aadharImageUrl, ...publicBooking } = booking;
     return (
       <BookingVoucher
         booking={{
-          ...booking,
+          ...publicBooking,
           checkInDate: booking.checkInDate.toISOString(),
           checkOutDate: booking.checkOutDate.toISOString(),
           createdAt: booking.createdAt.toISOString(),

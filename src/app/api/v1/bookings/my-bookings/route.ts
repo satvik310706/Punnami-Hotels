@@ -44,12 +44,18 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json(
-      bookings.map((b) => ({
-        ...b,
-        id: b.id.toString(),
-        roomTypeId: b.roomTypeId.toString(),
-        totalAmount: Number(b.totalAmount),
-      }))
+      bookings.map((b) => {
+        const { aadharEncrypted, aadharHash, aadharImageUrl, ...publicBooking } = b;
+        return {
+          ...publicBooking,
+          id: b.id.toString(),
+          roomTypeId: b.roomTypeId.toString(),
+          totalAmount: Number(b.totalAmount),
+          subtotalAmount: Number(b.subtotalAmount),
+          discountAmount: Number(b.discountAmount),
+          gstAmount: Number(b.gstAmount),
+        };
+      })
     );
   } catch (err) {
     console.error('[My Bookings API] Error:', err);

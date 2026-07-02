@@ -35,9 +35,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       // 2. Atomically confirm inventory (move from reserved to booked)
       const dateRange: Date[] = [];
       const current = new Date(booking.checkInDate);
-      while (current < booking.checkOutDate) {
-        dateRange.push(new Date(current));
-        current.setDate(current.getDate() + 1);
+      const checkOutTime = new Date(booking.checkOutDate).getTime();
+      if (booking.checkInDate.getTime() === checkOutTime) {
+        dateRange.push(new Date(booking.checkInDate));
+      } else {
+        while (current.getTime() < checkOutTime) {
+          dateRange.push(new Date(current));
+          current.setUTCDate(current.getUTCDate() + 1);
+        }
       }
 
       for (const date of dateRange) {
@@ -109,9 +114,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       // Release inventory reservations
       const dateRange: Date[] = [];
       const current = new Date(booking.checkInDate);
-      while (current < booking.checkOutDate) {
-        dateRange.push(new Date(current));
-        current.setDate(current.getDate() + 1);
+      const checkOutTime = new Date(booking.checkOutDate).getTime();
+      if (booking.checkInDate.getTime() === checkOutTime) {
+        dateRange.push(new Date(booking.checkInDate));
+      } else {
+        while (current.getTime() < checkOutTime) {
+          dateRange.push(new Date(current));
+          current.setUTCDate(current.getUTCDate() + 1);
+        }
       }
 
       for (const date of dateRange) {

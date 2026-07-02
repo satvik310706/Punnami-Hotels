@@ -8,6 +8,7 @@ export async function GET(
   const { id: roomId } = await params;
 
   let clientCallback: ((message: string) => void) | null = null;
+  let intervalId: NodeJS.Timeout | null = null;
 
   const stream = new ReadableStream({
     start(controller) {
@@ -26,7 +27,7 @@ export async function GET(
       sseManager.addClient(roomId, clientCallback);
 
       // Keep connection alive with pings every 20 seconds
-      const interval = setInterval(() => {
+      intervalId = setInterval(() => {
         try {
           controller.enqueue(new TextEncoder().encode("event: ping\ndata: alive\n\n"));
         } catch (e) {
@@ -35,7 +36,10 @@ export async function GET(
       }, 20000);
 
       req.signal.addEventListener('abort', () => {
-        clearInterval(interval);
+        if (intervalId) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
         if (clientCallback) {
           sseManager.removeClient(roomId, clientCallback);
         }
@@ -45,6 +49,10 @@ export async function GET(
       });
     },
     cancel() {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
       if (clientCallback) {
         sseManager.removeClient(roomId, clientCallback);
       }

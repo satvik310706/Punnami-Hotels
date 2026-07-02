@@ -4,10 +4,18 @@ import { generatePublicId } from '@/lib/utils';
 import { calculateStayTotal, calculateGST } from '@/lib/utils';
 import { jwtVerify } from 'jose';
 import { broadcastRoomInventoryUpdate } from '@/lib/sse';
+import { cleanupExpiredBookings } from '@/lib/booking-cleanup';
 
 // POST /api/v1/bookings/checkout — Reserve room inventory and create pending stay booking (with agent discount integrations)
 export async function POST(req: NextRequest) {
   try {
+    // Run cleanup of expired pending bookings first to release locked inventory in real-time
+    try {
+      await cleanupExpiredBookings();
+    } catch (cleanupErr) {
+      console.error('[Checkout API] Expired bookings cleanup failed:', cleanupErr);
+    }
+
     const body = await req.json();
     const {
       roomTypeId,
@@ -129,6 +137,8 @@ export async function POST(req: NextRequest) {
         // Step 2 — Acquire an exclusive row-level lock (SELECT FOR UPDATE)
         // Any other concurrent transaction trying to lock the same row will
         // block here until we commit — preventing all race conditions.
+        // Format date parameter timezone-neutrally as string YYYY-MM-DD to avoid database-level timezone offset shifts.
+        const dateStr = date.toISOString().split('T')[0];
         const lockedRows = await tx.$queryRaw<{
           id: bigint;
           totalRooms: number;
@@ -140,7 +150,7 @@ export async function POST(req: NextRequest) {
           SELECT id, "totalRooms", "bookedRooms", "reservedRooms", "isClosed", "priceOverride"
           FROM "RoomInventory"
           WHERE "roomTypeId" = ${BigInt(roomTypeId)}
-            AND date = ${date}::date
+            AND date = ${dateStr}::date
             AND "slotStart" = ${slotStart}
             AND "slotEnd" = ${slotEnd}
           FOR UPDATE
@@ -201,7 +211,7 @@ export async function POST(req: NextRequest) {
       const gstAmount = calculateGST(taxableAmount);
       const totalAmount = Math.max(0, taxableAmount + gstAmount - commissionVal);
 
-      const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000 * 50); // 50 years TTL
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes TTL
       const publicId = generatePublicId();
 
       // Upsert User profile details

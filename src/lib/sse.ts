@@ -54,8 +54,7 @@ if (process.env.NODE_ENV !== 'production') globalForSSE.sseManager = sseManager;
 
 export async function broadcastRoomInventoryUpdate(roomTypeId: bigint, date: Date, slotStart?: string, slotEnd?: string) {
   try {
-    const dateObj = new Date(date);
-    dateObj.setHours(0, 0, 0, 0);
+    const dateObj = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 
     const roomType = await prisma.roomType.findUnique({
       where: { id: roomTypeId },
