@@ -1,0 +1,206 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum PublishStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum BookingStatus {
+  PENDING_PROOF       // Reserved, waiting for user screenshot upload
+  PENDING_CONFIRMATION // User uploaded proof, waiting for Admin review
+  CONFIRMED           // Admin approved
+  REJECTED            // Admin rejected
+  EXPIRED             // TTL expired without proof upload
+}
+
+enum BookingSource {
+  PUBLIC
+  ADMIN
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  AGENT
+}
+
+enum AccountStatus {
+  ACTIVE
+  BLOCKED
+}
+
+model Hotel {
+  id              BigInt     @id @default(autoincrement())
+  name            String
+  slug            String     @unique
+  tagline         String?
+  description     String?    @db.Text
+  address         String?
+  mapUrl          String?
+  checkInTime     String     @default("12:00")
+  checkOutTime    String     @default("11:00")
+  facilities      Json?      // string[]
+  policies        Json?      // PolicyItem[]
+  galleryImages   Json?      // { url, alt }[]
+  coverImageUrl   String?
+  isActive        Boolean    @default(true)
+  status          PublishStatus @default(DRAFT)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  roomTypes       RoomType[]
+}
+
+model RoomType {
+  id               BigInt    @id @default(autoincrement())
+  hotelId          BigInt
+  hotel            Hotel     @relation(fields: [hotelId], references: [id])
+  name             String
+  slug             String    @unique
+  description      String?   @db.Text
+  coverImageUrl    String?
+  galleryImages    Json?
+  facilities       Json?     // string[]
+  highlights       Json?     // { icon, title }[]
+  faqs             Json?     // { question, answer }[]
+  policies         Json?     // PolicyItem[]
+  weekdayPrice     Decimal   @db.Decimal(12,2)
+  weekendPrice     Decimal   @db.Decimal(12,2)
+  capacityPerRoom  Int
+  maxAdults        Int
+  maxChildren      Int
+  totalInventory   Int
+  bookingSlots     Json?     // Array of { title, slotStart, slotEnd } — multiple booking timeslots per room
+  isActive         Boolean   @default(true)
+  isFeatured       Boolean   @default(false)
+  orderPriority    Int       @default(0)
+  status           PublishStatus @default(DRAFT)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  inventories      RoomInventory[]
+  bookings         Booking[]
+}
+
+model RoomInventory {
+  id             BigInt    @id @default(autoincrement())
+  roomTypeId     BigInt
+  roomType       RoomType  @relation(fields: [roomTypeId], references: [id])
+  date           DateTime  @db.Date
+  slotStart      String    @default("12:00:00")
+  slotEnd        String    @default("11:00:00")
+  priceOverride  Decimal?  @db.Decimal(12,2)
+  totalRooms     Int
+  bookedRooms    Int       @default(0)
+  reservedRooms  Int       @default(0)
+  isClosed       Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([roomTypeId, date, slotStart, slotEnd])
+  @@index([date])
+  @@index([roomTypeId])
+}
+
+model Booking {
+  id                 BigInt        @id @default(autoincrement())
+  publicId           String        @unique    // HTL-20260627-XXXXX
+  roomTypeId         BigInt
+  roomType           RoomType      @relation(fields: [roomTypeId], references: [id])
+  checkInDate        DateTime      @db.Date
+  checkOutDate       DateTime      @db.Date
+  slotStart          String        @default("12:00:00")
+  slotEnd            String        @default("11:00:00")
+  totalNights        Int
+  roomsBooked        Int           @default(1)
+  
+  guestName          String
+  guestEmail         String
+  guestPhone         String
+  adultCount         Int           @default(1)
+  childCount         Int           @default(0)
+  
+  subtotalAmount     Decimal       @db.Decimal(12,2)
+  couponCode         String?
+  discountAmount     Decimal       @db.Decimal(12,2) @default(0)
+  gstAmount          Decimal       @db.Decimal(12,2)
+  gatewayFee         Decimal       @db.Decimal(12,2) @default(0)
+  totalAmount        Decimal       @db.Decimal(12,2)
+  
+  // Manual Payment Proof
+  paymentProofUrl    String?
+  transactionId      String?
+  
+  status             BookingStatus @default(PENDING_PROOF)
+  source             BookingSource @default(PUBLIC)
+  
+  ticketPdfUrl       String?
+  invoicePdfUrl      String?
+  
+  aadharEncrypted    String?
+  aadharHash         String?
+  aadharImageUrl     String?
+  
+  // Agent Reference
+  agentId            BigInt?
+  agentCommission    Decimal       @default(0.00) @db.Decimal(12,2)
+  agent              User?         @relation("AgentBookings", fields: [agentId], references: [id])
+
+  expiresAt          DateTime
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([roomTypeId])
+  @@index([checkInDate])
+  @@index([status])
+  @@index([agentId])
+  @@index([createdAt])
+}
+
+model Coupon {
+  id             BigInt    @id @default(autoincrement())
+  code           String    @unique
+  discountType   String    // PERCENTAGE | FIXED
+  discountValue  Decimal   @db.Decimal(12,2)
+  maxDiscount    Decimal?  @db.Decimal(12,2)
+  minBookingAmt  Decimal?  @db.Decimal(12,2)
+  usageLimit     Int?
+  usageCount     Int       @default(0)
+  validFrom      DateTime?
+  validUntil     DateTime?
+  isActive       Boolean   @default(true)
+  applicableTo   String    @default("ALL")
+  createdAt      DateTime  @default(now())
+}
+
+model User {
+  id                    BigInt        @id @default(autoincrement())
+  phone                 String        @unique
+  email                 String?
+  fullName              String?
+  role                  UserRole      @default(USER)
+  accountStatus         AccountStatus @default(ACTIVE)
+  password              String?
+  lastLoginAt           DateTime?
+  createdAt             DateTime      @default(now())
+
+  // Agent fields
+  commissionPercentage  Decimal       @default(0.00) @db.Decimal(5,2)
+  commissionType        String        @default("PERCENTAGE") // PERCENTAGE | FIXED
+  commissionFixedAmount Decimal       @default(0.00) @db.Decimal(12,2)
+  companyName           String?
+  gstNumber             String?
+  address               String?
+  adminNotes            String?
+  whiteLabelEnabled     Boolean       @default(false)
+
+  // Relationships
+  agentBookings         Booking[]     @relation("AgentBookings")
+}
