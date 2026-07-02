@@ -30,6 +30,7 @@ interface Booking {
   transactionId: string | null;
   status: string;
   createdAt: string;
+  passengers?: any;
   roomType: { name: string; coverImageUrl: string | null };
 }
 
@@ -127,7 +128,7 @@ export default function AdminBookingsPage() {
             className="w-full rounded-xl border border-stone-200 bg-white pl-11 pr-4 py-3 text-sm outline-none focus:border-amber-500 transition-all shadow-sm"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {['', 'PENDING_PROOF', 'PENDING_CONFIRMATION', 'CONFIRMED', 'REJECTED'].map((status) => (
             <button
               key={status}
@@ -232,8 +233,16 @@ export default function AdminBookingsPage() {
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button className="p-2 text-stone-400 hover:text-stone-900 rounded-lg hover:bg-stone-100 transition-colors">
-                        <Eye className="h-4 w-4" />
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(`/booking/${b.publicId}`, '_blank');
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors border border-amber-200"
+                        title="View Public Ticket"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        Ticket
                       </button>
                     </td>
                   </tr>
@@ -246,7 +255,7 @@ export default function AdminBookingsPage() {
 
       {/* Booking Audit Details Drawer Modal */}
       {selectedBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl overflow-hidden max-w-2xl w-full shadow-2xl animate-in zoom-in-95 duration-150 flex flex-col max-h-[90vh]">
             {/* Header */}
             <div className="bg-stone-900 px-6 py-5 text-white flex items-center justify-between shrink-0">
@@ -327,20 +336,71 @@ export default function AdminBookingsPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Passengers Manifest */}
+              {selectedBooking.passengers && (selectedBooking.passengers as any[]).length > 0 && (
+                <div className="border-t border-stone-150 pt-4">
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-2">Passenger Manifest ({(selectedBooking.passengers as any[]).length} guest(s))</h4>
+                  <div className="overflow-x-auto rounded-xl border border-stone-250 bg-stone-50/50">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-stone-100 border-b border-stone-200 font-bold text-stone-700">
+                          <th className="p-2.5 pl-3">Sr</th>
+                          <th className="p-2.5">Name</th>
+                          <th className="p-2.5 text-center">Age</th>
+                          <th className="p-2.5">Gender</th>
+                          <th className="p-2.5 font-mono">Aadhaar (Last 4)</th>
+                          <th className="p-2.5 pr-3">Contact</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-stone-150">
+                        {(selectedBooking.passengers as any[]).map((p, idx) => {
+                          const isChild = idx >= selectedBooking.adultCount;
+                          let aadharText = 'N/A';
+                          if (p.aadhaar && p.aadhaar.trim().length === 12) {
+                            aadharText = `XXXX-XXXX-${p.aadhaar.slice(-4)}`;
+                          } else if (isChild) {
+                            aadharText = 'Not Required';
+                          }
+                          return (
+                            <tr key={idx} className="font-semibold text-stone-700">
+                              <td className="p-2.5 pl-3 text-stone-400">{idx + 1}</td>
+                              <td className="p-2.5 text-stone-900 font-bold">
+                                {p.fullName}
+                                {idx === 0 && <span className="ml-1.5 rounded bg-amber-100 px-1 py-0.5 text-[9px] text-amber-700 font-bold uppercase">Lead</span>}
+                              </td>
+                              <td className="p-2.5 text-center">{p.age} Yrs</td>
+                              <td className="p-2.5 capitalize">{p.gender?.toLowerCase() || 'N/A'}</td>
+                              <td className="p-2.5 font-mono text-stone-650">{aadharText}</td>
+                              <td className="p-2.5 pr-3 text-stone-500">{p.phone || (idx === 0 ? selectedBooking.guestPhone : '—')}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Footer actions */}
             <div className="px-6 py-4 bg-stone-50 border-t border-stone-100 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-1.5 text-xs text-stone-400 font-bold uppercase">
+              <div className="hidden sm:flex items-center gap-1.5 text-xs text-stone-400 font-bold uppercase">
                 <Info className="h-4 w-4 text-stone-300" />
                 <span>Status: {selectedBooking.status}</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
                 <button 
                   onClick={() => setSelectedBooking(null)}
                   className="px-4 py-2.5 text-xs font-bold text-stone-500 hover:bg-stone-100 rounded-xl cursor-pointer"
                 >
                   Cancel
+                </button>
+                <button
+                  onClick={() => window.open(`/booking/${selectedBooking.publicId}`, '_blank')}
+                  className="px-4 py-2.5 text-xs font-bold text-stone-700 bg-white border border-stone-200 hover:bg-stone-50 shadow-sm rounded-xl cursor-pointer"
+                >
+                  View Ticket
                 </button>
                 {selectedBooking.status !== 'CONFIRMED' && selectedBooking.status !== 'REJECTED' && (
                   <>
@@ -349,14 +409,14 @@ export default function AdminBookingsPage() {
                       disabled={actionLoading}
                       className="bg-red-50 border border-red-200 hover:bg-red-100 text-red-700 font-black px-4 py-2.5 rounded-xl text-xs transition-colors cursor-pointer"
                     >
-                      Reject Payment
+                      Reject
                     </button>
                     <button
                       onClick={() => handleAction(selectedBooking.publicId, 'APPROVE')}
                       disabled={actionLoading}
                       className="bg-stone-900 hover:bg-amber-700 text-white font-black px-4 py-2.5 rounded-xl text-xs transition-colors shadow-md cursor-pointer"
                     >
-                      Approve & Confirm Stay
+                      Approve & Confirm
                     </button>
                   </>
                 )}

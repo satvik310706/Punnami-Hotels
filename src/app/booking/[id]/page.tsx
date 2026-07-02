@@ -29,20 +29,28 @@ export default async function BookingPaymentPage({ params }: { params: Promise<{
   }
 
   if (booking.status === 'CONFIRMED') {
-    const { aadharEncrypted, aadharHash, aadharImageUrl, ...publicBooking } = booking;
     return (
       <BookingVoucher
         booking={{
-          ...publicBooking,
+          publicId: booking.publicId,
           checkInDate: booking.checkInDate.toISOString(),
           checkOutDate: booking.checkOutDate.toISOString(),
+          totalNights: booking.totalNights,
+          roomsBooked: booking.roomsBooked,
+          guestName: booking.guestName,
+          guestEmail: booking.guestEmail,
+          guestPhone: booking.guestPhone,
+          adultCount: booking.adultCount,
+          childCount: booking.childCount,
+          status: booking.status,
           createdAt: booking.createdAt.toISOString(),
           subtotalAmount: Number(booking.subtotalAmount),
           discountAmount: Number(booking.discountAmount),
           gstAmount: Number(booking.gstAmount),
           totalAmount: Number(booking.totalAmount),
+          passengers: booking.passengers ? (booking.passengers as any) : undefined,
           roomType: {
-            ...booking.roomType,
+            name: booking.roomType.name,
             capacityPerRoom: booking.roomType.capacityPerRoom,
             maxAdults: booking.roomType.maxAdults,
             maxChildren: booking.roomType.maxChildren,

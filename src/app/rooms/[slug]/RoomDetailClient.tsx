@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   Wifi, Wind, Car, Flame, Tv, UtensilsCrossed, CheckCircle2, Star, MapPin,
   Clock, Users, BedDouble, CalendarDays, ChevronLeft, ChevronRight, X,
-  ChevronDown, Shield, Sparkles,
+  ChevronDown, Shield, Sparkles, Minus, Plus,
 } from 'lucide-react';
 import { format, addDays, addMonths } from 'date-fns';
 import { getTodayIST } from '@/lib/ist';
@@ -15,6 +15,7 @@ import OTPModal from '@/components/OTPModal';
 import CustomDatePicker from '@/components/CustomDatePicker';
 import CustomSelect from '@/components/CustomSelect';
 import { ReconnectingEventSource } from '@/lib/ReconnectingEventSource';
+import CheckoutPassengerModal from '@/components/CheckoutPassengerModal';
 
 const FACILITY_ICONS: Record<string, React.ElementType> = {
   'wi-fi': Wifi, 'wifi': Wifi, 'a/c': Wind, 'ac': Wind,
@@ -43,8 +44,17 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
   const [checkOut, setCheckOut] = useState<Date>(
     initialCheckOut ? new Date(initialCheckOut + 'T00:00:00') : tomorrow
   );
-  const [rooms, setRooms] = useState(1);
+  
   const [adults, setAdults] = useState(1);
+  const [childrenCount, setChildrenCount] = useState(0);
+  const [showPassengerModal, setShowPassengerModal] = useState(false);
+  const roomsCount = useMemo(() => {
+    const roomsForAdults = Math.ceil(adults / (room.capacityPerRoom || 3));
+    const roomsForChildren = room.maxChildren > 0 ? Math.ceil(childrenCount / room.maxChildren) : 0;
+    return Math.max(1, Math.max(roomsForAdults, roomsForChildren));
+  }, [adults, childrenCount, room.capacityPerRoom, room.maxChildren]);
+  const rooms = roomsCount;
+
   const [activeImg, setActiveImg] = useState(0);
   const [showGallery, setShowGallery] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -294,10 +304,19 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
   }, [checkIn, checkOut, selectedSlotIndex, slots, availability, room, isAdmin]);
 
   useEffect(() => {
-    if (rooms > maxAvailableForSelectedSlot && maxAvailableForSelectedSlot > 0) {
-      setRooms(maxAvailableForSelectedSlot);
+    const capacity = room.capacityPerRoom || 3;
+    const maxAdultsAllowed = maxAvailableForSelectedSlot * capacity;
+    if (adults > maxAdultsAllowed && maxAvailableForSelectedSlot > 0) {
+      setAdults(maxAdultsAllowed);
     }
-  }, [maxAvailableForSelectedSlot, rooms]);
+  }, [maxAvailableForSelectedSlot, adults, room.capacityPerRoom]);
+
+  useEffect(() => {
+    const maxChildrenAllowed = maxAvailableForSelectedSlot * (room.maxChildren || 2);
+    if (childrenCount > maxChildrenAllowed && maxAvailableForSelectedSlot > 0) {
+      setChildrenCount(maxChildrenAllowed);
+    }
+  }, [maxAvailableForSelectedSlot, childrenCount, room.maxChildren]);
 
   const pricing = useMemo(() => {
     let subtotal = 0;
@@ -352,7 +371,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
     return { subtotal, gst, total, nights: breakdown.length, breakdown, agentDiscount };
   }, [checkIn, checkOut, rooms, room.weekdayPrice, room.weekendPrice, agentProfile, availability, selectedSlotIndex, slots]);
 
-  const executeCheckout = async () => {
+  const executeCheckout = async (passengersList?: any[], quickBookingVal?: boolean) => {
     setBookingLoading(true);
     try {
       const slot = slots[selectedSlotIndex] || slots[0];
@@ -365,11 +384,14 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
           checkOutDate: format(checkOut, 'yyyy-MM-dd'),
           slotStart: slot ? normalizeTime(slot.slotStart) : '12:00:00',
           slotEnd: slot ? normalizeTime(slot.slotEnd) : '11:00:00',
-          rooms,
+          rooms: roomsCount,
           guestName,
           guestPhone,
           guestEmail,
           adultCount: adults,
+          childCount: childrenCount,
+          passengers: passengersList,
+          quickBooking: quickBookingVal,
           isAdmin,
         }),
       });
@@ -405,7 +427,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
 
     if (isAdmin || isSessionMatched) {
       setIsMobileDrawerOpen(false);
-      await executeCheckout();
+      setShowPassengerModal(true);
     } else {
       setShowOTP(true);
     }
@@ -416,7 +438,12 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
     setIsMobileDrawerOpen(false);
     localStorage.setItem('punnami_user_phone', guestPhone);
     setIsUserLoggedIn(true);
-    await executeCheckout();
+    setShowPassengerModal(true);
+  };
+
+  const handlePassengerSubmit = async (passengersList: any[], quickVal: boolean) => {
+    setShowPassengerModal(false);
+    await executeCheckout(passengersList, quickVal);
   };
 
   const nights = pricing.nights;
@@ -497,27 +524,62 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
           </div>
         )}
 
-        {/* Rooms & Guests */}
-        <div className="grid grid-cols-2 gap-2">
-          <CustomSelect
-            value={rooms}
-            onChange={(val) => setRooms(val)}
-            options={Array.from({ length: Math.max(1, Math.min(maxAvailableForSelectedSlot, 5)) }, (_, i) => i + 1).map((n) => ({
-              value: n,
-              label: `${n} Room${n > 1 ? 's' : ''}`,
-            }))}
-            label="Rooms"
-          />
-          <CustomSelect
-            value={adults}
-            onChange={(val) => setAdults(val)}
-            options={Array.from({ length: room.maxAdults }, (_, i) => i + 1).map((n) => ({
-              value: n,
-              label: `${n} Adult${n > 1 ? 's' : ''}`,
-            }))}
-            label="Guests"
-            icon={<Users className="h-3 w-3 inline mr-1 text-amber-600" />}
-          />
+        {/* Guests Counters */}
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            {/* Adults Counter */}
+            <div>
+              <span className="block text-[10px] font-bold text-stone-400 uppercase mb-1.5">Adults</span>
+              <div className="flex items-center justify-between rounded-xl border border-stone-200 bg-white px-3 py-1.5 shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setAdults((v) => Math.max(1, v - 1))}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-stone-500 hover:text-amber-700 hover:bg-stone-50 active:scale-95 transition cursor-pointer"
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+                <span className="text-sm font-black text-stone-800">{adults}</span>
+                <button
+                  type="button"
+                  onClick={() => setAdults((v) => Math.min((maxAvailableForSelectedSlot || 5) * room.maxAdults, v + 1))}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-stone-500 hover:text-amber-700 hover:bg-stone-50 active:scale-95 transition cursor-pointer"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Children Counter */}
+            <div>
+              <span className="block text-[10px] font-bold text-stone-400 uppercase mb-1.5">Children (Ages 0 - 10)</span>
+              <div className="flex items-center justify-between rounded-xl border border-stone-200 bg-white px-3 py-1.5 shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setChildrenCount((v) => Math.max(0, v - 1))}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-stone-500 hover:text-amber-700 hover:bg-stone-50 active:scale-95 transition cursor-pointer"
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+                <span className="text-sm font-black text-stone-800">{childrenCount}</span>
+                <button
+                  type="button"
+                  onClick={() => setChildrenCount((v) => Math.min((maxAvailableForSelectedSlot || 5) * room.maxChildren, v + 1))}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-stone-500 hover:text-amber-700 hover:bg-stone-50 active:scale-95 transition cursor-pointer"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center text-[10px] font-bold mt-1">
+            <span className="text-stone-400">
+              {room.capacityPerRoom} Guests/Room Capacity
+            </span>
+            <span className="text-amber-750">
+              Requires {roomsCount} Room{roomsCount > 1 ? 's' : ''}
+            </span>
+          </div>
         </div>
 
       {/* Guest Details */}
@@ -901,6 +963,18 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
           onClose={() => setShowOTP(false)}
         />
       )}
+
+      {/* Checkout Passenger Modal */}
+      <CheckoutPassengerModal
+        isOpen={showPassengerModal}
+        onClose={() => setShowPassengerModal(false)}
+        onSubmit={handlePassengerSubmit}
+        adults={adults}
+        children={childrenCount}
+        isProcessing={bookingLoading}
+        guestName={guestName}
+        guestPhone={guestPhone}
+      />
     </div>
   );
 }

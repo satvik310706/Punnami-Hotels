@@ -6,6 +6,41 @@ import { jwtVerify } from 'jose';
 import { broadcastRoomInventoryUpdate } from '@/lib/sse';
 import { cleanupExpiredBookings } from '@/lib/booking-cleanup';
 
+// Verhoeff Checksum Algorithm matrices for Aadhaar validation
+const VERHOEFF_D = [
+  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+  [1, 2, 3, 4, 0, 6, 7, 8, 9, 5],
+  [2, 3, 4, 0, 1, 7, 8, 9, 5, 6],
+  [3, 4, 0, 1, 2, 8, 9, 5, 6, 7],
+  [4, 0, 1, 2, 3, 9, 5, 6, 7, 8],
+  [5, 9, 8, 7, 6, 0, 4, 3, 2, 1],
+  [6, 5, 9, 8, 7, 1, 0, 4, 3, 2],
+  [7, 6, 5, 9, 8, 2, 1, 0, 4, 3],
+  [8, 7, 6, 5, 9, 3, 2, 1, 0, 4],
+  [9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
+];
+const VERHOEFF_P = [
+  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+  [1, 5, 7, 6, 2, 8, 3, 0, 9, 4],
+  [5, 8, 0, 3, 7, 9, 6, 1, 4, 2],
+  [8, 9, 1, 6, 0, 4, 3, 5, 2, 7],
+  [9, 4, 5, 3, 1, 2, 6, 8, 7, 0],
+  [4, 2, 8, 6, 5, 7, 3, 9, 0, 1],
+  [2, 7, 9, 3, 8, 0, 6, 4, 1, 5],
+  [7, 0, 4, 6, 9, 1, 3, 2, 5, 8]
+];
+
+function isValidAadhaarBackend(num: string): boolean {
+  if (!num || num.length !== 12 || !/^\d{12}$/.test(num)) return false;
+  if (num[0] === '0' || num[0] === '1') return false;
+  let c = 0;
+  const digits = num.split('').map(Number).reverse();
+  for (let i = 0; i < digits.length; i++) {
+    c = VERHOEFF_D[c][VERHOEFF_P[i % 8][digits[i]]];
+  }
+  return c === 0;
+}
+
 // POST /api/v1/bookings/checkout — Reserve room inventory and create pending stay booking (with agent discount integrations)
 export async function POST(req: NextRequest) {
   try {
@@ -31,10 +66,49 @@ export async function POST(req: NextRequest) {
       childCount = 0,
       couponCode,
       isAdmin = false,
+      passengers = [],
+      quickBooking = false,
     } = body;
 
     if (!roomTypeId || !checkInDate || !checkOutDate || !guestName || !guestPhone) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // Aadhaar and guest count validation for non-admin checkouts
+    if (!isAdmin) {
+      if (passengers.length === 0) {
+        return NextResponse.json({ error: 'Passenger manifest details are required' }, { status: 400 });
+      }
+
+      for (let i = 0; i < passengers.length; i++) {
+        const p = passengers[i];
+        const isChild = i >= adultCount;
+
+        if (!p.fullName || p.fullName.trim() === '') {
+          return NextResponse.json({ error: `Passenger name for card ${i + 1} is required` }, { status: 400 });
+        }
+
+        // Validate age limits
+        if (typeof p.age !== 'number' || (isChild ? (p.age > 10 || p.age < 0) : p.age < 11)) {
+          return NextResponse.json({ error: `Invalid age for passenger ${p.fullName}. Children must be 0-10, adults 11+.` }, { status: 400 });
+        }
+
+        // Skip other placeholders in Quick Booking mode
+        if (quickBooking && i > 0) {
+          continue;
+        }
+
+        // Aadhaar validation
+        if (!isChild) {
+          if (!p.aadhaar || !isValidAadhaarBackend(p.aadhaar)) {
+            return NextResponse.json({ error: `Invalid Aadhaar number for guest: ${p.fullName}` }, { status: 400 });
+          }
+        } else if (p.aadhaar && p.aadhaar.trim().length > 0) {
+          if (!isValidAadhaarBackend(p.aadhaar)) {
+            return NextResponse.json({ error: `Invalid Aadhaar number for guest: ${p.fullName}` }, { status: 400 });
+          }
+        }
+      }
     }
 
     const checkIn = new Date(checkInDate);
@@ -211,7 +285,7 @@ export async function POST(req: NextRequest) {
       const gstAmount = calculateGST(taxableAmount);
       const totalAmount = Math.max(0, taxableAmount + gstAmount - commissionVal);
 
-      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes TTL
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours TTL
       const publicId = generatePublicId();
 
       // Upsert User profile details
@@ -258,6 +332,8 @@ export async function POST(req: NextRequest) {
           agentCommission: commissionVal,
           status: isAdmin ? 'CONFIRMED' : 'PENDING_PROOF',
           expiresAt,
+          aadharEncrypted: passengers[0]?.aadhaar || null,
+          passengers: passengers as any,
         },
         include: {
           roomType: {
@@ -267,6 +343,8 @@ export async function POST(req: NextRequest) {
       });
 
       return newBooking;
+    }, {
+      timeout: 30000,
     });
 
     // Broadcast availability update to SSE clients

@@ -68,10 +68,14 @@ export default function RootLayout({
         className={`${inter.variable} ${cormorant.variable} antialiased min-h-screen flex flex-col bg-stone-50 text-stone-900`}
         style={{ fontFamily: "var(--font-inter), sans-serif" }}
       >
-        <Navbar />
+        <div className="print:hidden">
+          <Navbar />
+        </div>
         <main className="flex-1">{children}</main>
-        <Footer />
-        <WhatsAppFAB />
+        <div className="print:hidden">
+          <Footer />
+          <WhatsAppFAB />
+        </div>
         <InstallPromptModal />
         <Suspense fallback={null}>
           <NavigationLoader />

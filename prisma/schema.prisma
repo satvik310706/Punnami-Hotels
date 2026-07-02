@@ -147,6 +147,8 @@ model Booking {
   aadharEncrypted    String?
   aadharHash         String?
   aadharImageUrl     String?
+  passengers         Json?
+  
   
   // Agent Reference
   agentId            BigInt?
