@@ -25,36 +25,84 @@ const cormorant = Cormorant_Garamond({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://punnamihotels.com"),
+  applicationName: "Punnami Southern Residency",
   title: {
-    default: "Punnami Southern Residency | Luxury Stay in Bhadrachalam",
+    default: "Punnami Southern Residency Bhadrachalam | Best Hotel Stays, Luxury Rooms & Temple Lodge Booking",
     template: "%s | Punnami Southern Residency",
   },
   description:
-    "Experience luxury and comfort at Punnami Southern Residency, Bhadrachalam. Book premium rooms with modern amenities, stunning views, and seamless online booking.",
-  keywords: ["Punnami Southern Residency", "Bhadrachalam hotel", "hotel booking", "luxury stay"],
+    "Book luxury rooms at Punnami Southern Residency, the premier hotel near Bhadrachalam Temple. Experience premium amenities, family suites, AC deluxe lodging, and seamless online booking support.",
+  keywords: [
+    "punnami southern residency bhadrachalam",
+    "best hotel in bhadrachalam near temple",
+    "bhadrachalam hotel rooms booking",
+    "punnami residency bhadrachalam contact number",
+    "luxury stays in bhadrachalam",
+    "bhadrachalam temple cottages",
+    "hotels near bhadrachalam temple",
+    "ac rooms in bhadrachalam",
+    "family hotel bhadrachalam",
+    "hotel booking bhadrachalam list",
+    "punnami rooms bhadrachalam price",
+    "punnami residency godavari",
+    "telangana tourism hotel bhadrachalam",
+    "bhadrachalam lodge online booking",
+    "cheap hotels in bhadrachalam",
+    "deluxe rooms bhadrachalam",
+    "punnami lodge bhadrachalam room rent",
+    "bhadrachalam pilgrimage rooms",
+    "punnami temple residency booking"
+  ],
+  authors: [{ name: "Punnami Southern Residency" }],
+  creator: "Satvik",
+  appleWebApp: {
+    capable: true,
+    title: "Punnami Hotels",
+    statusBarStyle: "default",
+  },
   icons: {
     icon: [
-      { url: "/icon.png", type: "image/png" },
-      { url: "/logo.png", type: "image/png" },
-    ],
-    apple: [
-      { url: "/apple-touch-icon.png", type: "image/png" },
+      { url: "/icon.png", sizes: "192x192", type: "image/png" },
+      { url: "/logo.png", sizes: "512x512", type: "image/png" },
     ],
     shortcut: "/icon.png",
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "512x512", type: "image/png" },
+    ],
   },
   openGraph: {
     type: "website",
+    locale: "en_IN",
+    url: "https://punnamihotels.com",
+    title: "Punnami Southern Residency Bhadrachalam | Best Hotel Stays & Luxury Rooms",
+    description: "Experience premium hospitality at Punnami Southern Residency, Bhadrachalam. Book air-conditioned family suites and executive rooms online.",
     siteName: "Punnami Southern Residency",
-    title: "Punnami Southern Residency | Luxury Stay in Bhadrachalam",
-    description: "Book premium rooms at Punnami Southern Residency — seamless booking, modern amenities.",
-    images: [
-      {
-        url: "/logo.png",
-        width: 1024,
-        height: 1024,
-        alt: "Punnami Southern Residency Logo",
-      },
-    ],
+    images: [{
+      url: "/logo.png",
+      width: 1024,
+      height: 1024,
+      alt: "Punnami Southern Residency Logo"
+    }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Punnami Southern Residency Bhadrachalam | Best Hotel Stays",
+    description: "Book executive hotel stays and premium family lodging near Bhadrachalam Temple online.",
+    images: ["/logo.png"],
+  },
+  alternates: {
+    canonical: "/",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
   },
 };
 
