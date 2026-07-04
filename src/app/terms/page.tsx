@@ -42,7 +42,7 @@ export default function TermsPage() {
               </div>
               <div className="pl-11">
                 <p className="text-base text-stone-600 bg-stone-50 p-6 rounded-2xl border border-stone-100">
-                  Rooms are reserved temporarily for 30 minutes upon creation. A reservation is only confirmed once standard payment proof (transaction ID or UTR number/screenshot) is uploaded and manually verified by our administration team.
+                  Rooms are reserved temporarily for 30 minutes upon creation. A reservation is only confirmed once payment is successfully processed and verified through our secure online payment gateway.
                 </p>
               </div>
             </section>

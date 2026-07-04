@@ -58,7 +58,7 @@ export default function PrivacyPage() {
               </div>
               <div className="pl-11">
                 <p className="text-base text-stone-600 bg-stone-50 p-6 rounded-2xl border border-stone-100">
-                  All verification records, payment screenshots, and guest logs are stored securely. We do not sell or share your phone numbers or personal records with third parties for marketing purposes.
+                  All verification records, payment transaction details, and guest logs are stored securely. We do not sell or share your phone numbers or personal records with third parties for marketing purposes.
                 </p>
               </div>
             </section>
