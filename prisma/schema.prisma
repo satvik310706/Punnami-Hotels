@@ -158,6 +158,7 @@ model Booking {
   expiresAt          DateTime
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
+  payments           Payment[]
 
   @@index([roomTypeId])
   @@index([checkInDate])
@@ -205,4 +206,16 @@ model User {
 
   // Relationships
   agentBookings         Booking[]     @relation("AgentBookings")
+}
+
+model Payment {
+  id                     String   @id @default(uuid())
+  bookingId              BigInt
+  booking                Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  merchantTransactionId  String   @unique
+  amount                 Float
+  status                 String   @default("PENDING") // PENDING, COMPLETED, FAILED
+  providerResponse       String?  @db.Text
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 }

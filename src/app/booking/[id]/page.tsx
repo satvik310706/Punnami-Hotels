@@ -48,6 +48,7 @@ export default async function BookingPaymentPage({ params }: { params: Promise<{
           discountAmount: Number(booking.discountAmount),
           gstAmount: Number(booking.gstAmount),
           totalAmount: Number(booking.totalAmount),
+          transactionId: booking.transactionId,
           passengers: booking.passengers ? (booking.passengers as any) : undefined,
           roomType: {
             name: booking.roomType.name,

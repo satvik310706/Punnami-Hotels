@@ -8,6 +8,7 @@ import WhatsAppFAB from "@/components/WhatsAppFAB";
 import InstallPromptModal from "@/components/InstallPromptModal";
 import NavigationLoader from "@/components/NavigationLoader";
 import GlobalModal from "@/components/GlobalModal";
+import PaymentReconciliation from "@/components/PaymentReconciliation";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -81,6 +82,7 @@ export default function RootLayout({
           <NavigationLoader />
         </Suspense>
         <GlobalModal />
+        <PaymentReconciliation />
       </body>
     </html>
   );

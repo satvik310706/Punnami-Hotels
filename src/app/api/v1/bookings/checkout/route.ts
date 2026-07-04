@@ -285,7 +285,9 @@ export async function POST(req: NextRequest) {
       const gstAmount = calculateGST(taxableAmount);
       const totalAmount = Math.max(0, taxableAmount + gstAmount - commissionVal);
 
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours TTL
+      const expiresAt = isAdmin 
+        ? new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours for admin
+        : new Date(Date.now() + 30 * 60 * 1000);    // 30 minutes for public online checkout
       const publicId = generatePublicId();
 
       // Upsert User profile details
@@ -306,6 +308,10 @@ export async function POST(req: NextRequest) {
           },
         });
       }
+
+      const adminTxnId = isAdmin 
+        ? `ADMIN-${publicId}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
+        : null;
 
       const newBooking = await tx.booking.create({
         data: {
@@ -331,6 +337,7 @@ export async function POST(req: NextRequest) {
           agentId,
           agentCommission: commissionVal,
           status: isAdmin ? 'CONFIRMED' : 'PENDING_PROOF',
+          transactionId: adminTxnId,
           expiresAt,
           aadharEncrypted: passengers[0]?.aadhaar || null,
           passengers: passengers as any,
@@ -341,6 +348,18 @@ export async function POST(req: NextRequest) {
           },
         },
       });
+
+      if (isAdmin && adminTxnId) {
+        await tx.payment.create({
+          data: {
+            bookingId: newBooking.id,
+            merchantTransactionId: adminTxnId,
+            amount: Number(newBooking.totalAmount),
+            status: 'COMPLETED',
+            providerResponse: JSON.stringify({ note: 'Admin Direct Booking' })
+          }
+        });
+      }
 
       return newBooking;
     }, {

@@ -24,6 +24,7 @@ interface BookingVoucherProps {
     totalAmount: number;
     status: string;
     createdAt: string;
+    transactionId?: string | null;
     passengers?: {
       fullName: string;
       age: number;
@@ -272,6 +273,13 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
                 <span className="font-extrabold text-stone-900 text-sm">Paid Total Amount</span>
                 <span className="font-black text-amber-700 text-xl">{formatCurrency(booking.totalAmount)}</span>
               </div>
+
+              {booking.transactionId && (
+                <div className="flex justify-between text-[11px] pt-1">
+                  <span className="text-stone-400 font-bold uppercase tracking-wider">Transaction ID</span>
+                  <span className="text-stone-750 font-mono font-bold">{booking.transactionId}</span>
+                </div>
+              )}
 
               <div className="bg-emerald-50/50 border border-emerald-200 rounded-xl p-3.5 text-center mt-4">
                 <p className="text-[10px] text-emerald-700 font-black uppercase tracking-wider">Payment Status: PAID IN FULL</p>

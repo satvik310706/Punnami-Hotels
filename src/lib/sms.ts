@@ -92,13 +92,17 @@ export async function sendRoomConfirmationSMS({
   totalAmount: string;
 }): Promise<boolean> {
   return sendMsg91SMS(customerPhone, TEMPLATES.PUNNAMI_ROOM_CONFIRM, {
-    var1: customerName,
+    var1: customerName.split(' ')[0], // First name only (DLT/ts-tours style)
     var2: publicId,
     var3: hotelName.slice(0, 30),
-    var4: `${checkInDate} ${checkInTime}`,
-    var5: `${checkOutDate} ${checkOutTime}`,
-    var6: roomName.slice(0, 30),
-    var7: customerPhone,
+    var4: roomName.slice(0, 30),
+    var5: checkInDate,
+    var6: checkInTime,
+    var7: checkOutDate,
+    var8: checkOutTime,
+    var9: paidAmount,
+    var10: totalAmount,
+    var11: publicId,
   });
 }
 
@@ -120,12 +124,11 @@ export async function sendCheckInReminderSMS({
   hotelPhone: string;
 }): Promise<boolean> {
   return sendMsg91SMS(customerPhone, TEMPLATES.PUNNAMI_ROOM_REMINDER, {
-    var1: customerName,
+    var1: customerName.split(' ')[0],
     var2: publicId,
     var3: hotelName.slice(0, 30),
     var4: checkInDetail,
-    var5: 'Next Day 11:00 AM',
-    var6: 'Room Stay',
-    var7: customerPhone,
+    var5: hotelPhone || '9542069573',
+    var6: publicId,
   });
 }

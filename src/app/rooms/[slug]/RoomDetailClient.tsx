@@ -16,6 +16,7 @@ import CustomDatePicker from '@/components/CustomDatePicker';
 import CustomSelect from '@/components/CustomSelect';
 import { ReconnectingEventSource } from '@/lib/ReconnectingEventSource';
 import CheckoutPassengerModal from '@/components/CheckoutPassengerModal';
+import { CheckoutPendingCheck } from '@/components/CheckoutPendingCheck';
 
 const FACILITY_ICONS: Record<string, React.ElementType> = {
   'wi-fi': Wifi, 'wifi': Wifi, 'a/c': Wind, 'ac': Wind,
@@ -262,10 +263,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
   );
   const highlights = Array.isArray(room.highlights) ? room.highlights : [];
 
-  // Calculate maximum rooms available for the selected slot and date range
   const maxAvailableForSelectedSlot = useMemo(() => {
-    if (isAdmin) return 100; // Allow admin to book as many as they want
-
     const slot = slots[selectedSlotIndex] || slots[0];
     const sStart = slot ? normalizeTime(slot.slotStart) : '12:00:00';
     const sEnd = slot ? normalizeTime(slot.slotEnd) : '11:00:00';
@@ -274,7 +272,12 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
     const slotConfig = (room.bookingSlots || room.booking_slots || []).find(
       (s: any) => normalizeTime(s.slotStart || s.slot_start) === sStart && normalizeTime(s.slotEnd || s.slot_end) === sEnd
     );
-    const defaultCapacity = slotConfig?.totalRooms ?? slotConfig?.total_rooms ?? room.totalInventory;
+    const defaultCapacity = slotConfig?.totalRooms ?? slotConfig?.total_rooms ?? room.totalInventory ?? 5;
+
+    if (isAdmin) {
+      // Admin is not constrained by daily booked/reserved inventory but is capped by physical room capacity
+      return defaultCapacity;
+    }
     
     // Check if we have overrides for the date range
     const current = new Date(checkIn);
@@ -975,6 +978,9 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
         guestName={guestName}
         guestPhone={guestPhone}
       />
+
+      {/* Checkout Pending Check Modal */}
+      <CheckoutPendingCheck />
     </div>
   );
 }
