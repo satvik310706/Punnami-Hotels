@@ -7,6 +7,7 @@ import ScrollIndicator from '@/components/ScrollIndicator';
 import HeroCarousel from '@/components/HeroCarousel';
 import ScrollReveal from '@/components/ScrollReveal';
 import prisma from '@/lib/db';
+import ReviewsCarousel from '@/components/ReviewsCarousel';
 
 export const metadata: Metadata = {
   title: 'Punnami Southern Residency | Luxury Stay in Bhadrachalam',
@@ -284,29 +285,7 @@ export default async function HomePage() {
           </h2>
         </ScrollReveal>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {REVIEWS.map((review, idx) => (
-            <ScrollReveal key={review.name} delay={idx * 150}>
-              <div className="bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgba(0,0,0,0.07)] border border-stone-100 h-full">
-                <div className="flex gap-1 mb-4">
-                  {Array.from({ length: review.rating }).map((_, i) => (
-                    <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
-                  ))}
-                </div>
-                <p className="text-stone-600 text-sm leading-relaxed mb-5 italic">"{review.text}"</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-bold text-sm">
-                    {review.name[0]}
-                  </div>
-                  <div>
-                    <div className="font-bold text-stone-900 text-sm">{review.name}</div>
-                    <div className="text-xs text-stone-400">{review.location}</div>
-                  </div>
-                </div>
-              </div>
-            </ScrollReveal>
-          ))}
-        </div>
+        <ReviewsCarousel />
       </section>
 
       {/* ─── CTA Banner ─────────────────────────────────────────────────────── */}

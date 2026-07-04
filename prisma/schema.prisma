@@ -20,6 +20,11 @@ enum BookingStatus {
   CONFIRMED           // Admin approved
   REJECTED            // Admin rejected
   EXPIRED             // TTL expired without proof upload
+  CANCEL_REQUESTED    // Guest requested cancellation
+  CANCELLED           // Admin approved cancellation
+  POSTPONE_REQUESTED  // Guest requested reschedule
+  POSTPONED           // Admin approved reschedule
+  REFUNDED            // Refund is completed
 }
 
 enum BookingSource {
@@ -149,6 +154,12 @@ model Booking {
   aadharImageUrl     String?
   passengers         Json?
   
+  // Cancellation/Postpone fields
+  cancellationReason String?       @db.Text
+  cancellationFee    Decimal?      @db.Decimal(12,2)
+  refundAmount       Decimal?      @db.Decimal(12,2)
+  postponeReason     String?       @db.Text
+  postponeNewDate    DateTime?     @db.Date
   
   // Agent Reference
   agentId            BigInt?

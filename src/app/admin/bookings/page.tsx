@@ -32,6 +32,11 @@ interface Booking {
   createdAt: string;
   passengers?: any;
   roomType: { name: string; coverImageUrl: string | null };
+  cancellationReason?: string | null;
+  cancellationFee?: number | null;
+  refundAmount?: number | null;
+  postponeReason?: string | null;
+  postponeNewDate?: string | null;
 }
 
 export default function AdminBookingsPage() {
@@ -62,12 +67,41 @@ export default function AdminBookingsPage() {
     fetchBookings();
   }, []);
 
-  const handleAction = async (publicId: string, action: 'APPROVE' | 'REJECT') => {
-    const isApprove = action === 'APPROVE';
-    const confirmed = await showConfirm(
-      isApprove ? 'Approve Booking' : 'Reject Booking',
-      `Are you sure you want to ${isApprove ? 'APPROVE' : 'REJECT'} this booking?`
-    );
+  const handleAction = async (
+    publicId: string, 
+    action: 'APPROVE' | 'REJECT' | 'APPROVE_CANCEL' | 'REJECT_CANCEL' | 'APPROVE_POSTPONE' | 'REJECT_POSTPONE'
+  ) => {
+    let title = 'Process Action';
+    let text = 'Are you sure you want to perform this action?';
+    let successMessage = 'Action completed successfully.';
+
+    if (action === 'APPROVE') {
+      title = 'Approve Booking';
+      text = 'Are you sure you want to APPROVE this booking?';
+      successMessage = 'Booking approved successfully.';
+    } else if (action === 'REJECT') {
+      title = 'Reject Booking';
+      text = 'Are you sure you want to REJECT this booking?';
+      successMessage = 'Booking rejected successfully.';
+    } else if (action === 'APPROVE_CANCEL') {
+      title = 'Approve Cancellation';
+      text = 'Are you sure you want to APPROVE this cancellation and release inventory?';
+      successMessage = 'Cancellation request approved.';
+    } else if (action === 'REJECT_CANCEL') {
+      title = 'Reject Cancellation';
+      text = 'Are you sure you want to REJECT this cancellation request?';
+      successMessage = 'Cancellation request rejected.';
+    } else if (action === 'APPROVE_POSTPONE') {
+      title = 'Approve Reschedule';
+      text = 'Are you sure you want to APPROVE this reschedule and update travel dates?';
+      successMessage = 'Reschedule request approved.';
+    } else if (action === 'REJECT_POSTPONE') {
+      title = 'Reject Reschedule';
+      text = 'Are you sure you want to REJECT this reschedule request?';
+      successMessage = 'Reschedule request rejected.';
+    }
+
+    const confirmed = await showConfirm(title, text);
     if (!confirmed) return;
     
     setActionLoading(true);
@@ -77,9 +111,9 @@ export default function AdminBookingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action }),
       });
-
+ 
       if (res.ok) {
-        showAlert('Success', `Booking ${isApprove ? 'approved' : 'rejected'} successfully.`, 'success');
+        showAlert('Success', successMessage, 'success');
         setSelectedBooking(null);
         fetchBookings();
       } else {
@@ -208,6 +242,16 @@ export default function AdminBookingsPage() {
                           ? 'bg-amber-50 text-amber-700 border border-amber-200'
                           : b.status === 'PENDING_PROOF'
                           ? 'bg-stone-100 text-stone-600 border border-stone-200'
+                          : b.status === 'CANCEL_REQUESTED'
+                          ? 'bg-red-50 text-red-700 border border-red-200 animate-pulse'
+                          : b.status === 'CANCELLED'
+                          ? 'bg-stone-100 text-stone-500 border border-stone-200 line-through'
+                          : b.status === 'POSTPONE_REQUESTED'
+                          ? 'bg-amber-50 text-amber-700 border border-amber-200 animate-pulse'
+                          : b.status === 'POSTPONED'
+                          ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                          : b.status === 'REFUNDED'
+                          ? 'bg-stone-200 text-stone-700 border border-stone-300'
                           : 'bg-red-50 text-red-700 border border-red-200'
                       }`}>
                         {b.status === 'CONFIRMED' ? (
@@ -216,6 +260,16 @@ export default function AdminBookingsPage() {
                           <><Clock className="h-3 w-3 animate-spin" /> Verifying</>
                         ) : b.status === 'PENDING_PROOF' ? (
                           <><Clock className="h-3 w-3" /> Upload Awaiting</>
+                        ) : b.status === 'CANCEL_REQUESTED' ? (
+                          <><ShieldAlert className="h-3 w-3" /> Cancel Req</>
+                        ) : b.status === 'CANCELLED' ? (
+                          <><XCircle className="h-3 w-3" /> Cancelled</>
+                        ) : b.status === 'POSTPONE_REQUESTED' ? (
+                          <><Calendar className="h-3 w-3" /> Reschedule Req</>
+                        ) : b.status === 'POSTPONED' ? (
+                          <><CheckCircle className="h-3 w-3" /> Rescheduled</>
+                        ) : b.status === 'REFUNDED' ? (
+                          <><XCircle className="h-3 w-3" /> Refunded</>
                         ) : (
                           <><XCircle className="h-3 w-3" /> Rejected</>
                         )}
@@ -337,6 +391,37 @@ export default function AdminBookingsPage() {
                 </div>
               </div>
 
+              {/* Cancellation Request Box */}
+              {selectedBooking.status === 'CANCEL_REQUESTED' && (
+                <div className="bg-red-50 border border-red-200 rounded-2xl p-5 space-y-2">
+                  <h5 className="font-extrabold text-red-800 text-sm flex items-center gap-1.5">
+                    <ShieldAlert className="h-4 w-4" /> Cancellation Request Details
+                  </h5>
+                  <p className="text-stone-700 text-sm font-medium">
+                    <strong>Reason:</strong> "{selectedBooking.cancellationReason || 'No reason provided.'}"
+                  </p>
+                  <div className="flex gap-4 text-xs font-bold text-red-950 pt-1">
+                    <div>Cancellation Charge: ₹{selectedBooking.cancellationFee?.toLocaleString('en-IN')}</div>
+                    <div>Eligible Refund: ₹{selectedBooking.refundAmount?.toLocaleString('en-IN')}</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Postpone Request Box */}
+              {selectedBooking.status === 'POSTPONE_REQUESTED' && (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 space-y-2">
+                  <h5 className="font-extrabold text-amber-800 text-sm flex items-center gap-1.5">
+                    <Calendar className="h-4 w-4" /> Reschedule Request Details
+                  </h5>
+                  <p className="text-stone-700 text-sm font-medium">
+                    <strong>Reason:</strong> "{selectedBooking.postponeReason || 'No reason provided.'}"
+                  </p>
+                  <p className="text-xs font-bold text-amber-950">
+                    <strong>Requested New Date:</strong> {selectedBooking.postponeNewDate ? format(new Date(selectedBooking.postponeNewDate), 'dd MMMM yyyy') : 'N/A'}
+                  </p>
+                </div>
+              )}
+
               {/* Passengers Manifest */}
               {selectedBooking.passengers && (selectedBooking.passengers as any[]).length > 0 && (
                 <div className="border-t border-stone-150 pt-4">
@@ -402,14 +487,55 @@ export default function AdminBookingsPage() {
                 >
                   View Ticket
                 </button>
-                {selectedBooking.status !== 'CONFIRMED' && selectedBooking.status !== 'REJECTED' && (
+                {/* Cancellation Request Actions */}
+                {selectedBooking.status === 'CANCEL_REQUESTED' && (
+                  <>
+                    <button
+                      onClick={() => handleAction(selectedBooking.publicId, 'REJECT_CANCEL')}
+                      disabled={actionLoading}
+                      className="bg-stone-100 border border-stone-200 hover:bg-stone-200 text-stone-700 font-black px-4 py-2.5 rounded-xl text-xs transition-colors cursor-pointer"
+                    >
+                      Reject Cancellation
+                    </button>
+                    <button
+                      onClick={() => handleAction(selectedBooking.publicId, 'APPROVE_CANCEL')}
+                      disabled={actionLoading}
+                      className="bg-red-600 hover:bg-red-700 text-white font-black px-4 py-2.5 rounded-xl text-xs transition-colors shadow-md cursor-pointer"
+                    >
+                      Approve & Cancel Booking
+                    </button>
+                  </>
+                )}
+
+                {/* Reschedule Request Actions */}
+                {selectedBooking.status === 'POSTPONE_REQUESTED' && (
+                  <>
+                    <button
+                      onClick={() => handleAction(selectedBooking.publicId, 'REJECT_POSTPONE')}
+                      disabled={actionLoading}
+                      className="bg-stone-100 border border-stone-200 hover:bg-stone-200 text-stone-700 font-black px-4 py-2.5 rounded-xl text-xs transition-colors cursor-pointer"
+                    >
+                      Reject Reschedule
+                    </button>
+                    <button
+                      onClick={() => handleAction(selectedBooking.publicId, 'APPROVE_POSTPONE')}
+                      disabled={actionLoading}
+                      className="bg-amber-600 hover:bg-amber-700 text-white font-black px-4 py-2.5 rounded-xl text-xs transition-colors shadow-md cursor-pointer"
+                    >
+                      Approve & Reschedule Stays
+                    </button>
+                  </>
+                )}
+
+                {/* Original Awaiting Payment Proof Actions */}
+                {['PENDING_PROOF', 'PENDING_CONFIRMATION'].includes(selectedBooking.status) && (
                   <>
                     <button
                       onClick={() => handleAction(selectedBooking.publicId, 'REJECT')}
                       disabled={actionLoading}
                       className="bg-red-50 border border-red-200 hover:bg-red-100 text-red-700 font-black px-4 py-2.5 rounded-xl text-xs transition-colors cursor-pointer"
                     >
-                      Reject
+                      Reject Proof
                     </button>
                     <button
                       onClick={() => handleAction(selectedBooking.publicId, 'APPROVE')}
