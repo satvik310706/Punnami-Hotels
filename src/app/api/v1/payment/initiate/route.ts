@@ -22,7 +22,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Booking is already confirmed' }, { status: 400 });
     }
 
-    const amountInPaise = Math.round(Number(booking.totalAmount) * 100);
+    let paymentAmount = Number(booking.totalAmount);
+    if (booking.status === 'PARTIAL_PAID') {
+      const paid = booking.paidAmount ? Number(booking.paidAmount) : 0;
+      paymentAmount = Number(booking.totalAmount) - paid;
+    } else {
+      paymentAmount = booking.paidAmount ? Number(booking.paidAmount) : Number(booking.totalAmount);
+    }
+    const amountInPaise = Math.round(paymentAmount * 100);
     const merchantTransactionId = `TXN-PUN-${booking.publicId}-${Date.now()}`;
     const originUrl = req.headers.get('origin') || new URL(req.url).origin;
     const appUrl = originUrl.includes('localhost') ? originUrl : (process.env.NEXT_PUBLIC_SITE_URL || originUrl);
@@ -47,7 +54,7 @@ export async function POST(req: NextRequest) {
         data: {
           bookingId: booking.id,
           merchantTransactionId,
-          amount: Number(booking.totalAmount),
+          amount: paymentAmount,
           status: 'PENDING',
         }
       });

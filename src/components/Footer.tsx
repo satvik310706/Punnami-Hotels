@@ -69,6 +69,7 @@ export default function Footer() {
                   { href: '/privacy', label: 'Privacy Policy' },
                   { href: '/terms', label: 'Terms & Conditions' },
                   { href: '/refund', label: 'Refund Policy' },
+                  { href: '/shipping-policy', label: 'Shipping & Delivery' },
                 ].map(({ href, label }) => (
                   <li key={href}>
                     <Link href={href} className="text-[13px] sm:text-sm hover:text-amber-400 transition-colors">
@@ -86,7 +87,7 @@ export default function Footer() {
             <ul className="space-y-2 sm:space-y-3">
               <li className="flex items-start gap-2 sm:gap-3 text-[13px] sm:text-sm">
                 <MapPin className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-                <span className="text-stone-400">Punnami Southern Residency, <br />Bhadrachalam, Telangana</span>
+                <span className="text-stone-400">Punnami Southern Residency, <br />Shilpi Nagar, Bhadrachalam</span>
               </li>
               <li className="flex items-center gap-2 sm:gap-3 text-[13px] sm:text-sm">
                 <Phone className="h-4 w-4 text-amber-500 shrink-0" />

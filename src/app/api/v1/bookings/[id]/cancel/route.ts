@@ -23,24 +23,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'Booking is already cancelled, postponed, or has a pending request.' }, { status: 400 });
     }
 
-    if (booking.status !== 'CONFIRMED') {
-      return NextResponse.json({ error: 'Only confirmed bookings can be cancelled.' }, { status: 400 });
+    if (!['CONFIRMED', 'PARTIAL_PAID'].includes(booking.status)) {
+      return NextResponse.json({ error: 'Only confirmed or partially paid bookings can be cancelled.' }, { status: 400 });
     }
 
-    // Enforce 24-hour limit before check-in date
+    // Enforce 4-day cancellation restriction (checkInDate >= today + 4 days)
     const checkIn = new Date(booking.checkInDate);
-    const now = new Date();
-    const diffMs = checkIn.getTime() - now.getTime();
-    const diffHours = diffMs / (1000 * 60 * 60);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const limitDate = new Date(today);
+    limitDate.setDate(limitDate.getDate() + 4);
 
-    let cancellationFee = 0;
-    let refundAmount = Number(booking.totalAmount);
-
-    if (diffHours < 24) {
-      // 100% cancellation charge applies
-      cancellationFee = Number(booking.totalAmount);
-      refundAmount = 0;
+    if (checkIn < limitDate) {
+      return NextResponse.json({ error: 'Cancellation is unavailable within 4 days of check-in.' }, { status: 400 });
     }
+
+    // For room bookings in ts-tours, cancellation incurs 100% charge
+    const cancellationFee = Number(booking.totalAmount);
+    const refundAmount = 0;
 
     const updated = await prisma.booking.update({
       where: { publicId: id },

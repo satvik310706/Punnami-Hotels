@@ -30,7 +30,7 @@ export default function ContactPage() {
             Contact Information
           </h2>
           <p className="text-stone-600 text-sm leading-relaxed">
-            Reach out to our customer support or visit our lodging directly.
+            Reach out to our customer support or visit our lodging directly. Punnami Southern Residency is owned and operated by <strong>Telangana Boat Tourism</strong> (Proprietor: Mr. Nalla Saibabu).
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -59,7 +59,7 @@ export default function ContactPage() {
               <div>
                 <div className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-1">Address</div>
                 <p className="text-sm font-semibold text-stone-800">
-                  Punnami Southern Residency, Near Temple Road, Bhadrachalam, Telangana, 507111
+                  Punnami Southern Residency, Shilpi Nagar, Bhadrachalam, Telangana, 507111
                 </p>
               </div>
             </div>
@@ -83,6 +83,22 @@ export default function ContactPage() {
             Send Us a Message
           </h2>
           <ContactForm />
+        </div>
+      </section>
+
+      {/* Google Maps Embed Section */}
+      <section className="max-w-6xl mx-auto px-4 pb-20">
+        <div className="bg-white rounded-3xl border border-stone-200 overflow-hidden shadow-md p-2">
+          <iframe 
+            src="https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d3801.591537172071!2d80.88113787517149!3d17.669494583266612!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMTfCsDQwJzEwLjIiTiA4MMKwNTMnMDEuNCJF!5e0!3m2!1sen!2sin!4v1783320394235!5m2!1sen!2sin" 
+            width="100%" 
+            height="400" 
+            style={{ border: 0 }} 
+            allowFullScreen={true} 
+            loading="lazy" 
+            referrerPolicy="strict-origin-when-cross-origin"
+            className="rounded-2xl"
+          ></iframe>
         </div>
       </section>
     </div>

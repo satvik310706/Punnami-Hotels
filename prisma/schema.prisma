@@ -25,6 +25,7 @@ enum BookingStatus {
   POSTPONE_REQUESTED  // Guest requested reschedule
   POSTPONED           // Admin approved reschedule
   REFUNDED            // Refund is completed
+  PARTIAL_PAID        // Part payment completed
 }
 
 enum BookingSource {
@@ -121,6 +122,8 @@ model Booking {
   roomType           RoomType      @relation(fields: [roomTypeId], references: [id])
   checkInDate        DateTime      @db.Date
   checkOutDate       DateTime      @db.Date
+  originalCheckInDate  DateTime?   @db.Date   // Stored on first reschedule, never overwritten
+  originalCheckOutDate DateTime?   @db.Date   // Stored on first reschedule, never overwritten
   slotStart          String        @default("12:00:00")
   slotEnd            String        @default("11:00:00")
   totalNights        Int
@@ -138,6 +141,8 @@ model Booking {
   gstAmount          Decimal       @db.Decimal(12,2)
   gatewayFee         Decimal       @db.Decimal(12,2) @default(0)
   totalAmount        Decimal       @db.Decimal(12,2)
+  paidAmount         Decimal?      @db.Decimal(12,2)
+  paymentPercentage  Decimal?      @db.Decimal(5,2)  @default(100.00)
   
   // Manual Payment Proof
   paymentProofUrl    String?

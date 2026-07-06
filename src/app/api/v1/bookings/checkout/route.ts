@@ -68,10 +68,15 @@ export async function POST(req: NextRequest) {
       isAdmin = false,
       passengers = [],
       quickBooking = false,
+      paymentPercentage = 100,
     } = body;
 
     if (!roomTypeId || !checkInDate || !checkOutDate || !guestName || !guestPhone) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    if (!isAdmin && (typeof paymentPercentage !== 'number' || paymentPercentage < 35 || paymentPercentage > 100)) {
+      return NextResponse.json({ error: 'Payment percentage must be between 35% and 100%' }, { status: 400 });
     }
 
     // Aadhaar and guest count validation for non-admin checkouts
@@ -334,6 +339,8 @@ export async function POST(req: NextRequest) {
           gstAmount,
           gatewayFee: 0,
           totalAmount,
+          paidAmount: isAdmin ? totalAmount : (Number(totalAmount) * (paymentPercentage / 100)),
+          paymentPercentage: isAdmin ? 100 : paymentPercentage,
           agentId,
           agentCommission: commissionVal,
           status: isAdmin ? 'CONFIRMED' : 'PENDING_PROOF',
@@ -375,6 +382,8 @@ export async function POST(req: NextRequest) {
       bookingId: booking.id.toString(),
       publicId: booking.publicId,
       totalAmount: Number(booking.totalAmount),
+      paidAmount: Number(booking.paidAmount ?? booking.totalAmount),
+      paymentPercentage: Number(booking.paymentPercentage ?? 100),
       gstAmount: Number(booking.gstAmount),
       subtotal: Number(booking.subtotalAmount),
       agentCommission: Number(booking.agentCommission),

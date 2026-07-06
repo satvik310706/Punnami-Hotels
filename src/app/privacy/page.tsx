@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { Shield, Database, Lock } from 'lucide-react';
+import { Shield, Database, Lock, EyeOff } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy | Punnami Southern Residency',
@@ -20,8 +20,8 @@ export default function PrivacyPage() {
             Privacy Policy
           </h1>
           <div className="w-24 h-1 bg-amber-600 mx-auto rounded-full mb-6"></div>
-          <p className="text-stone-300 max-w-2xl mx-auto text-lg">
-            At Punnami Southern Residency, we respect your privacy and are committed to protecting the personal data you share with us.
+          <p className="text-stone-300 max-w-2xl mx-auto text-lg leading-relaxed">
+            At Punnami Southern Residency, we protect your personal information. This Privacy Policy details how Telangana Boat Tourism collects, uses, and secures your data.
           </p>
         </div>
       </div>
@@ -42,7 +42,7 @@ export default function PrivacyPage() {
               </div>
               <div className="pl-11">
                 <p className="text-base text-stone-600 bg-stone-50 p-6 rounded-2xl border border-stone-100">
-                  We collect your name, mobile number, email address, check-in dates, and payment transaction details to process your booking and notify you via SMS/Email.
+                  We collect your personal details (Full Name, Contact Number, Email Address), check-in and check-out dates, and guest passenger manifest details (Name, Age, Gender, and Aadhaar numbers if input during booking) for stay planning. We do not store full raw Aadhaar credentials or credit card numbers on our servers.
                 </p>
               </div>
             </section>
@@ -53,12 +53,28 @@ export default function PrivacyPage() {
                   <Lock className="h-4 w-4 text-amber-700" />
                 </div>
                 <h2 className="text-2xl font-bold text-stone-900 m-0" style={{ fontFamily: 'var(--font-cormorant), Georgia, serif' }}>
-                  2. Data Security
+                  2. Secure Processing & Third-Party Gateways
                 </h2>
               </div>
               <div className="pl-11">
                 <p className="text-base text-stone-600 bg-stone-50 p-6 rounded-2xl border border-stone-100">
-                  All verification records, payment transaction details, and guest logs are stored securely. We do not sell or share your phone numbers or personal records with third parties for marketing purposes.
+                  All monetary transactions are processed securely through the integrated <strong>PhonePe Payment Gateway Services</strong>. We do not inspect, capture, or store sensitive bank account credentials, UPI PINs, or card credentials. The gateway transmits success or failure states to verify bookings transactionally.
+                </p>
+              </div>
+            </section>
+
+            <section>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                  <EyeOff className="h-4 w-4 text-amber-700" />
+                </div>
+                <h2 className="text-2xl font-bold text-stone-900 m-0" style={{ fontFamily: 'var(--font-cormorant), Georgia, serif' }}>
+                  3. Information Disclosure & Marketing
+                </h2>
+              </div>
+              <div className="pl-11">
+                <p className="text-base text-stone-600 bg-stone-50 p-6 rounded-2xl border border-stone-100">
+                  <strong>Telangana Boat Tourism</strong> is committed to keeping your information confidential. We do not sell, rent, trade, or distribute your email addresses, phone numbers, or stay histories with third parties for promotional or marketing campaigns. Data is strictly utilized for booking, invoicing, check-in validation, and compliance with local law enforcement guidelines.
                 </p>
               </div>
             </section>

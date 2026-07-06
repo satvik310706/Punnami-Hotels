@@ -77,7 +77,7 @@ export default function AgentBookingsPage() {
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
           <input 
             type="text" 
-            placeholder="Search by Voucher ID, guest name, phone..."
+            placeholder="Search by Booking ID, guest name, phone..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full rounded-xl border border-stone-200 bg-white pl-11 pr-4 py-3 text-sm outline-none focus:border-amber-500 transition-all shadow-sm"
@@ -106,7 +106,7 @@ export default function AgentBookingsPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-stone-100 bg-stone-50/50 text-xs font-bold text-stone-400 uppercase tracking-wider">
-                <th className="px-6 py-4">Voucher ID</th>
+                <th className="px-6 py-4">Booking ID</th>
                 <th className="px-6 py-4">Guest Info</th>
                 <th className="px-6 py-4">Stay Details</th>
                 <th className="px-6 py-4">Price paid (Net)</th>

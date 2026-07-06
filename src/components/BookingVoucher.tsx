@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Ticket, Calendar, Phone, Mail, User, ShieldCheck, MapPin, Printer, ArrowLeft, Home, Sparkles, Users, AlertTriangle, CalendarClock, MessageSquare, RefreshCw, X, XCircle } from 'lucide-react';
+import { Ticket, Calendar, Phone, Mail, User, ShieldCheck, MapPin, Printer, ArrowLeft, Home, Sparkles, Users, AlertTriangle, CalendarClock, MessageSquare, RefreshCw, X, XCircle, CreditCard, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatCurrency } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
@@ -30,6 +30,10 @@ interface BookingVoucherProps {
     refundAmount?: number;
     postponeReason?: string;
     postponeNewDate?: string;
+    originalCheckInDate?: string | null;
+    originalCheckOutDate?: string | null;
+    paidAmount?: number;
+    paymentPercentage?: number;
     passengers?: {
       fullName: string;
       age: number;
@@ -64,7 +68,34 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
   const [postponeDate, setPostponeDate] = useState('');
   
   const [submitting, setSubmitting] = useState(false);
+  const [payingBalance, setPayingBalance] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  const handlePayBalance = async () => {
+    setPayingBalance(true);
+    setErrorMsg('');
+    try {
+      const res = await fetch('/api/v1/payment/initiate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId: booking.publicId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorMsg(data.error || 'Failed to initiate payment. Please try again.');
+        return;
+      }
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setErrorMsg('Failed to initiate payment.');
+      }
+    } catch {
+      setErrorMsg('Failed to connect to payment gateway. Please check connection.');
+    } finally {
+      setPayingBalance(false);
+    }
+  };
 
   const handleCancelSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -219,7 +250,7 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
             <div>
               <div className="flex items-center gap-1.5 text-amber-700 font-black tracking-widest text-[10px] uppercase mb-0.5">
                 <Sparkles className="h-3 w-3 text-amber-600 fill-amber-600" />
-                <span>Official Hotel Stay Voucher</span>
+                <span>Official Hotel Stay Ticket</span>
               </div>
               <h1 className="text-2xl font-black text-stone-900 tracking-tight leading-tight" style={{ fontFamily: 'Georgia, serif' }}>
                 {booking.roomType.hotel.name}
@@ -231,10 +262,15 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
             </div>
           </div>
           <div className="flex flex-col items-start sm:items-end gap-1.5 shrink-0 self-stretch sm:self-auto border-t sm:border-t-0 pt-4 sm:pt-0 border-stone-150">
-            <span className="text-[10px] font-black uppercase tracking-widest text-stone-400">Voucher Status</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-stone-400">Booking Status</span>
             {booking.status === 'CONFIRMED' && (
               <span className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full px-3.5 py-1.5 text-xs font-black uppercase tracking-wider shadow-sm">
                 <ShieldCheck className="h-4 w-4 fill-emerald-100" /> Confirmed
+              </span>
+            )}
+            {booking.status === 'PARTIAL_PAID' && (
+              <span className="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-700 rounded-full px-3.5 py-1.5 text-xs font-black uppercase tracking-wider shadow-sm">
+                <ShieldCheck className="h-4 w-4 fill-amber-100" /> Partially Paid
               </span>
             )}
             {booking.status === 'CANCEL_REQUESTED' && (
@@ -293,7 +329,17 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
             </div>
             <div>
               <p className="text-[10px] font-black uppercase tracking-wider text-stone-400 mb-0.5">Check-In Date</p>
-              <h4 className="font-black text-stone-800 text-lg leading-tight">{checkInDateFormatted}</h4>
+              {booking.status === 'POSTPONED' && booking.originalCheckInDate ? (
+                <>
+                  <p className="text-stone-400 line-through text-sm font-semibold">
+                    {format(new Date(booking.originalCheckInDate), 'dd MMMM yyyy')}
+                  </p>
+                  <h4 className="font-black text-amber-700 text-lg leading-tight">{checkInDateFormatted}</h4>
+                  <p className="text-[10px] font-bold text-amber-600 mt-0.5">↑ Rescheduled Date</p>
+                </>
+              ) : (
+                <h4 className="font-black text-stone-800 text-lg leading-tight">{checkInDateFormatted}</h4>
+              )}
               <p className="text-stone-500 text-xs mt-1 font-semibold">Standard Check-In Time: {booking.roomType.hotel.checkInTime || '12:00 PM'}</p>
             </div>
           </div>
@@ -304,7 +350,17 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
             </div>
             <div>
               <p className="text-[10px] font-black uppercase tracking-wider text-stone-400 mb-0.5">Check-Out Date</p>
-              <h4 className="font-black text-stone-800 text-lg leading-tight">{checkOutDateFormatted}</h4>
+              {booking.status === 'POSTPONED' && booking.originalCheckOutDate ? (
+                <>
+                  <p className="text-stone-400 line-through text-sm font-semibold">
+                    {format(new Date(booking.originalCheckOutDate), 'dd MMMM yyyy')}
+                  </p>
+                  <h4 className="font-black text-amber-700 text-lg leading-tight">{checkOutDateFormatted}</h4>
+                  <p className="text-[10px] font-bold text-amber-600 mt-0.5">↑ Rescheduled Date</p>
+                </>
+              ) : (
+                <h4 className="font-black text-stone-800 text-lg leading-tight">{checkOutDateFormatted}</h4>
+              )}
               <p className="text-stone-500 text-xs mt-1 font-semibold">Standard Check-Out Time: {booking.roomType.hotel.checkOutTime || '11:00 AM'}</p>
             </div>
           </div>
@@ -354,7 +410,7 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
 
           {/* Pricing & Ledger */}
           <div className="space-y-6 print-card">
-            <h3 className="text-xs font-black uppercase tracking-widest text-stone-450 border-b border-stone-150 pb-2">Voucher Financial Summary</h3>
+            <h3 className="text-xs font-black uppercase tracking-widest text-stone-450 border-b border-stone-150 pb-2">Booking Payment Summary</h3>
             <div className="space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-stone-500 font-semibold">Room Tariff Base Total</span>
@@ -385,7 +441,19 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
                 </div>
               )}
 
-              {['CONFIRMED', 'CANCEL_REQUESTED', 'POSTPONE_REQUESTED'].includes(booking.status) && (
+              {booking.status === 'PARTIAL_PAID' && (
+                <div className="bg-amber-50/50 border border-amber-200 rounded-xl p-3.5 text-center mt-4 space-y-1">
+                  <p className="text-[10px] text-amber-700 font-black uppercase tracking-wider">Payment Status: PARTIALLY PAID</p>
+                  <p className="text-[11px] text-stone-750 font-bold">
+                    Paid Advance: {formatCurrency(booking.paidAmount ?? 0)} ({booking.paymentPercentage}% of Total)
+                  </p>
+                  <p className="text-[11px] text-amber-950 font-extrabold bg-amber-100/50 py-1 rounded-lg">
+                    Due at Check-In: {formatCurrency(booking.totalAmount - (booking.paidAmount ?? 0))}
+                  </p>
+                </div>
+              )}
+
+              {['CONFIRMED', 'CANCEL_REQUESTED', 'POSTPONE_REQUESTED'].includes(booking.status) && booking.status !== 'PARTIAL_PAID' && (
                 <div className="bg-emerald-50/50 border border-emerald-200 rounded-xl p-3.5 text-center mt-4">
                   <p className="text-[10px] text-emerald-700 font-black uppercase tracking-wider">Payment Status: PAID IN FULL</p>
                   <p className="text-[9px] text-emerald-600 mt-0.5 font-medium">Verified through PhonePe gateway transaction check.</p>
@@ -466,15 +534,36 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
         )}
 
         {/* Stays Cancellation / Modification Actions Section - Hidden during print */}
-        {['CONFIRMED', 'CANCEL_REQUESTED', 'POSTPONE_REQUESTED'].includes(booking.status) && (
+        {['CONFIRMED', 'PARTIAL_PAID', 'CANCEL_REQUESTED', 'POSTPONE_REQUESTED'].includes(booking.status) && (
           <div className="p-8 border-b border-stone-150 bg-stone-50/30 print:hidden">
             <h3 className="text-xs font-black uppercase tracking-widest text-stone-450 border-b border-stone-150 pb-2 mb-4 flex items-center gap-2">
               <CalendarClock className="h-4.5 w-4.5 text-stone-450" />
               <span>Modify Stay or Request Cancellation</span>
             </h3>
             
-            {booking.status === 'CONFIRMED' ? (
-              <div className="flex flex-col sm:flex-row gap-4">
+            {['CONFIRMED', 'PARTIAL_PAID'].includes(booking.status) ? (
+              <div className="flex flex-col gap-4">
+                {booking.status === 'PARTIAL_PAID' && (
+                  <button
+                    onClick={handlePayBalance}
+                    disabled={payingBalance}
+                    className="w-full bg-amber-600 hover:bg-amber-700 disabled:bg-stone-300 disabled:cursor-not-allowed text-white font-black rounded-2xl py-4 text-sm transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
+                  >
+                    {payingBalance ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin text-white" />
+                        <span>Redirecting to PhonePe PG...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="h-4.5 w-4.5" />
+                        <span>Pay Remaining Balance Online (₹{(booking.totalAmount - (booking.paidAmount || 0)).toLocaleString('en-IN')})</span>
+                      </>
+                    )}
+                  </button>
+                )}
+                
+                <div className="flex flex-col sm:flex-row gap-4">
                 <button
                   onClick={() => setShowCancelModal(true)}
                   className="flex-1 bg-white hover:bg-red-50 text-red-700 hover:text-red-850 border-2 border-red-200 hover:border-red-300 font-extrabold text-sm px-6 py-3.5 rounded-2xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
@@ -490,7 +579,8 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
                   <span>Reschedule Booking (Postpone)</span>
                 </button>
               </div>
-            ) : (
+            </div>
+          ) : (
               <div className="bg-amber-50/50 border border-amber-200 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div>
                   <p className="font-extrabold text-stone-900 text-sm">
@@ -529,7 +619,7 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
               </div>
               <form onSubmit={handleCancelSubmit} className="p-6 space-y-4">
                 <p className="text-xs text-stone-500 leading-relaxed bg-stone-50 border border-stone-200 p-3.5 rounded-xl font-medium">
-                  <strong>Cancellation Policy:</strong> Cancellations made 24 hours or more before check-in are eligible for a 100% refund. Cancellations within 24 hours are non-refundable.
+                  <strong>Cancellation Policy:</strong> Cancellations must be requested 4 days or more before check-in. Room bookings are non-refundable (cancellation incurs a 100% charge).
                 </p>
 
                 <div>
@@ -583,7 +673,7 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
               </div>
               <form onSubmit={handlePostponeSubmit} className="p-6 space-y-4">
                 <p className="text-xs text-stone-500 leading-relaxed bg-stone-50 border border-stone-200 p-3.5 rounded-xl font-medium">
-                  <strong>Reschedule Policy:</strong> Postponement requests must be submitted 24 hours or more before check-in. Subject to room availability on proposed dates.
+                  <strong>Reschedule Policy:</strong> Postponement requests must be submitted 7 days or more before check-in. Subject to room availability on proposed dates.
                 </p>
 
                 <div>
@@ -651,14 +741,14 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
             <li><strong>Photo Identification:</strong> A valid physical photo ID (Aadhar Card, Passport, Driving License or Voter ID) must be presented by all adult guests at the time of check-in.</li>
             <li><strong>Occupancy Limits:</strong> Check-in is capped based on the standard capacity of the room (max {booking.roomType.maxAdults} adults and {booking.roomType.maxChildren} children per room category).</li>
             <li><strong>Check-in & Check-out:</strong> Standard Check-In is at 12:00 PM. Check-Out is at 11:00 AM. Early check-in or late check-out is subject to availability and may incur custom hotel charges.</li>
-            <li><strong>Boarding Ticket Voucher:</strong> Please carry a digital copy or printed slip of this hotel ticket voucher to present to check-in reception staff.</li>
+            <li><strong>Hotel Booking Ticket:</strong> Please carry a digital copy or printed slip of this hotel stay ticket to present to check-in reception staff.</li>
           </ul>
         </div>
 
         {/* Voucher Footer */}
         <div className="bg-stone-900 text-stone-400 p-6 text-center text-xs border-t border-stone-800 print-card">
           <p className="font-bold text-stone-300">Thank you for choosing Punnami Southern Residency Bhadrachalam</p>
-          <p className="text-[10px] mt-1 text-stone-500">For support, call us or email support@punnamihotels.com. This is an officially generated digital hotel voucher.</p>
+          <p className="text-[10px] mt-1 text-stone-500">For support, call us or email support@punnamihotels.com. This is an officially generated digital hotel booking ticket.</p>
         </div>
 
       </div>

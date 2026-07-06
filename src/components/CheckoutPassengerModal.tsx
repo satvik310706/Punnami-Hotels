@@ -51,12 +51,13 @@ export interface PassengerInput {
 interface CheckoutPassengerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (passengers: PassengerInput[], quickBooking: boolean) => Promise<void>;
+  onSubmit: (passengers: PassengerInput[], quickBooking: boolean, paymentPercentage: number) => Promise<void>;
   adults: number;
   children: number;
   isProcessing: boolean;
   guestName?: string;
   guestPhone?: string;
+  totalAmount?: number;
 }
 
 export default function CheckoutPassengerModal({
@@ -68,11 +69,15 @@ export default function CheckoutPassengerModal({
   isProcessing,
   guestName = '',
   guestPhone = '',
+  totalAmount,
 }: CheckoutPassengerModalProps) {
   const totalGuests = adults + childrenCount;
 
   const [passengers, setPassengers] = useState<PassengerInput[]>([]);
   const [passengerMode, setPassengerMode] = useState<'full' | 'quick'>('full');
+  const [paymentPercentage, setPaymentPercentage] = useState<number>(100);
+  const [paymentOption, setPaymentOption] = useState<'FULL' | 'CUSTOM'>('FULL');
+  const [customPayAmount, setCustomPayAmount] = useState<string>('');
   const [quickPassenger, setQuickPassenger] = useState<PassengerInput>({
     fullName: '',
     age: '',
@@ -86,29 +91,35 @@ export default function CheckoutPassengerModal({
 
   useEffect(() => {
     if (isOpen) {
-      // Set initial guest passenger entries with pre-filled lead guest info
+      // Set initial guest passenger entries empty (no auto-prefill)
       const initial: PassengerInput[] = Array.from({ length: totalGuests }).map((_, i) => ({
-        fullName: i === 0 ? guestName : '',
+        fullName: '',
         age: '',
         gender: '',
-        phone: i === 0 ? guestPhone : '',
+        phone: '',
         aadhaar: '',
         isPrimary: i === 0,
       }));
       setPassengers(initial);
       setPassengerMode('full');
       setQuickPassenger({
-        fullName: guestName,
+        fullName: '',
         age: '',
         gender: '',
-        phone: guestPhone,
+        phone: '',
         aadhaar: '',
         isPrimary: true,
       });
       setAgreedToTerms(false);
       setAgreedToConsent(false);
+
+      if (totalAmount !== undefined) {
+        setCustomPayAmount(String(Math.round(totalAmount * 0.35)));
+        setPaymentPercentage(100);
+        setPaymentOption('FULL');
+      }
     }
-  }, [isOpen, totalGuests, guestName, guestPhone]);
+  }, [isOpen, totalGuests, totalAmount]);
 
   if (!isOpen) return null;
 
@@ -118,9 +129,23 @@ export default function CheckoutPassengerModal({
     setPassengers(newPassengers);
   };
 
+  const minAmount = totalAmount ? Math.round(totalAmount * 0.35) : 0;
+  const currentCustomVal = Number(customPayAmount) || 0;
+  const calculatedPercentage = (totalAmount && totalAmount > 0)
+    ? Number(((currentCustomVal / totalAmount) * 100).toFixed(2))
+    : 100;
+  const customError = (totalAmount !== undefined) && (
+    currentCustomVal < minAmount
+      ? `Minimum payment is ₹${minAmount.toLocaleString('en-IN')} (35% of total)`
+      : currentCustomVal > totalAmount
+      ? `Amount cannot exceed total booking price of ₹${totalAmount.toLocaleString('en-IN')}`
+      : null
+  );
+  const finalPercentage = paymentOption === 'FULL' ? 100 : calculatedPercentage;
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!agreedToTerms || !agreedToConsent) return;
+    if (!agreedToTerms || !agreedToConsent || (paymentOption === 'CUSTOM' && customError)) return;
 
     if (passengerMode === 'quick') {
       const payload: PassengerInput[] = [
@@ -152,15 +177,16 @@ export default function CheckoutPassengerModal({
           isPrimary: false,
         });
       }
-      await onSubmit(payload, true);
+      await onSubmit(payload, true, finalPercentage);
     } else {
-      await onSubmit(passengers, false);
+      await onSubmit(passengers, false, finalPercentage);
     }
   };
 
   // Check if form is valid to proceed
   const isFormValid = () => {
     if (!agreedToTerms || !agreedToConsent) return false;
+    if (paymentOption === 'CUSTOM' && customError) return false;
 
     if (passengerMode === 'quick') {
       const nameOk = quickPassenger.fullName.trim() !== '';
@@ -452,6 +478,77 @@ export default function CheckoutPassengerModal({
               </div>
             )}
           </form>
+
+           {/* Payment Percentage Selector */}
+          {totalAmount !== undefined && (
+            <div className="bg-stone-50 border border-stone-200 rounded-xl p-4 space-y-4">
+              <h4 className="text-xs font-black text-stone-700 uppercase tracking-wider">
+                Select Payment Option
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPaymentOption('FULL')}
+                  className={`flex items-center justify-between p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer ${
+                    paymentOption === 'FULL'
+                      ? 'border-amber-500 bg-amber-50/30'
+                      : 'border-stone-200 bg-white hover:border-amber-300'
+                  }`}
+                >
+                  <div>
+                    <p className="text-xs font-extrabold text-stone-900">Pay Full Amount</p>
+                    <p className="text-[10px] text-stone-500 mt-0.5">Instant booking confirmation</p>
+                  </div>
+                  <span className="text-sm font-black text-amber-700">₹{totalAmount.toLocaleString('en-IN')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentOption('CUSTOM')}
+                  className={`flex items-center justify-between p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer ${
+                    paymentOption === 'CUSTOM'
+                      ? 'border-amber-500 bg-amber-50/30'
+                      : 'border-stone-200 bg-white hover:border-amber-300'
+                  }`}
+                >
+                  <div>
+                    <p className="text-xs font-extrabold text-stone-900">Pay Custom Advance</p>
+                    <p className="text-[10px] text-stone-550 mt-0.5">Pay remaining online or at check-in</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-sm font-black text-amber-700 block">
+                      Min: ₹{minAmount.toLocaleString('en-IN')}
+                    </span>
+                    <span className="text-[9px] font-bold text-stone-400">Advance (35%+)</span>
+                  </div>
+                </button>
+              </div>
+
+              {paymentOption === 'CUSTOM' && (
+                <div className="space-y-2 pt-2 border-t border-stone-200 animate-in fade-in duration-200">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <label className="text-xs font-bold text-stone-600">Enter Advance Amount (₹)</label>
+                    {customError ? (
+                      <span className="text-[10px] font-bold text-red-650">{customError}</span>
+                    ) : (
+                      <span className="text-[10px] font-bold text-teal-650 bg-teal-50 px-2 py-0.5 rounded border border-teal-200/50">
+                        Paying {calculatedPercentage.toFixed(2)}% of total
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative rounded-xl border-2 border-stone-200 bg-white px-3 py-2.5 focus-within:border-amber-500 transition-colors">
+                    <span className="absolute left-3 top-2.5 text-stone-400 font-bold text-sm">₹</span>
+                    <input
+                      type="number"
+                      value={customPayAmount}
+                      onChange={(e) => setCustomPayAmount(e.target.value)}
+                      className="w-full bg-transparent pl-4 pr-2 text-sm font-bold text-stone-850 outline-none"
+                      placeholder={`Min ${minAmount}`}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Consents & Checklist */}
           <div className="bg-amber-50/50 border border-amber-200 rounded-xl p-4 space-y-3">

@@ -129,7 +129,7 @@ export default function MyBookings() {
             <Ticket className="h-8 w-8 text-amber-500" />
           </div>
           <h1 className="text-4xl md:text-5xl font-black text-white mb-4" style={{ fontFamily: 'var(--font-cormorant), Georgia, serif' }}>
-            My Hotel Vouchers
+            My Bookings
           </h1>
           <div className="w-24 h-1 bg-amber-600 mx-auto rounded-full mb-6"></div>
           <p className="text-stone-300 max-w-2xl mx-auto text-lg">
@@ -265,7 +265,7 @@ export default function MyBookings() {
                           onClick={() => router.push(`/booking/${booking.publicId}`)}
                           className="flex items-center gap-1 text-xs font-bold text-amber-600 hover:text-amber-800 transition-colors cursor-pointer group/btn"
                         >
-                          View Voucher <ArrowRight className="h-3 w-3 group-hover/btn:translate-x-1 transition-transform" />
+                          View Ticket <ArrowRight className="h-3 w-3 group-hover/btn:translate-x-1 transition-transform" />
                         </button>
                       </div>
                     </div>

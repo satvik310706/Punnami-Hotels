@@ -117,9 +117,7 @@ export default function RootLayout({
         className={`${inter.variable} ${cormorant.variable} antialiased min-h-screen flex flex-col bg-stone-50 text-stone-900`}
         style={{ fontFamily: "var(--font-inter), sans-serif" }}
       >
-        <div className="print:hidden">
-          <Navbar />
-        </div>
+        <Navbar />
         <main className="flex-1">{children}</main>
         <div className="print:hidden">
           <Footer />

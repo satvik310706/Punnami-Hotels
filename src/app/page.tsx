@@ -258,7 +258,7 @@ export default async function HomePage() {
             {[
               { step: '01', title: 'Choose Your Room', desc: 'Browse our rooms, check availability for your dates, and select the perfect room for your stay.' },
               { step: '02', title: 'Pay Online Securely', desc: 'Complete your booking using the integrated PhonePe Payment Gateway via UPI, cards, or net banking.' },
-              { step: '03', title: 'Instant Confirmation', desc: 'Your stay voucher is generated immediately with your payment details and transaction ID.' },
+              { step: '03', title: 'Instant Confirmation', desc: 'Your stay ticket is generated immediately with your payment details and transaction ID.' },
             ].map(({ step, title, desc }, idx) => (
               <ScrollReveal key={step} delay={idx * 200} className="text-center relative">
                 <div className="w-16 h-16 bg-amber-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-black shadow-lg shadow-amber-600/20">

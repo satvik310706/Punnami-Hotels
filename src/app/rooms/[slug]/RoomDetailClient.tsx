@@ -60,6 +60,9 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
   const [showGallery, setShowGallery] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [showOTP, setShowOTP] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginPhone, setLoginPhone] = useState('');
+  const [loginError, setLoginError] = useState('');
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState('');
   const [guestName, setGuestName] = useState('');
@@ -374,7 +377,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
     return { subtotal, gst, total, nights: breakdown.length, breakdown, agentDiscount };
   }, [checkIn, checkOut, rooms, room.weekdayPrice, room.weekendPrice, agentProfile, availability, selectedSlotIndex, slots]);
 
-  const executeCheckout = async (passengersList?: any[], quickBookingVal?: boolean) => {
+  const executeCheckout = async (passengersList?: any[], quickBookingVal?: boolean, paymentPercentage?: number) => {
     setBookingLoading(true);
     try {
       const slot = slots[selectedSlotIndex] || slots[0];
@@ -396,6 +399,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
           passengers: passengersList,
           quickBooking: quickBookingVal,
           isAdmin,
+          paymentPercentage,
         }),
       });
       const data = await res.json();
@@ -411,28 +415,45 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
     }
   };
 
-  const handleBookNow = async () => {
-    if (!guestName.trim() || !guestPhone.trim()) {
-      setBookingError('Please enter your name and phone number');
+  const handleBookingClick = () => {
+    if (nights <= 0) return;
+    if (!isAdmin && !isUserLoggedIn) {
+      setLoginPhone('');
+      setLoginError('');
+      setShowLoginModal(true);
       return;
     }
-    if (guestPhone.replace(/\D/g, '').length !== 10) {
-      setBookingError('Please enter a valid 10-digit phone number');
+    setIsMobileDrawerOpen(false);
+    setShowPassengerModal(true);
+  };
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanPhone = loginPhone.replace(/\D/g, '');
+    if (cleanPhone.length !== 10) {
+      setLoginError('Please enter a valid 10-digit phone number');
       return;
     }
-    setBookingError('');
-
-    const normalizedInput = guestPhone.replace(/\D/g, '').slice(-10);
-    const sessionPhone = localStorage.getItem('punnami_user_phone') || '';
-    const normalizedSession = sessionPhone.replace(/\D/g, '').slice(-10);
-
-    const isSessionMatched = isUserLoggedIn && normalizedInput === normalizedSession;
-
-    if (isAdmin || isSessionMatched) {
-      setIsMobileDrawerOpen(false);
-      setShowPassengerModal(true);
-    } else {
+    setLoginError('');
+    setBookingLoading(true);
+    try {
+      const res = await fetch('/api/v1/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: cleanPhone }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setLoginError(data.error || 'Failed to send OTP');
+        return;
+      }
+      setGuestPhone(cleanPhone);
+      setShowLoginModal(false);
       setShowOTP(true);
+    } catch {
+      setLoginError('Failed to send OTP. Please try again.');
+    } finally {
+      setBookingLoading(false);
     }
   };
 
@@ -441,12 +462,25 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
     setIsMobileDrawerOpen(false);
     localStorage.setItem('punnami_user_phone', guestPhone);
     setIsUserLoggedIn(true);
+
+    try {
+      const userRes = await fetch('/api/v1/auth/me');
+      if (userRes.ok) {
+        const data = await userRes.json();
+        if (data.authenticated && data.user) {
+          setGuestName(data.user.fullName || '');
+          setGuestPhone(data.user.phone || '');
+          setGuestEmail(data.user.email || '');
+        }
+      }
+    } catch {}
+
     setShowPassengerModal(true);
   };
 
-  const handlePassengerSubmit = async (passengersList: any[], quickVal: boolean) => {
+  const handlePassengerSubmit = async (passengersList: any[], quickVal: boolean, paymentPercentage: number) => {
     setShowPassengerModal(false);
-    await executeCheckout(passengersList, quickVal);
+    await executeCheckout(passengersList, quickVal, paymentPercentage);
   };
 
   const nights = pricing.nights;
@@ -585,40 +619,6 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
           </div>
         </div>
 
-      {/* Guest Details */}
-      <div className="space-y-2">
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-1.5">Your Name *</label>
-          <input
-            type="text"
-            value={guestName}
-            onChange={(e) => setGuestName(e.target.value)}
-            placeholder="Full Name"
-            className="w-full border-2 border-stone-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-amber-500 transition-colors font-bold text-stone-850"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-1.5">Mobile Number *</label>
-          <input
-            type="tel"
-            value={guestPhone}
-            onChange={(e) => setGuestPhone(e.target.value)}
-            placeholder="+91 9XXXXXXXXX"
-            className="w-full border-2 border-stone-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-amber-500 transition-colors font-bold text-stone-850"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-1.5">Email (optional)</label>
-          <input
-            type="email"
-            value={guestEmail}
-            onChange={(e) => setGuestEmail(e.target.value)}
-            placeholder="email@example.com"
-            className="w-full border-2 border-stone-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-amber-500 transition-colors font-bold text-stone-850"
-          />
-        </div>
-      </div>
-
       {/* Price Breakdown */}
       {nights > 0 && (
         <div className="bg-stone-50 rounded-xl p-4 space-y-2">
@@ -651,11 +651,15 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
 
       {/* Book Button */}
       <button
-        onClick={handleBookNow}
+        onClick={handleBookingClick}
         disabled={bookingLoading || nights <= 0}
         className="w-full bg-amber-600 hover:bg-amber-700 disabled:bg-stone-300 disabled:cursor-not-allowed text-white font-black rounded-xl py-3.5 text-sm transition-colors shadow-lg hover:shadow-amber-600/30 cursor-pointer"
       >
-        {bookingLoading ? 'Processing...' : `Book Now – ${formatCurrency(pricing.total)}`}
+        {bookingLoading
+          ? 'Processing...'
+          : !isUserLoggedIn && !isAdmin
+          ? 'Login to Book'
+          : `Book Now – ${formatCurrency(pricing.total)}`}
       </button>
 
       <p className="text-center text-[10px] text-stone-400 font-bold uppercase tracking-wider">
@@ -958,6 +962,60 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
         </div>
       )}
 
+      {/* Login Modal */}
+      {showLoginModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden border border-stone-200">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-stone-100 bg-stone-50">
+              <div>
+                <h2 className="font-bold text-stone-900 text-lg">Login to Book Stay</h2>
+                <p className="text-xs text-stone-500 mt-0.5">Please verify your mobile number to continue</p>
+              </div>
+              <button 
+                onClick={() => setShowLoginModal(false)} 
+                className="p-2 hover:bg-stone-200 rounded-xl transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5 text-stone-500" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleLoginSubmit} className="p-6 space-y-4">
+              <div className="space-y-1">
+                <label className="block text-xs font-bold uppercase tracking-wider text-stone-500">
+                  Mobile Number *
+                </label>
+                <input
+                  type="tel"
+                  required
+                  maxLength={10}
+                  placeholder="10-digit mobile number"
+                  value={loginPhone}
+                  onChange={(e) => setLoginPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  className="w-full border-2 border-stone-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-amber-500 transition-colors font-bold text-stone-850"
+                  disabled={bookingLoading}
+                />
+              </div>
+
+              {loginError && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-750 font-bold text-center">
+                  {loginError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loginPhone.length !== 10 || bookingLoading}
+                className="w-full bg-amber-600 hover:bg-amber-700 disabled:bg-stone-300 disabled:cursor-not-allowed text-white font-black rounded-xl py-3.5 text-sm transition-colors cursor-pointer"
+              >
+                {bookingLoading ? 'Sending...' : 'Send OTP'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* OTP Modal */}
       {showOTP && (
         <OTPModal
@@ -977,6 +1035,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
         isProcessing={bookingLoading}
         guestName={guestName}
         guestPhone={guestPhone}
+        totalAmount={pricing.total}
       />
 
       {/* Checkout Pending Check Modal */}

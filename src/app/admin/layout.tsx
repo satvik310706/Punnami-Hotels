@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { 
-  KeyRound, LayoutDashboard, Sliders, LogOut, Bed, Calendar, Users, Menu, X 
+  KeyRound, LayoutDashboard, Sliders, LogOut, Bed, Calendar, Users, Menu, X, AlertTriangle 
 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -23,30 +23,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         const res = await fetch('/api/v1/auth/admin/me');
         if (res.ok) {
           const data = await res.json();
-          if (data.authenticated) {
-            setIsAuthenticated(true);
-            localStorage.setItem('punnami_admin_auth', 'true');
-          } else {
-            handleFailedAuth();
-          }
+          setIsAuthenticated(true);
         } else {
-          handleFailedAuth();
+          router.push('/admin/login');
         }
       } catch {
-        handleFailedAuth();
+        router.push('/admin/login');
       } finally {
         setCheckingAuth(false);
       }
     };
-
-    const handleFailedAuth = () => {
-      setIsAuthenticated(false);
-      localStorage.removeItem('punnami_admin_auth');
-      if (!isLoginPage) {
-        router.push('/admin/login');
-      }
-    };
-
     verifySession();
   }, [pathname, isLoginPage, router]);
 
@@ -89,6 +75,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/rooms', label: 'Room Categories', icon: Bed },
     { href: '/admin/inventory', label: 'Inventory Grid', icon: Sliders },
     { href: '/admin/bookings', label: 'Bookings', icon: Calendar },
+    { href: '/admin/cancellations', label: 'Cancellations', icon: AlertTriangle },
+    { href: '/admin/postpones', label: 'Postponements', icon: Calendar },
     { href: '/admin/agents', label: 'Travel Agents', icon: Users },
   ];
 
@@ -179,7 +167,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Page viewport */}
-      <main className="flex-1 overflow-x-hidden min-h-[calc(100vh-64px)] md:min-h-screen relative z-10 bg-stone-50">
+      <main className="flex-1 overflow-x-hidden min-h-[calc(100vh-64px)] md:min-h-screen relative bg-stone-50">
         {children}
       </main>
     </div>

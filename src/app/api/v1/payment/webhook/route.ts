@@ -96,13 +96,36 @@ export async function POST(req: NextRequest) {
         const currentBooking = lockedBookings[0];
 
         if (currentBooking && currentBooking.status !== 'CONFIRMED') {
-          await tx.booking.update({
-            where: { id: bookingId },
-            data: {
-              status: 'CONFIRMED',
-              transactionId: phonePeTransactionId
-            }
-          });
+          if (currentBooking.status === 'PARTIAL_PAID') {
+            const b = await tx.booking.findUnique({
+              where: { id: bookingId },
+              select: { totalAmount: true }
+            });
+            await tx.booking.update({
+              where: { id: bookingId },
+              data: {
+                status: 'CONFIRMED',
+                paymentPercentage: 100,
+                paidAmount: b?.totalAmount || 0,
+                transactionId: phonePeTransactionId
+              }
+            });
+          } else {
+            const b = await tx.booking.findUnique({
+              where: { id: bookingId },
+              select: { paymentPercentage: true }
+            });
+            const paymentPercentage = b?.paymentPercentage ? Number(b.paymentPercentage) : 100;
+            const targetStatus = paymentPercentage < 100 ? 'PARTIAL_PAID' : 'CONFIRMED';
+
+            await tx.booking.update({
+              where: { id: bookingId },
+              data: {
+                status: targetStatus,
+                transactionId: phonePeTransactionId
+              }
+            });
+          }
 
           await tx.payment.update({
             where: { merchantTransactionId },

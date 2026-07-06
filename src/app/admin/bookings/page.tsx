@@ -8,6 +8,7 @@ import {
 import { format } from 'date-fns';
 import InlineLoader from '@/components/InlineLoader';
 import { useModalStore } from '@/hooks/useModalStore';
+import AdminDatePicker from '@/components/AdminDatePicker';
 
 interface Booking {
   id: string;
@@ -26,6 +27,8 @@ interface Booking {
   discountAmount: number;
   gstAmount: number;
   totalAmount: number;
+  paidAmount?: number | null;
+  paymentPercentage?: number | null;
   paymentProofUrl: string | null;
   transactionId: string | null;
   status: string;
@@ -47,6 +50,8 @@ export default function AdminBookingsPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [showRescheduleInput, setShowRescheduleInput] = useState(false);
+  const [directPostponeDate, setDirectPostponeDate] = useState('');
 
   const fetchBookings = async () => {
     setLoading(true);
@@ -69,7 +74,7 @@ export default function AdminBookingsPage() {
 
   const handleAction = async (
     publicId: string, 
-    action: 'APPROVE' | 'REJECT' | 'APPROVE_CANCEL' | 'REJECT_CANCEL' | 'APPROVE_POSTPONE' | 'REJECT_POSTPONE'
+    action: 'APPROVE' | 'REJECT' | 'APPROVE_CANCEL' | 'REJECT_CANCEL' | 'APPROVE_POSTPONE' | 'REJECT_POSTPONE' | 'MARK_REFUNDED'
   ) => {
     let title = 'Process Action';
     let text = 'Are you sure you want to perform this action?';
@@ -78,7 +83,7 @@ export default function AdminBookingsPage() {
     if (action === 'APPROVE') {
       title = 'Approve Booking';
       text = 'Are you sure you want to APPROVE this booking?';
-      successMessage = 'Booking approved successfully.';
+      successMessage = 'Booking confirmed and approved successfully.';
     } else if (action === 'REJECT') {
       title = 'Reject Booking';
       text = 'Are you sure you want to REJECT this booking?';
@@ -99,6 +104,10 @@ export default function AdminBookingsPage() {
       title = 'Reject Reschedule';
       text = 'Are you sure you want to REJECT this reschedule request?';
       successMessage = 'Reschedule request rejected.';
+    } else if (action === 'MARK_REFUNDED') {
+      title = 'Mark as Refunded';
+      text = 'Are you sure you want to mark this booking as fully REFUNDED?';
+      successMessage = 'Booking marked as refunded.';
     }
 
     const confirmed = await showConfirm(title, text);
@@ -109,7 +118,7 @@ export default function AdminBookingsPage() {
       const res = await fetch(`/api/v1/admin/bookings/${publicId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action, postponeNewDate: directPostponeDate }),
       });
  
       if (res.ok) {
@@ -156,14 +165,14 @@ export default function AdminBookingsPage() {
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
           <input 
             type="text" 
-            placeholder="Search by Voucher ID, guest name, phone, or transaction ID..."
+            placeholder="Search by Booking ID, guest name, phone, or transaction ID..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full rounded-xl border border-stone-200 bg-white pl-11 pr-4 py-3 text-sm outline-none focus:border-amber-500 transition-all shadow-sm"
           />
         </div>
         <div className="flex flex-wrap gap-2">
-          {['', 'PENDING_PROOF', 'PENDING_CONFIRMATION', 'CONFIRMED', 'REJECTED'].map((status) => (
+          {['', 'PENDING_PROOF', 'PENDING_CONFIRMATION', 'CONFIRMED', 'PARTIAL_PAID', 'REJECTED'].map((status) => (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
@@ -185,12 +194,11 @@ export default function AdminBookingsPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-stone-100 bg-stone-50/50 text-xs font-bold text-stone-400 uppercase tracking-wider">
-                <th className="px-6 py-4">Voucher ID</th>
+                <th className="px-6 py-4">Booking ID</th>
                 <th className="px-6 py-4">Guest Info</th>
                 <th className="px-6 py-4">Stay / Variant</th>
                 <th className="px-6 py-4">Amount</th>
                 <th className="px-6 py-4">Payment Status</th>
-                <th className="px-6 py-4">Proof</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -238,6 +246,8 @@ export default function AdminBookingsPage() {
                       <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
                         b.status === 'CONFIRMED'
                           ? 'bg-green-50 text-green-700 border border-green-200'
+                          : b.status === 'PARTIAL_PAID'
+                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
                           : b.status === 'PENDING_CONFIRMATION'
                           ? 'bg-amber-50 text-amber-700 border border-amber-200'
                           : b.status === 'PENDING_PROOF'
@@ -256,6 +266,8 @@ export default function AdminBookingsPage() {
                       }`}>
                         {b.status === 'CONFIRMED' ? (
                           <><CheckCircle className="h-3 w-3" /> Confirmed</>
+                        ) : b.status === 'PARTIAL_PAID' ? (
+                          <><CheckCircle className="h-3 w-3" /> Partially Paid</>
                         ) : b.status === 'PENDING_CONFIRMATION' ? (
                           <><Clock className="h-3 w-3 animate-spin" /> Verifying</>
                         ) : b.status === 'PENDING_PROOF' ? (
@@ -275,28 +287,18 @@ export default function AdminBookingsPage() {
                         )}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      {b.paymentProofUrl ? (
-                        <span className="text-[10px] font-bold text-green-600 uppercase tracking-widest flex items-center gap-1">
-                          <CheckCircle className="h-3 w-3 inline" /> Available
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest flex items-center gap-1">
-                          <XCircle className="h-3 w-3 inline" /> Missing
-                        </span>
-                      )}
-                    </td>
+
                     <td className="px-6 py-4 text-right">
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
-                          window.open(`/booking/${b.publicId}`, '_blank');
+                          setSelectedBooking(b);
                         }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors border border-amber-200"
-                        title="View Public Ticket"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-stone-750 bg-white hover:bg-stone-50 rounded-lg transition-colors border border-stone-200 cursor-pointer shadow-sm active:scale-95"
+                        title="Review stay details"
                       >
-                        <Eye className="h-3.5 w-3.5" />
-                        Ticket
+                        <Eye className="h-3.5 w-3.5 text-stone-500" />
+                        <span>Manage</span>
                       </button>
                     </td>
                   </tr>
@@ -326,9 +328,8 @@ export default function AdminBookingsPage() {
             </div>
 
             {/* Scrollable Body */}
-            <div className="p-6 overflow-y-auto space-y-6 flex-1">
-              {/* Info grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 text-stone-800">
+              <div className="grid grid-cols-1 gap-6">
                 <div className="space-y-4">
                   <div>
                     <h4 className="text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-2">Guest Details</h4>
@@ -360,33 +361,24 @@ export default function AdminBookingsPage() {
                       <div className="flex justify-between text-stone-900 border-t border-stone-250 pt-2 font-bold text-sm">
                         <span>Total Price:</span><span className="text-amber-700">₹{selectedBooking.totalAmount.toLocaleString('en-IN')}</span>
                       </div>
+                      {selectedBooking.paymentPercentage && selectedBooking.paymentPercentage < 100 && (
+                        <>
+                          <div className="flex justify-between text-stone-500 border-t border-stone-200/60 pt-1.5">
+                            <span>Paid Advance ({selectedBooking.paymentPercentage}%):</span>
+                            <span className="text-emerald-700 font-bold">₹{selectedBooking.paidAmount?.toLocaleString('en-IN')}</span>
+                          </div>
+                          <div className="flex justify-between text-stone-900 font-extrabold bg-amber-50 p-1.5 rounded-lg mt-1 text-[11px]">
+                            <span>Due at Check-In:</span>
+                            <span className="text-amber-700">₹{(selectedBooking.totalAmount - (selectedBooking.paidAmount ?? 0)).toLocaleString('en-IN')}</span>
+                          </div>
+                        </>
+                      )}
                       {selectedBooking.transactionId && (
                         <div className="mt-2 text-stone-600 border-t border-stone-200 pt-2">
-                          Transaction ID: <span className="font-black text-stone-900">{selectedBooking.transactionId}</span>
+                          Gateway Transaction ID: <span className="font-black text-stone-900">{selectedBooking.transactionId}</span>
                         </div>
                       )}
                     </div>
-                  </div>
-                </div>
-
-                {/* Payment Proof Column */}
-                <div className="flex flex-col">
-                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-2">Payment Verification Proof</h4>
-                  <div className="border border-stone-200 rounded-2xl bg-stone-100 overflow-hidden flex-1 flex items-center justify-center min-h-[250px] relative">
-                    {selectedBooking.paymentProofUrl ? (
-                      <img 
-                        src={selectedBooking.paymentProofUrl} 
-                        alt="Payment Proof Uploaded by Customer" 
-                        className="w-full h-full object-contain max-h-[350px] hover:scale-105 transition-transform duration-300 cursor-zoom-in"
-                        onClick={() => window.open(selectedBooking.paymentProofUrl!, '_blank')}
-                      />
-                    ) : (
-                      <div className="text-center p-6 text-stone-400">
-                        <FileText className="h-10 w-10 mx-auto mb-2 text-stone-300" />
-                        <p className="font-bold">No receipt proof uploaded</p>
-                        <p className="text-xs mt-1">Customer hasn't uploaded payment screenshot yet.</p>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -467,6 +459,48 @@ export default function AdminBookingsPage() {
                 </div>
               )}
             </div>
+            {/* Reschedule Date Picker Input block */}
+            {showRescheduleInput && (
+              <div className="px-6 py-4 bg-amber-50 border-t border-amber-200 flex flex-col gap-3 shrink-0">
+                <p className="text-xs font-black text-amber-800">Select New Check-in Date</p>
+                <AdminDatePicker
+                  value={directPostponeDate}
+                  onChange={setDirectPostponeDate}
+                  placeholder="Pick a future date..."
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      if (!directPostponeDate) {
+                        alert('Please select a future check-in date first.');
+                        return;
+                      }
+                      const tomorrow = new Date();
+                      tomorrow.setDate(tomorrow.getDate() + 1);
+                      tomorrow.setHours(0,0,0,0);
+                      const [py, pm, pd] = directPostponeDate.split('-').map(Number);
+                      const chosen = new Date(py, pm - 1, pd);
+                      if (chosen < tomorrow) {
+                        alert('New check-in date must be tomorrow or later.');
+                        return;
+                      }
+                      handleAction(selectedBooking.publicId, 'APPROVE_POSTPONE');
+                      setShowRescheduleInput(false);
+                    }}
+                    disabled={actionLoading || !directPostponeDate}
+                    className="flex-1 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold px-3 py-2 rounded-xl text-xs cursor-pointer shadow-sm transition-colors"
+                  >
+                    Confirm Reschedule
+                  </button>
+                  <button
+                    onClick={() => { setShowRescheduleInput(false); setDirectPostponeDate(''); }}
+                    className="px-3 py-2 text-stone-500 hover:bg-stone-100 rounded-xl text-xs font-bold cursor-pointer transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Footer actions */}
             <div className="px-6 py-4 bg-stone-50 border-t border-stone-100 flex items-center justify-between shrink-0">
@@ -476,10 +510,14 @@ export default function AdminBookingsPage() {
               </div>
               <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
                 <button 
-                  onClick={() => setSelectedBooking(null)}
+                  onClick={() => {
+                    setSelectedBooking(null);
+                    setShowRescheduleInput(false);
+                    setDirectPostponeDate('');
+                  }}
                   className="px-4 py-2.5 text-xs font-bold text-stone-500 hover:bg-stone-100 rounded-xl cursor-pointer"
                 >
-                  Cancel
+                  Close Review
                 </button>
                 <button
                   onClick={() => window.open(`/booking/${selectedBooking.publicId}`, '_blank')}
@@ -487,6 +525,27 @@ export default function AdminBookingsPage() {
                 >
                   View Ticket
                 </button>
+
+                {/* Direct Actions for Confirmed / Partially Paid Stay Bookings */}
+                {['CONFIRMED', 'PARTIAL_PAID'].includes(selectedBooking.status) && (
+                  <>
+                    <button
+                      onClick={() => handleAction(selectedBooking.publicId, 'APPROVE_CANCEL')}
+                      disabled={actionLoading}
+                      className="bg-white border border-red-200 hover:bg-red-50 text-red-600 font-black px-4 py-2.5 rounded-xl text-xs transition-colors cursor-pointer"
+                    >
+                      Cancel Booking
+                    </button>
+                    <button
+                      onClick={() => setShowRescheduleInput(true)}
+                      disabled={actionLoading}
+                      className="bg-white border border-amber-250 hover:bg-amber-50 text-amber-800 font-black px-4 py-2.5 rounded-xl text-xs transition-colors cursor-pointer"
+                    >
+                      Reschedule Stay
+                    </button>
+                  </>
+                )}
+
                 {/* Cancellation Request Actions */}
                 {selectedBooking.status === 'CANCEL_REQUESTED' && (
                   <>
@@ -545,6 +604,17 @@ export default function AdminBookingsPage() {
                       Approve & Confirm
                     </button>
                   </>
+                )}
+
+                {/* Cancelled Stay Awaiting Refund settlement */}
+                {selectedBooking.status === 'CANCELLED' && (
+                  <button
+                    onClick={() => handleAction(selectedBooking.publicId, 'MARK_REFUNDED')}
+                    disabled={actionLoading}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-4 py-2.5 rounded-xl text-xs transition shadow-md cursor-pointer"
+                  >
+                    Mark as Refunded
+                  </button>
                 )}
               </div>
             </div>

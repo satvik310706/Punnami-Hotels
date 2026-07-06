@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { Wallet, CheckCircle2, Clock } from 'lucide-react';
+import { Wallet, CheckCircle2, Clock, HelpCircle, FileX } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Refund Policy | Punnami Southern Residency',
@@ -20,8 +20,8 @@ export default function RefundPage() {
             Refund Policy
           </h1>
           <div className="w-24 h-1 bg-amber-600 mx-auto rounded-full mb-6"></div>
-          <p className="text-stone-300 max-w-2xl mx-auto text-lg">
-            This policy details the guidelines, modes, and timelines for processed refunds at Punnami Southern Residency.
+          <p className="text-stone-300 max-w-2xl mx-auto text-lg leading-relaxed">
+            This policy outlines the parameters, modes of payment, and processing timelines for customer transactions managed by Telangana Boat Tourism.
           </p>
         </div>
       </div>
@@ -34,15 +34,31 @@ export default function RefundPage() {
             <section>
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
-                  <CheckCircle2 className="h-4 w-4 text-amber-700" />
+                  <FileX className="h-4 w-4 text-red-700" />
                 </div>
                 <h2 className="text-2xl font-bold text-stone-900 m-0" style={{ fontFamily: 'var(--font-cormorant), Georgia, serif' }}>
-                  1. Eligibility
+                  1. Strict Non-Refundable Policy
                 </h2>
               </div>
               <div className="pl-11">
                 <p className="text-base text-stone-600 bg-stone-50 p-6 rounded-2xl border border-stone-100">
-                  Refunds are eligible only for bookings cancelled according to our cancellation policies. Bookings cancelled within 24 hours of check-in time are non-refundable.
+                  All room stays booked at Punnami Southern Residency (operated by Telangana Boat Tourism) are <strong>strictly non-refundable</strong>. Once a reservation is paid for and confirmed, payments cannot be refunded, returned, or credited back to the customer under any circumstances, including cancellations, booking modifications, or guest no-shows.
+                </p>
+              </div>
+            </section>
+
+            <section>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                  <HelpCircle className="h-4 w-4 text-amber-700" />
+                </div>
+                <h2 className="text-2xl font-bold text-stone-900 m-0" style={{ fontFamily: 'var(--font-cormorant), Georgia, serif' }}>
+                  2. Failed Online Payments
+                </h2>
+              </div>
+              <div className="pl-11">
+                <p className="text-base text-stone-600 bg-stone-50 p-6 rounded-2xl border border-stone-100">
+                  In the event of a transaction failure where funds are debited from your bank account/card but the booking confirmation/voucher fails to generate on our site, the gateway provider (PhonePe) will automatically reconcile the transaction. The debited money will be refunded directly back to your original source account (UPI, Card, or Bank Account) within <strong>2 to 3 business days</strong>.
                 </p>
               </div>
             </section>
@@ -53,12 +69,12 @@ export default function RefundPage() {
                   <Clock className="h-4 w-4 text-amber-700" />
                 </div>
                 <h2 className="text-2xl font-bold text-stone-900 m-0" style={{ fontFamily: 'var(--font-cormorant), Georgia, serif' }}>
-                  2. Processing Time
+                  3. Duplicate Stay Bookings
                 </h2>
               </div>
               <div className="pl-11">
                 <p className="text-base text-stone-600 bg-stone-50 p-6 rounded-2xl border border-stone-100">
-                  Eligible refunds are processed directly to the source account (bank account/UPI) within <strong className="text-stone-900">5 to 7 working days</strong> from the cancellation approval.
+                  If you have made a duplicate booking by mistake for the same stay dates and room type, please contact our support team immediately at <strong>info@punnamihotels.com</strong> or call <strong>+91 95420 69573</strong>. Following verification, any approved exceptions will be refunded to the original payment source within <strong>5 to 7 working days</strong>.
                 </p>
               </div>
             </section>

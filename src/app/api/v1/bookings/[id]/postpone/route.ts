@@ -35,18 +35,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'Booking is already cancelled, postponed, or has a pending request.' }, { status: 400 });
     }
 
-    if (booking.status !== 'CONFIRMED') {
-      return NextResponse.json({ error: 'Only confirmed bookings can be postponed.' }, { status: 400 });
+    if (!['CONFIRMED', 'PARTIAL_PAID'].includes(booking.status)) {
+      return NextResponse.json({ error: 'Only confirmed or partially paid bookings can be postponed.' }, { status: 400 });
     }
 
-    // Enforce 24-hour limit before check-in date
+    // Enforce 7-day postpone restriction (checkInDate >= today + 7 days)
     const checkIn = new Date(booking.checkInDate);
-    const now = new Date();
-    const diffMs = checkIn.getTime() - now.getTime();
-    const diffHours = diffMs / (1000 * 60 * 60);
+    const limitDate = new Date(today);
+    limitDate.setDate(limitDate.getDate() + 7);
 
-    if (diffHours < 24) {
-      return NextResponse.json({ error: 'Postponement is unavailable within 24 hours of check-in.' }, { status: 400 });
+    if (checkIn < limitDate) {
+      return NextResponse.json({ error: 'Postponement is unavailable within 7 days of check-in.' }, { status: 400 });
     }
 
     const updated = await prisma.booking.update({

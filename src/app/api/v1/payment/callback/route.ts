@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   try {
     const booking = await prisma.booking.findUnique({
       where: { publicId: bookingId },
-      select: { id: true, publicId: true, status: true }
+      select: { id: true, publicId: true, status: true, totalAmount: true }
     });
 
     if (!booking) {
@@ -35,6 +35,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(`${appUrl}/booking/${booking.publicId}?status=verifying`, { status: 303 });
     }
 
+    if (paymentRecord.status === 'COMPLETED') {
+      return NextResponse.redirect(`${appUrl}/booking/${booking.publicId}?status=success`, { status: 303 });
+    }
+
     const client = getPhonePeClient();
     const statusResult = await client.getOrderStatus(paymentRecord.merchantTransactionId);
     const pgState = statusResult?.state?.toUpperCase();
@@ -50,13 +54,32 @@ export async function GET(req: NextRequest) {
         const currentBooking = lockedBookings[0];
 
         if (currentBooking && currentBooking.status !== 'CONFIRMED') {
-          await tx.booking.update({
-            where: { id: booking.id },
-            data: {
-              status: 'CONFIRMED',
-              transactionId: transactionId
-            }
-          });
+          if (currentBooking.status === 'PARTIAL_PAID') {
+            await tx.booking.update({
+              where: { id: booking.id },
+              data: {
+                status: 'CONFIRMED',
+                paymentPercentage: 100,
+                paidAmount: booking.totalAmount,
+                transactionId: transactionId
+              }
+            });
+          } else {
+            const b = await tx.booking.findUnique({
+              where: { id: booking.id },
+              select: { paymentPercentage: true }
+            });
+            const paymentPercentage = b?.paymentPercentage ? Number(b.paymentPercentage) : 100;
+            const targetStatus = paymentPercentage < 100 ? 'PARTIAL_PAID' : 'CONFIRMED';
+
+            await tx.booking.update({
+              where: { id: booking.id },
+              data: {
+                status: targetStatus,
+                transactionId: transactionId
+              }
+            });
+          }
 
           await tx.payment.update({
             where: { merchantTransactionId: paymentRecord.merchantTransactionId },

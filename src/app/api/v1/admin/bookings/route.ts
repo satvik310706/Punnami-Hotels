@@ -24,6 +24,8 @@ export async function GET(req: NextRequest) {
         totalAmount: Number(b.totalAmount),
         cancellationFee: b.cancellationFee ? Number(b.cancellationFee) : null,
         refundAmount: b.refundAmount ? Number(b.refundAmount) : null,
+        paidAmount: b.paidAmount ? Number(b.paidAmount) : null,
+        paymentPercentage: b.paymentPercentage ? Number(b.paymentPercentage) : null,
       }))
     );
   } catch (err) {

@@ -142,7 +142,7 @@ export default function PaymentPageClient({ bookingId, initialData }: PaymentPag
           <div className="py-12 text-center space-y-4">
             <RefreshCw className="h-12 w-12 text-amber-600 animate-spin mx-auto" />
             <p className="text-stone-600 font-semibold text-sm">Validating transaction status...</p>
-            <p className="text-stone-400 text-xs leading-relaxed">If you completed your payment on the app, please wait. Your voucher is loading.</p>
+            <p className="text-stone-450 text-xs leading-relaxed">If you completed your payment on the app, please wait. Your stay ticket is loading.</p>
           </div>
         ) : (
           <>

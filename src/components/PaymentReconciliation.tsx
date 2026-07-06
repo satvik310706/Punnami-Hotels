@@ -3,11 +3,23 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+/** Returns true if the browser session has a punnami login cookie. */
+function hasSessionCookie(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.cookie.split(';').some(c => c.trim().startsWith('punnami_token='));
+}
+
 export default function PaymentReconciliation() {
   const router = useRouter();
 
   useEffect(() => {
+    // Skip entirely if the user is not logged in — avoids spamming 401s on every page load
+    if (!hasSessionCookie()) return;
+
     const reconcilePayments = async () => {
+      // Re-check each time — the user may have logged out mid-session
+      if (!hasSessionCookie()) return;
+
       try {
         const res = await fetch('/api/v1/bookings/my-bookings');
         if (!res.ok) return;
@@ -36,7 +48,7 @@ export default function PaymentReconciliation() {
       }
     };
 
-    // Run reconciliation check after 2 seconds on mount, then every 30 seconds
+    // Run after 2 seconds on mount, then every 30 seconds
     const initialTimer = setTimeout(reconcilePayments, 2000);
     const interval = setInterval(reconcilePayments, 30000);
 

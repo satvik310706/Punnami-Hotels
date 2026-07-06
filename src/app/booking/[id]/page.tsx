@@ -28,7 +28,7 @@ export default async function BookingPaymentPage({ params }: { params: Promise<{
     notFound();
   }
 
-  const isVoucherStatus = ['CONFIRMED', 'CANCEL_REQUESTED', 'CANCELLED', 'POSTPONE_REQUESTED', 'POSTPONED', 'REFUNDED'].includes(booking.status);
+  const isVoucherStatus = ['CONFIRMED', 'PARTIAL_PAID', 'CANCEL_REQUESTED', 'CANCELLED', 'POSTPONE_REQUESTED', 'POSTPONED', 'REFUNDED'].includes(booking.status);
   if (isVoucherStatus) {
     return (
       <BookingVoucher
@@ -56,6 +56,10 @@ export default async function BookingPaymentPage({ params }: { params: Promise<{
           refundAmount: booking.refundAmount ? Number(booking.refundAmount) : undefined,
           postponeReason: booking.postponeReason || undefined,
           postponeNewDate: booking.postponeNewDate ? booking.postponeNewDate.toISOString() : undefined,
+          originalCheckInDate: booking.originalCheckInDate ? booking.originalCheckInDate.toISOString() : null,
+          originalCheckOutDate: booking.originalCheckOutDate ? booking.originalCheckOutDate.toISOString() : null,
+          paidAmount: booking.paidAmount ? Number(booking.paidAmount) : undefined,
+          paymentPercentage: booking.paymentPercentage ? Number(booking.paymentPercentage) : undefined,
           roomType: {
             name: booking.roomType.name,
             capacityPerRoom: booking.roomType.capacityPerRoom,
