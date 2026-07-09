@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { getPhonePeClient } from '@/lib/phonepe';
+import { broadcastRoomInventoryUpdate } from '@/lib/sse';
+import { formatDate } from '@/lib/utils';
+import { sendRoomConfirmationSMS } from '@/lib/sms';
+import { sendBookingConfirmationEmail, sendAdminBookingConfirmationEmail } from '@/lib/zohoMail';
 
+// GET handler: Handles user navigation/redirect back from PhonePe
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const bookingId = searchParams.get('bookingId');
@@ -15,7 +20,7 @@ export async function GET(req: NextRequest) {
   try {
     const booking = await prisma.booking.findUnique({
       where: { publicId: bookingId },
-      select: { id: true, publicId: true, status: true, totalAmount: true }
+      include: { roomType: { include: { hotel: true } } },
     });
 
     if (!booking) {
@@ -54,32 +59,52 @@ export async function GET(req: NextRequest) {
         const currentBooking = lockedBookings[0];
 
         if (currentBooking && currentBooking.status !== 'CONFIRMED') {
-          if (currentBooking.status === 'PARTIAL_PAID') {
-            await tx.booking.update({
-              where: { id: booking.id },
-              data: {
-                status: 'CONFIRMED',
-                paymentPercentage: 100,
-                paidAmount: booking.totalAmount,
-                transactionId: transactionId
-              }
-            });
-          } else {
-            const b = await tx.booking.findUnique({
-              where: { id: booking.id },
-              select: { paymentPercentage: true }
-            });
-            const paymentPercentage = b?.paymentPercentage ? Number(b.paymentPercentage) : 100;
-            const targetStatus = paymentPercentage < 100 ? 'PARTIAL_PAID' : 'CONFIRMED';
+          let targetStatus = currentBooking.status;
+          let updateData: any = { transactionId };
 
-            await tx.booking.update({
-              where: { id: booking.id },
-              data: {
-                status: targetStatus,
-                transactionId: transactionId
+          if (currentBooking.status === 'PARTIAL_PAID') {
+            targetStatus = 'CONFIRMED';
+            updateData.status = 'CONFIRMED';
+            updateData.paymentPercentage = 100;
+            updateData.paidAmount = booking.totalAmount;
+          } else {
+            const paymentPercentage = booking.paymentPercentage ? Number(booking.paymentPercentage) : 100;
+            targetStatus = paymentPercentage < 100 ? 'PARTIAL_PAID' : 'CONFIRMED';
+            updateData.status = targetStatus;
+
+            // Transition inventory from reserved (hold) to booked
+            const dateRange: Date[] = [];
+            const current = new Date(booking.checkInDate);
+            const checkOutTime = new Date(booking.checkOutDate).getTime();
+            if (booking.checkInDate.getTime() === checkOutTime) {
+              dateRange.push(new Date(booking.checkInDate));
+            } else {
+              while (current.getTime() < checkOutTime) {
+                dateRange.push(new Date(current));
+                current.setUTCDate(current.getUTCDate() + 1);
               }
-            });
+            }
+
+            for (const date of dateRange) {
+              await tx.roomInventory.updateMany({
+                where: {
+                  roomTypeId: booking.roomTypeId,
+                  date,
+                  slotStart: booking.slotStart,
+                  slotEnd: booking.slotEnd,
+                },
+                data: {
+                  reservedRooms: { decrement: booking.roomsBooked },
+                  bookedRooms: { increment: booking.roomsBooked },
+                },
+              });
+            }
           }
+
+          await tx.booking.update({
+            where: { id: booking.id },
+            data: updateData,
+          });
 
           await tx.payment.update({
             where: { merchantTransactionId: paymentRecord.merchantTransactionId },
@@ -91,9 +116,81 @@ export async function GET(req: NextRequest) {
         }
       });
 
+      // Send confirmation notifications (best-effort, non-blocking)
+      const hotel = booking.roomType.hotel as { checkInTime?: string; checkOutTime?: string; name: string };
+      try {
+        await sendRoomConfirmationSMS({
+          customerName: booking.guestName,
+          customerPhone: booking.guestPhone,
+          publicId: booking.publicId,
+          hotelName: hotel.name,
+          roomName: booking.roomType.name,
+          checkInDate: formatDate(booking.checkInDate),
+          checkInTime: hotel.checkInTime || '12:00 PM',
+          checkOutDate: formatDate(booking.checkOutDate),
+          checkOutTime: hotel.checkOutTime || '11:00 AM',
+          paidAmount: `₹${Number(booking.paidAmount || booking.totalAmount).toLocaleString('en-IN')}`,
+          totalAmount: `₹${Number(booking.totalAmount).toLocaleString('en-IN')}`,
+        });
+      } catch (smsErr) {
+        console.error('[Callback Approve] SMS send failed:', smsErr);
+      }
+      try {
+        await sendBookingConfirmationEmail({
+          guestEmail: booking.guestEmail,
+          guestName: booking.guestName,
+          publicId: booking.publicId,
+          roomName: booking.roomType.name,
+          checkInDate: formatDate(booking.checkInDate),
+          checkInTime: hotel.checkInTime || '12:00 PM',
+          checkOutDate: formatDate(booking.checkOutDate),
+          checkOutTime: hotel.checkOutTime || '11:00 AM',
+          nights: booking.totalNights,
+          rooms: booking.roomsBooked,
+          paidAmount: (booking.paidAmount || booking.totalAmount).toString(),
+          totalAmount: booking.totalAmount.toString(),
+        });
+      } catch (mailErr) {
+        console.error('[Callback Approve] Email send failed:', mailErr);
+      }
+      try {
+        await sendAdminBookingConfirmationEmail({
+          guestName: booking.guestName,
+          guestEmail: booking.guestEmail,
+          guestPhone: booking.guestPhone,
+          publicId: booking.publicId,
+          roomName: booking.roomType.name,
+          checkInDate: formatDate(booking.checkInDate),
+          checkInTime: hotel.checkInTime || '12:00 PM',
+          checkOutDate: formatDate(booking.checkOutDate),
+          checkOutTime: hotel.checkOutTime || '11:00 AM',
+          nights: booking.totalNights,
+          rooms: booking.roomsBooked,
+          paidAmount: (booking.paidAmount || booking.totalAmount).toString(),
+          totalAmount: booking.totalAmount.toString(),
+        });
+      } catch (adminMailErr) {
+        console.error('[Callback Approve] Admin Email send failed:', adminMailErr);
+      }
+
+      // Broadcast inventory updates to SSE clients
+      const dateRange: Date[] = [];
+      const current = new Date(booking.checkInDate);
+      const checkOutTime = new Date(booking.checkOutDate).getTime();
+      if (booking.checkInDate.getTime() === checkOutTime) {
+        dateRange.push(new Date(booking.checkInDate));
+      } else {
+        while (current.getTime() < checkOutTime) {
+          dateRange.push(new Date(current));
+          current.setUTCDate(current.getUTCDate() + 1);
+        }
+      }
+      for (const date of dateRange) {
+        broadcastRoomInventoryUpdate(booking.roomTypeId, date, booking.slotStart, booking.slotEnd);
+      }
+
       return NextResponse.redirect(`${appUrl}/booking/${booking.publicId}?status=success`, { status: 303 });
     } else if (pgState === 'FAILED' || pgState === 'CANCELLED') {
-      // Keep booking.status as PENDING_PROOF so the user can retry checkout
       await prisma.payment.update({
         where: { merchantTransactionId: paymentRecord.merchantTransactionId },
         data: {
@@ -108,6 +205,240 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${appUrl}/booking/${booking.publicId}?status=verifying`, { status: 303 });
   } catch (error) {
     console.error('Redirection verification error:', error);
+    return NextResponse.redirect(`${appUrl}/booking/${bookingId}?status=verifying`, { status: 303 });
+  }
+}
+
+// POST handler: Handles browser-redirect POST callbacks from PhonePe
+export async function POST(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const bookingId = searchParams.get('bookingId');
+  const originUrl = new URL(req.url).origin;
+  const appUrl = originUrl.includes('localhost') ? originUrl : (process.env.NEXT_PUBLIC_SITE_URL || originUrl);
+
+  if (!bookingId) {
+    return NextResponse.redirect(`${appUrl}/rooms`, { status: 303 });
+  }
+
+  try {
+    const formData = await req.formData();
+    const responseBody = formData.get('response') as string;
+
+    if (!responseBody) {
+      return NextResponse.redirect(`${appUrl}/booking/${bookingId}?status=failed&msg=NoResponse`, { status: 303 });
+    }
+
+    // Decode Base64 response
+    const decodedBuffer = Buffer.from(responseBody, 'base64');
+    const decodedJson = JSON.parse(decodedBuffer.toString('utf-8'));
+
+    const { code, success, data } = decodedJson;
+    const merchantTransactionId = data?.merchantTransactionId;
+    let phonePeTransactionId = data?.transactionId || null;
+
+    const booking = await prisma.booking.findUnique({
+      where: { publicId: bookingId },
+      include: { roomType: { include: { hotel: true } } },
+    });
+
+    if (!booking) {
+      return NextResponse.redirect(`${appUrl}/rooms?status=error&msg=NotFound`, { status: 303 });
+    }
+
+    if (booking.status === 'CONFIRMED') {
+      return NextResponse.redirect(`${appUrl}/booking/${booking.publicId}?status=success`, { status: 303 });
+    }
+
+    let verifiedState: 'COMPLETED' | 'FAILED' | 'PENDING' = 'PENDING';
+
+    if (code === 'PAYMENT_SUCCESS' && success) {
+      try {
+        const client = getPhonePeClient();
+        const verifyResult = await client.getOrderStatus(merchantTransactionId);
+        const state = verifyResult?.state?.toUpperCase();
+
+        if (state === 'COMPLETED') {
+          verifiedState = 'COMPLETED';
+          if (verifyResult.paymentDetails && verifyResult.paymentDetails.length > 0) {
+            phonePeTransactionId = verifyResult.paymentDetails[0].transactionId || phonePeTransactionId;
+          }
+        } else if (state === 'FAILED' || state === 'CANCELLED' || state === 'PAYMENT_CANCELLED') {
+          verifiedState = 'FAILED';
+        }
+      } catch (err) {
+        console.error('PhonePe SDK status verification failed inside POST callback. Falling back to payload.', err);
+        if (code === 'PAYMENT_SUCCESS') {
+          verifiedState = 'COMPLETED';
+        }
+      }
+    } else if (code === 'PAYMENT_ERROR' || success === false) {
+      verifiedState = 'FAILED';
+    }
+
+    if (verifiedState === 'COMPLETED') {
+      // Wrap in transactional row-lock update
+      await prisma.$transaction(async (tx) => {
+        const lockedBookings = await tx.$queryRaw<{ id: bigint; status: string }[]>`
+          SELECT id, status FROM "Booking" WHERE id = ${booking.id} FOR UPDATE
+        `;
+        const currentBooking = lockedBookings[0];
+
+        if (currentBooking && currentBooking.status !== 'CONFIRMED') {
+          let targetStatus = currentBooking.status;
+          let updateData: any = { transactionId: phonePeTransactionId };
+
+          if (currentBooking.status === 'PARTIAL_PAID') {
+            targetStatus = 'CONFIRMED';
+            updateData.status = 'CONFIRMED';
+            updateData.paymentPercentage = 100;
+            updateData.paidAmount = booking.totalAmount;
+          } else {
+            const paymentPercentage = booking.paymentPercentage ? Number(booking.paymentPercentage) : 100;
+            targetStatus = paymentPercentage < 100 ? 'PARTIAL_PAID' : 'CONFIRMED';
+            updateData.status = targetStatus;
+
+            // Transition inventory from reserved to booked
+            const dateRange: Date[] = [];
+            const current = new Date(booking.checkInDate);
+            const checkOutTime = new Date(booking.checkOutDate).getTime();
+            if (booking.checkInDate.getTime() === checkOutTime) {
+              dateRange.push(new Date(booking.checkInDate));
+            } else {
+              while (current.getTime() < checkOutTime) {
+                dateRange.push(new Date(current));
+                current.setUTCDate(current.getUTCDate() + 1);
+              }
+            }
+
+            for (const date of dateRange) {
+              await tx.roomInventory.updateMany({
+                where: {
+                  roomTypeId: booking.roomTypeId,
+                  date,
+                  slotStart: booking.slotStart,
+                  slotEnd: booking.slotEnd,
+                },
+                data: {
+                  reservedRooms: { decrement: booking.roomsBooked },
+                  bookedRooms: { increment: booking.roomsBooked },
+                },
+              });
+            }
+          }
+
+          await tx.booking.update({
+            where: { id: booking.id },
+            data: updateData,
+          });
+
+          await tx.payment.upsert({
+            where: { merchantTransactionId },
+            update: { status: 'COMPLETED', providerResponse: JSON.stringify(decodedJson) },
+            create: {
+              bookingId: booking.id,
+              merchantTransactionId,
+              amount: Number(booking.paidAmount || booking.totalAmount),
+              status: 'COMPLETED',
+              providerResponse: JSON.stringify(decodedJson)
+            }
+          });
+        }
+      });
+
+      // Send confirmation notifications (best-effort, non-blocking)
+      const hotel = booking.roomType.hotel as { checkInTime?: string; checkOutTime?: string; name: string };
+      try {
+        await sendRoomConfirmationSMS({
+          customerName: booking.guestName,
+          customerPhone: booking.guestPhone,
+          publicId: booking.publicId,
+          hotelName: hotel.name,
+          roomName: booking.roomType.name,
+          checkInDate: formatDate(booking.checkInDate),
+          checkInTime: hotel.checkInTime || '12:00 PM',
+          checkOutDate: formatDate(booking.checkOutDate),
+          checkOutTime: hotel.checkOutTime || '11:00 AM',
+          paidAmount: `₹${Number(booking.paidAmount || booking.totalAmount).toLocaleString('en-IN')}`,
+          totalAmount: `₹${Number(booking.totalAmount).toLocaleString('en-IN')}`,
+        });
+      } catch (smsErr) {
+        console.error('[Callback Approve] SMS send failed:', smsErr);
+      }
+      try {
+        await sendBookingConfirmationEmail({
+          guestEmail: booking.guestEmail,
+          guestName: booking.guestName,
+          publicId: booking.publicId,
+          roomName: booking.roomType.name,
+          checkInDate: formatDate(booking.checkInDate),
+          checkInTime: hotel.checkInTime || '12:00 PM',
+          checkOutDate: formatDate(booking.checkOutDate),
+          checkOutTime: hotel.checkOutTime || '11:00 AM',
+          nights: booking.totalNights,
+          rooms: booking.roomsBooked,
+          paidAmount: (booking.paidAmount || booking.totalAmount).toString(),
+          totalAmount: booking.totalAmount.toString(),
+        });
+      } catch (mailErr) {
+        console.error('[Callback Approve] Email send failed:', mailErr);
+      }
+      try {
+        await sendAdminBookingConfirmationEmail({
+          guestName: booking.guestName,
+          guestEmail: booking.guestEmail,
+          guestPhone: booking.guestPhone,
+          publicId: booking.publicId,
+          roomName: booking.roomType.name,
+          checkInDate: formatDate(booking.checkInDate),
+          checkInTime: hotel.checkInTime || '12:00 PM',
+          checkOutDate: formatDate(booking.checkOutDate),
+          checkOutTime: hotel.checkOutTime || '11:00 AM',
+          nights: booking.totalNights,
+          rooms: booking.roomsBooked,
+          paidAmount: (booking.paidAmount || booking.totalAmount).toString(),
+          totalAmount: booking.totalAmount.toString(),
+        });
+      } catch (adminMailErr) {
+        console.error('[Callback Approve] Admin Email send failed:', adminMailErr);
+      }
+
+      // Broadcast inventory updates to SSE clients
+      const dateRange: Date[] = [];
+      const current = new Date(booking.checkInDate);
+      const checkOutTime = new Date(booking.checkOutDate).getTime();
+      if (booking.checkInDate.getTime() === checkOutTime) {
+        dateRange.push(new Date(booking.checkInDate));
+      } else {
+        while (current.getTime() < checkOutTime) {
+          dateRange.push(new Date(current));
+          current.setUTCDate(current.getUTCDate() + 1);
+        }
+      }
+      for (const date of dateRange) {
+        broadcastRoomInventoryUpdate(booking.roomTypeId, date, booking.slotStart, booking.slotEnd);
+      }
+
+      return NextResponse.redirect(`${appUrl}/booking/${booking.publicId}?status=success`, { status: 303 });
+    } else if (verifiedState === 'FAILED') {
+      if (merchantTransactionId) {
+        await prisma.payment.upsert({
+          where: { merchantTransactionId },
+          update: { status: 'FAILED', providerResponse: JSON.stringify(decodedJson) },
+          create: {
+            bookingId: booking.id,
+            merchantTransactionId,
+            amount: Number(booking.paidAmount || booking.totalAmount),
+            status: 'FAILED',
+            providerResponse: JSON.stringify(decodedJson)
+          }
+        });
+      }
+      return NextResponse.redirect(`${appUrl}/booking/${booking.publicId}?status=failed`, { status: 303 });
+    }
+
+    return NextResponse.redirect(`${appUrl}/booking/${booking.publicId}?status=verifying`, { status: 303 });
+  } catch (error) {
+    console.error('POST Callback: Error processing PhonePe redirect POST payload:', error);
     return NextResponse.redirect(`${appUrl}/booking/${bookingId}?status=verifying`, { status: 303 });
   }
 }

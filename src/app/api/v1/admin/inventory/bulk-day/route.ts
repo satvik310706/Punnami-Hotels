@@ -11,22 +11,42 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing date or invalid action' }, { status: 450 });
     }
 
-    const dateObj = new Date(date);
-    dateObj.setHours(0, 0, 0, 0);
+    // Parse the date timezone-neutrally as UTC midnight to match DB Date format
+    const [yearVal, monthVal, dayVal] = date.split('-').map(Number);
+    const dateObj = new Date(Date.UTC(yearVal, monthVal - 1, dayVal));
 
     const roomTypes = await prisma.roomType.findMany({
       where: { isActive: true, status: 'PUBLISHED' },
+      include: {
+        hotel: {
+          select: { checkInTime: true, checkOutTime: true }
+        }
+      }
     });
 
     const isClosed = action === 'CLOSE_ALL';
 
     for (const rt of roomTypes) {
-      const slots = [
-        {
-          slotStart: '12:00:00',
-          slotEnd: '11:00:00',
-        },
-      ];
+      const normalizeTime = (timeStr: string) => {
+        if (!timeStr) return '12:00:00';
+        if (/^\d{2}:\d{2}:\d{2}$/.test(timeStr)) return timeStr;
+        if (/^\d{2}:\d{2}$/.test(timeStr)) return `${timeStr}:00`;
+        const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+        if (match) {
+          let hours = parseInt(match[1], 10);
+          const minutes = match[2];
+          const ampm = match[3].toUpperCase();
+          if (ampm === 'PM' && hours < 12) hours += 12;
+          if (ampm === 'AM' && hours === 12) hours = 0;
+          return `${hours.toString().padStart(2, '0')}:${minutes}:00`;
+        }
+        return timeStr;
+      };
+
+      const standardSlotStart = normalizeTime(rt.hotel?.checkInTime || '12:00:00');
+      const standardSlotEnd = normalizeTime(rt.hotel?.checkOutTime || '11:00:00');
+
+      const slots: { slotStart: string; slotEnd: string }[] = [];
 
       const customSlots = rt.bookingSlots as any;
       if (Array.isArray(customSlots)) {

@@ -32,6 +32,8 @@ interface Booking {
   paymentPercentage: number | null;
   paymentProofUrl: string | null;
   transactionId: string | null;
+  gatewayTransactionId?: string | null;
+  merchantTransactionId?: string | null;
   status: string;
   cancellationReason: string | null;
   cancellationFee: number | null;
@@ -347,9 +349,20 @@ export default function AdminDashboard() {
                           </div>
                         </>
                       )}
-                      {selectedBooking.transactionId && (
-                        <div className="mt-2 text-stone-600 border-t border-stone-200 pt-2">
-                          Gateway Transaction ID: <span className="font-black text-stone-900">{selectedBooking.transactionId}</span>
+                      {(selectedBooking.gatewayTransactionId || selectedBooking.transactionId) && (
+                        <div className="mt-2 text-stone-600 border-t border-stone-200 pt-2 space-y-1">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[10px] uppercase tracking-wider font-bold text-stone-400">PhonePe Gateway Transaction ID</span>
+                            <span className="font-black text-stone-900 text-sm break-all">
+                              {selectedBooking.gatewayTransactionId || selectedBooking.transactionId}
+                            </span>
+                          </div>
+                          {selectedBooking.merchantTransactionId && selectedBooking.merchantTransactionId !== selectedBooking.gatewayTransactionId && (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[10px] uppercase tracking-wider font-bold text-stone-400">Internal Merchant Ref</span>
+                              <span className="font-mono text-xs text-stone-600 break-all">{selectedBooking.merchantTransactionId}</span>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

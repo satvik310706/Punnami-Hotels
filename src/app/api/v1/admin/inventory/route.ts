@@ -11,8 +11,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
     }
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const parseUTCDate = (dateStr: string) => {
+      const [yearVal, monthVal, dayVal] = dateStr.split('-').map(Number);
+      return new Date(Date.UTC(yearVal, monthVal - 1, dayVal));
+    };
+
+    const start = parseUTCDate(startDate);
+    const end = parseUTCDate(endDate);
     const roomType = await prisma.roomType.findUnique({
       where: { id: BigInt(roomTypeId) },
     });
@@ -28,9 +33,9 @@ export async function POST(req: NextRequest) {
 
     const dateRange: Date[] = [];
     const current = new Date(start);
-    while (current <= end) {
+    while (current.getTime() <= end.getTime()) {
       dateRange.push(new Date(current));
-      current.setDate(current.getDate() + 1);
+      current.setUTCDate(current.getUTCDate() + 1);
     }
 
     // Upsert inventory blocks

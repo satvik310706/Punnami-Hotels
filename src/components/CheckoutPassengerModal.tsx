@@ -51,7 +51,14 @@ export interface PassengerInput {
 interface CheckoutPassengerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (passengers: PassengerInput[], quickBooking: boolean, paymentPercentage: number) => Promise<void>;
+  onSubmit: (
+    passengers: PassengerInput[],
+    quickBooking: boolean,
+    paymentPercentage: number,
+    leadName: string,
+    leadPhone: string,
+    leadEmail: string
+  ) => Promise<void>;
   adults: number;
   children: number;
   isProcessing: boolean;
@@ -73,15 +80,17 @@ export default function CheckoutPassengerModal({
 }: CheckoutPassengerModalProps) {
   const totalGuests = adults + childrenCount;
 
+  const [leadName, setLeadName] = useState(guestName);
+  const [leadPhone, setLeadPhone] = useState(guestPhone);
+  const [leadEmail, setLeadEmail] = useState('');
+
   const [passengers, setPassengers] = useState<PassengerInput[]>([]);
   const [passengerMode, setPassengerMode] = useState<'full' | 'quick'>('full');
-  const [paymentPercentage, setPaymentPercentage] = useState<number>(100);
   const [paymentOption, setPaymentOption] = useState<'FULL' | 'CUSTOM'>('FULL');
-  const [customPayAmount, setCustomPayAmount] = useState<string>('');
   const [quickPassenger, setQuickPassenger] = useState<PassengerInput>({
     fullName: '',
     age: '',
-    gender: '',
+    gender: 'MALE',
     phone: '',
     aadhaar: '',
     isPrimary: true,
@@ -91,11 +100,14 @@ export default function CheckoutPassengerModal({
 
   useEffect(() => {
     if (isOpen) {
+      setLeadName(guestName);
+      setLeadPhone(guestPhone);
+      setLeadEmail('');
       // Set initial guest passenger entries empty (no auto-prefill)
       const initial: PassengerInput[] = Array.from({ length: totalGuests }).map((_, i) => ({
         fullName: '',
         age: '',
-        gender: '',
+        gender: 'MALE',
         phone: '',
         aadhaar: '',
         isPrimary: i === 0,
@@ -105,21 +117,18 @@ export default function CheckoutPassengerModal({
       setQuickPassenger({
         fullName: '',
         age: '',
-        gender: '',
+        gender: 'MALE',
         phone: '',
         aadhaar: '',
         isPrimary: true,
       });
       setAgreedToTerms(false);
       setAgreedToConsent(false);
-
       if (totalAmount !== undefined) {
-        setCustomPayAmount(String(Math.round(totalAmount * 0.35)));
-        setPaymentPercentage(100);
         setPaymentOption('FULL');
       }
     }
-  }, [isOpen, totalGuests, totalAmount]);
+  }, [isOpen, totalGuests, totalAmount, guestName, guestPhone]);
 
   if (!isOpen) return null;
 
@@ -129,31 +138,23 @@ export default function CheckoutPassengerModal({
     setPassengers(newPassengers);
   };
 
-  const minAmount = totalAmount ? Math.round(totalAmount * 0.35) : 0;
-  const currentCustomVal = Number(customPayAmount) || 0;
-  const calculatedPercentage = (totalAmount && totalAmount > 0)
-    ? Number(((currentCustomVal / totalAmount) * 100).toFixed(2))
-    : 100;
-  const customError = (totalAmount !== undefined) && (
-    currentCustomVal < minAmount
-      ? `Minimum payment is ₹${minAmount.toLocaleString('en-IN')} (35% of total)`
-      : currentCustomVal > totalAmount
-      ? `Amount cannot exceed total booking price of ₹${totalAmount.toLocaleString('en-IN')}`
-      : null
-  );
-  const finalPercentage = paymentOption === 'FULL' ? 100 : calculatedPercentage;
+  const advanceAmount = totalAmount ? Math.round(totalAmount * 0.5) : 0;
+  const finalPercentage = paymentOption === 'FULL' ? 100 : 50;
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!agreedToTerms || !agreedToConsent || (paymentOption === 'CUSTOM' && customError)) return;
+    if (!agreedToTerms || !agreedToConsent) return;
+    if (!leadName.trim() || !leadPhone.trim()) return;
 
     if (passengerMode === 'quick') {
       const payload: PassengerInput[] = [
         {
-          ...quickPassenger,
+          fullName: leadName,
           age: quickPassenger.age || 25,
+          gender: quickPassenger.gender || 'MALE',
+          phone: leadPhone,
           aadhaar: quickPassenger.aadhaar || '',
-          phone: quickPassenger.phone || '',
+          isPrimary: true,
         }
       ];
       // Generate placeholders for other guests
@@ -177,28 +178,34 @@ export default function CheckoutPassengerModal({
           isPrimary: false,
         });
       }
-      await onSubmit(payload, true, finalPercentage);
+      await onSubmit(payload, true, finalPercentage, leadName, leadPhone, leadEmail);
     } else {
-      await onSubmit(passengers, false, finalPercentage);
+      const updatedPassengers = [...passengers];
+      if (updatedPassengers[0]) {
+        updatedPassengers[0].fullName = leadName;
+        updatedPassengers[0].phone = leadPhone;
+      }
+      await onSubmit(updatedPassengers, false, finalPercentage, leadName, leadPhone, leadEmail);
     }
   };
 
   // Check if form is valid to proceed
   const isFormValid = () => {
     if (!agreedToTerms || !agreedToConsent) return false;
-    if (paymentOption === 'CUSTOM' && customError) return false;
+    if (!leadName.trim()) return false;
+    if (!/^\d{10}$/.test(leadPhone.trim())) return false;
+    if (leadEmail.trim().length > 0 && !leadEmail.includes('@')) return false;
 
     if (passengerMode === 'quick') {
-      const nameOk = quickPassenger.fullName.trim() !== '';
       const ageOk = typeof quickPassenger.age === 'number' && quickPassenger.age >= 11;
       const genderOk = quickPassenger.gender !== '';
-      const phoneOk = /^\d{10}$/.test(quickPassenger.phone.trim());
       const aadhaarOk = quickPassenger.aadhaar.length === 12 && isValidAadhaar(quickPassenger.aadhaar);
-      return nameOk && ageOk && genderOk && phoneOk && aadhaarOk;
+      return ageOk && genderOk && aadhaarOk;
     } else {
       return passengers.every((p, i) => {
         const isChild = i >= adults;
-        const nameOk = p.fullName.trim() !== '';
+        // The first passenger name and phone are synced to leadName and leadPhone, so they are always ok
+        const nameOk = i === 0 ? true : p.fullName.trim() !== '';
         
         // Age validation
         let ageOk = false;
@@ -218,9 +225,7 @@ export default function CheckoutPassengerModal({
 
         // Phone validation: Mandatory for primary contact (index 0)
         let phoneOk = true;
-        if (i === 0) {
-          phoneOk = /^\d{10}$/.test(p.phone.trim());
-        } else if (p.phone.trim().length > 0) {
+        if (i > 0 && p.phone.trim().length > 0) {
           phoneOk = /^\d{10}$/.test(p.phone.trim());
         }
 
@@ -307,11 +312,34 @@ export default function CheckoutPassengerModal({
                       <input
                         type="text"
                         required
-                        disabled={isProcessing}
-                        value={quickPassenger.fullName}
-                        onChange={(e) => setQuickPassenger(prev => ({ ...prev, fullName: e.target.value }))}
-                        className="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm font-semibold text-stone-855 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                        placeholder="Lead guest name"
+                        value={leadName}
+                        onChange={(e) => setLeadName(e.target.value)}
+                        className="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm font-semibold text-stone-855 outline-none focus:border-amber-500 text-stone-850"
+                        placeholder="Full Name"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-stone-600">Contact Phone *</label>
+                      <input
+                        type="tel"
+                        required
+                        maxLength={10}
+                        value={leadPhone}
+                        onChange={(e) => setLeadPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                        className="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm font-semibold text-stone-855 outline-none focus:border-amber-500 text-stone-850"
+                        placeholder="10 digit phone number"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-stone-600">Email Address <span className="text-[10px] text-stone-400 font-bold uppercase">(Optional)</span></label>
+                      <input
+                        type="email"
+                        value={leadEmail}
+                        onChange={(e) => setLeadEmail(e.target.value)}
+                        className="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm font-semibold text-stone-855 outline-none focus:border-amber-500 text-stone-850"
+                        placeholder="Optional (for confirmation email)"
                       />
                     </div>
 
@@ -325,7 +353,7 @@ export default function CheckoutPassengerModal({
                         disabled={isProcessing}
                         value={quickPassenger.age}
                         onChange={(e) => setQuickPassenger(prev => ({ ...prev, age: e.target.value === '' ? '' : parseInt(e.target.value) }))}
-                        className="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm font-semibold text-stone-855 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                        className="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm font-semibold text-stone-855 outline-none focus:border-amber-500"
                         placeholder="Min 11"
                       />
                     </div>
@@ -352,7 +380,7 @@ export default function CheckoutPassengerModal({
                         title="12 digit Aadhaar number"
                         value={quickPassenger.aadhaar}
                         onChange={(e) => setQuickPassenger(prev => ({ ...prev, aadhaar: e.target.value.replace(/\D/g, '').slice(0, 12) }))}
-                        className={`w-full rounded-lg border px-3 py-2.5 text-sm font-semibold text-stone-855 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 ${
+                        className={`w-full rounded-lg border px-3 py-2.5 text-sm font-semibold text-stone-855 outline-none focus:border-amber-500 ${
                           quickPassenger.aadhaar.length === 12 && !isValidAadhaar(quickPassenger.aadhaar)
                             ? 'border-red-400 bg-red-50'
                             : 'border-stone-300'
@@ -362,20 +390,6 @@ export default function CheckoutPassengerModal({
                       {quickPassenger.aadhaar.length === 12 && !isValidAadhaar(quickPassenger.aadhaar) && (
                         <p className="text-[10px] font-bold text-red-600 mt-1">Checksum validation failed</p>
                       )}
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-stone-600">Contact Phone *</label>
-                      <input
-                        type="tel"
-                        required
-                        pattern="[0-9]{10}"
-                        maxLength={10}
-                        value={quickPassenger.phone}
-                        onChange={(e) => setQuickPassenger(prev => ({ ...prev, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
-                        className="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm font-semibold text-stone-855 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                        placeholder="10 digit phone"
-                      />
                     </div>
                   </div>
                 </div>
@@ -387,25 +401,65 @@ export default function CheckoutPassengerModal({
                   return (
                     <div key={idx} className="rounded-xl border border-stone-250 bg-white p-5 space-y-4 hover:border-amber-500/30 transition-all shadow-sm">
                       <p className="text-xs font-black text-amber-700 uppercase tracking-wider flex items-center justify-between">
-                        <span>{isChild ? `Guest Card ${idx + 1} (Child)` : `Guest Card ${idx + 1} (Adult)`}</span>
+                        <span>{isChild ? `Child ${idx - adults + 1} Details` : `Adult ${idx + 1} Details`}</span>
                         {idx === 0 && <span className="rounded bg-amber-100 border border-amber-200 px-1.5 py-0.5 text-[9px] text-amber-700 font-bold uppercase">Primary Contact</span>}
                       </p>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-1 sm:col-span-2">
-                          <label className="text-xs font-bold text-stone-650">Full Name *</label>
-                          <input
-                            type="text"
-                            required
-                            value={p.fullName}
-                            onChange={(e) => handleChange(idx, 'fullName', e.target.value)}
-                            className="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm font-semibold text-stone-850 outline-none focus:border-amber-500"
-                            placeholder="Full Name"
-                          />
-                        </div>
+                        {idx === 0 ? (
+                          <>
+                            <div className="space-y-1 sm:col-span-2">
+                              <label className="text-xs font-bold text-stone-655">Full Name *</label>
+                              <input
+                                type="text"
+                                required
+                                value={leadName}
+                                onChange={(e) => setLeadName(e.target.value)}
+                                className="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm font-semibold outline-none focus:border-amber-500 text-stone-850 border-stone-300"
+                                placeholder="Full Name"
+                              />
+                            </div>
+                            
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-stone-655">Contact Phone *</label>
+                              <input
+                                type="tel"
+                                required
+                                maxLength={10}
+                                value={leadPhone}
+                                onChange={(e) => setLeadPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                className="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm font-semibold outline-none focus:border-amber-500 text-stone-850 border-stone-300"
+                                placeholder="10 digit phone number"
+                              />
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-stone-655">Email Address <span className="text-[10px] text-stone-400 font-bold uppercase">(Optional)</span></label>
+                              <input
+                                type="email"
+                                value={leadEmail}
+                                onChange={(e) => setLeadEmail(e.target.value)}
+                                className="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm font-semibold outline-none focus:border-amber-500 text-stone-850 border-stone-300"
+                                placeholder="Optional (for confirmation email)"
+                              />
+                            </div>
+                          </>
+                        ) : (
+                          <div className="space-y-1 sm:col-span-2">
+                            <label className="text-xs font-bold text-stone-655">Full Name *</label>
+                            <input
+                              type="text"
+                              required
+                              value={p.fullName}
+                              onChange={(e) => handleChange(idx, 'fullName', e.target.value)}
+                              className="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm font-semibold outline-none focus:border-amber-500 text-stone-850 border-stone-300"
+                              placeholder="Full Name"
+                            />
+                          </div>
+                        )}
 
                         <div className="space-y-1">
-                          <label className="text-xs font-bold text-stone-650">{isChild ? 'Age (0 - 10) *' : 'Age (11+) *'}</label>
+                          <label className="text-xs font-bold text-stone-655">{isChild ? 'Age (0 - 10) *' : 'Age (11+) *'}</label>
                           <input
                             type="number"
                             required
@@ -413,7 +467,7 @@ export default function CheckoutPassengerModal({
                             max={isChild ? 10 : 120}
                             value={p.age}
                             onChange={(e) => handleChange(idx, 'age', e.target.value === '' ? '' : parseInt(e.target.value))}
-                            className="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm font-semibold text-stone-850 outline-none focus:border-amber-500"
+                            className="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm font-semibold text-stone-855 outline-none focus:border-amber-500"
                             placeholder="Age"
                           />
                         </div>
@@ -455,22 +509,23 @@ export default function CheckoutPassengerModal({
                           )}
                         </div>
 
-                        <div className="space-y-1">
-                          <label className="text-xs font-bold text-stone-655 flex items-center gap-1.5">
-                            <span>Contact Phone</span>
-                            {idx > 0 && <span className="text-[10px] text-stone-400 font-bold uppercase">(Optional)</span>}
-                          </label>
-                          <input
-                            type="tel"
-                            required={idx === 0}
-                            pattern="[0-9]{10}"
-                            maxLength={10}
-                            value={p.phone}
-                            onChange={(e) => handleChange(idx, 'phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
-                            className="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm font-semibold text-stone-850 outline-none focus:border-amber-500"
-                            placeholder="10 digit phone"
-                          />
-                        </div>
+                        {idx > 0 && (
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-stone-655 flex items-center gap-1.5">
+                              <span>Contact Phone</span>
+                              <span className="text-[10px] text-stone-400 font-bold uppercase">(Optional)</span>
+                            </label>
+                            <input
+                              type="tel"
+                              pattern="[0-9]{10}"
+                              maxLength={10}
+                              value={p.phone}
+                              onChange={(e) => handleChange(idx, 'phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                              className="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm font-semibold outline-none focus:border-amber-500"
+                              placeholder="10 digit phone"
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -479,7 +534,7 @@ export default function CheckoutPassengerModal({
             )}
           </form>
 
-           {/* Payment Percentage Selector */}
+          {/* Payment Percentage Selector */}
           {totalAmount !== undefined && (
             <div className="bg-stone-50 border border-stone-200 rounded-xl p-4 space-y-4">
               <h4 className="text-xs font-black text-stone-700 uppercase tracking-wider">
@@ -496,7 +551,7 @@ export default function CheckoutPassengerModal({
                   }`}
                 >
                   <div>
-                    <p className="text-xs font-extrabold text-stone-900">Pay Full Amount</p>
+                    <p className="text-xs font-extrabold text-stone-900">Pay Full Amount (100%)</p>
                     <p className="text-[10px] text-stone-500 mt-0.5">Instant booking confirmation</p>
                   </div>
                   <span className="text-sm font-black text-amber-700">₹{totalAmount.toLocaleString('en-IN')}</span>
@@ -511,42 +566,17 @@ export default function CheckoutPassengerModal({
                   }`}
                 >
                   <div>
-                    <p className="text-xs font-extrabold text-stone-900">Pay Custom Advance</p>
-                    <p className="text-[10px] text-stone-550 mt-0.5">Pay remaining online or at check-in</p>
+                    <p className="text-xs font-extrabold text-stone-900">Pay 50% Advance</p>
+                    <p className="text-[10px] text-stone-550 mt-0.5">Pay balance online or at check-in</p>
                   </div>
                   <div className="text-right">
                     <span className="text-sm font-black text-amber-700 block">
-                      Min: ₹{minAmount.toLocaleString('en-IN')}
+                      ₹{advanceAmount.toLocaleString('en-IN')}
                     </span>
-                    <span className="text-[9px] font-bold text-stone-400">Advance (35%+)</span>
+                    <span className="text-[9px] font-bold text-stone-400">Advance (50%)</span>
                   </div>
                 </button>
               </div>
-
-              {paymentOption === 'CUSTOM' && (
-                <div className="space-y-2 pt-2 border-t border-stone-200 animate-in fade-in duration-200">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <label className="text-xs font-bold text-stone-600">Enter Advance Amount (₹)</label>
-                    {customError ? (
-                      <span className="text-[10px] font-bold text-red-650">{customError}</span>
-                    ) : (
-                      <span className="text-[10px] font-bold text-teal-650 bg-teal-50 px-2 py-0.5 rounded border border-teal-200/50">
-                        Paying {calculatedPercentage.toFixed(2)}% of total
-                      </span>
-                    )}
-                  </div>
-                  <div className="relative rounded-xl border-2 border-stone-200 bg-white px-3 py-2.5 focus-within:border-amber-500 transition-colors">
-                    <span className="absolute left-3 top-2.5 text-stone-400 font-bold text-sm">₹</span>
-                    <input
-                      type="number"
-                      value={customPayAmount}
-                      onChange={(e) => setCustomPayAmount(e.target.value)}
-                      className="w-full bg-transparent pl-4 pr-2 text-sm font-bold text-stone-850 outline-none"
-                      placeholder={`Min ${minAmount}`}
-                    />
-                  </div>
-                </div>
-              )}
             </div>
           )}
 

@@ -24,11 +24,9 @@ export async function POST(req: NextRequest) {
 
     const saved = adminStore.get(email);
 
-    // Bypass check: if dev test code is entered (e.g. 915420) or matches generated otp
-    const isMockOtp = otp === '915420';
     const isValidOtp = saved && saved.otp === otp && Date.now() < saved.expires;
 
-    if (!isMockOtp && !isValidOtp) {
+    if (!isValidOtp) {
       return NextResponse.json({ error: 'Invalid or expired verification code' }, { status: 401 });
     }
 

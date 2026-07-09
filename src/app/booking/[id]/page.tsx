@@ -94,6 +94,8 @@ export default async function BookingPaymentPage({ params }: { params: Promise<{
         hotelName: booking.roomType.hotel.name,
         checkInTime: booking.roomType.hotel.checkInTime || '12:00 PM',
         checkOutTime: booking.roomType.hotel.checkOutTime || '11:00 AM',
+        paidAmount: booking.paidAmount ? Number(booking.paidAmount) : undefined,
+        paymentPercentage: booking.paymentPercentage ? Number(booking.paymentPercentage) : undefined,
       }}
     />
   );

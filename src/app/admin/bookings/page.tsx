@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { 
   Search, ShieldAlert, CheckCircle, Clock, XCircle, Eye, 
-  Calendar, Phone, Mail, User, Info, FileText, ArrowLeft
+  Calendar, Phone, Mail, User, Info, FileText, ArrowLeft,
+  AlertCircle, RefreshCw
 } from 'lucide-react';
 import { format } from 'date-fns';
 import InlineLoader from '@/components/InlineLoader';
@@ -31,6 +32,8 @@ interface Booking {
   paymentPercentage?: number | null;
   paymentProofUrl: string | null;
   transactionId: string | null;
+  gatewayTransactionId?: string | null;
+  merchantTransactionId?: string | null;
   status: string;
   createdAt: string;
   passengers?: any;
@@ -152,11 +155,21 @@ export default function AdminBookingsPage() {
   return (
     <div className="space-y-8 p-6 md:p-10 max-w-7xl mx-auto">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-black text-stone-900" style={{ fontFamily: 'var(--font-cormorant), Georgia, serif' }}>
-          Customer Bookings Log
-        </h1>
-        <p className="text-stone-500 mt-1">Monitor stays, audit transaction proof uploads, and verify manual booking payments.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-stone-900" style={{ fontFamily: 'var(--font-cormorant), Georgia, serif' }}>
+            Customer Bookings Log
+          </h1>
+          <p className="text-stone-500 mt-1">Monitor stays, audit transaction proof uploads, and verify manual booking payments.</p>
+        </div>
+        <button 
+          onClick={fetchBookings}
+          disabled={loading}
+          className="flex items-center justify-center gap-2 rounded-xl bg-white border border-stone-200 px-4 py-2.5 text-xs font-bold text-stone-700 hover:bg-stone-50 shadow-sm cursor-pointer disabled:opacity-50 self-start sm:self-center"
+        >
+          <RefreshCw className={`h-4 w-4 text-stone-500 ${loading ? 'animate-spin' : ''}`} />
+          <span>Refresh List</span>
+        </button>
       </div>
 
       {/* Filters Bar */}
@@ -251,7 +264,7 @@ export default function AdminBookingsPage() {
                           : b.status === 'PENDING_CONFIRMATION'
                           ? 'bg-amber-50 text-amber-700 border border-amber-200'
                           : b.status === 'PENDING_PROOF'
-                          ? 'bg-stone-100 text-stone-600 border border-stone-200'
+                          ? 'bg-purple-50 text-purple-750 border border-purple-200'
                           : b.status === 'CANCEL_REQUESTED'
                           ? 'bg-red-50 text-red-700 border border-red-200 animate-pulse'
                           : b.status === 'CANCELLED'
@@ -271,7 +284,7 @@ export default function AdminBookingsPage() {
                         ) : b.status === 'PENDING_CONFIRMATION' ? (
                           <><Clock className="h-3 w-3 animate-spin" /> Verifying</>
                         ) : b.status === 'PENDING_PROOF' ? (
-                          <><Clock className="h-3 w-3" /> Upload Awaiting</>
+                          <><Clock className="h-3 w-3 animate-pulse" /> Pending Payment</>
                         ) : b.status === 'CANCEL_REQUESTED' ? (
                           <><ShieldAlert className="h-3 w-3" /> Cancel Req</>
                         ) : b.status === 'CANCELLED' ? (
@@ -373,9 +386,20 @@ export default function AdminBookingsPage() {
                           </div>
                         </>
                       )}
-                      {selectedBooking.transactionId && (
-                        <div className="mt-2 text-stone-600 border-t border-stone-200 pt-2">
-                          Gateway Transaction ID: <span className="font-black text-stone-900">{selectedBooking.transactionId}</span>
+                      {(selectedBooking.gatewayTransactionId || selectedBooking.transactionId) && (
+                        <div className="mt-2 text-stone-600 border-t border-stone-200 pt-2 space-y-1">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[10px] uppercase tracking-wider font-bold text-stone-400">PhonePe Gateway Transaction ID</span>
+                            <span className="font-black text-stone-900 text-sm break-all">
+                              {selectedBooking.gatewayTransactionId || selectedBooking.transactionId}
+                            </span>
+                          </div>
+                          {selectedBooking.merchantTransactionId && selectedBooking.merchantTransactionId !== selectedBooking.gatewayTransactionId && (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[10px] uppercase tracking-wider font-bold text-stone-400">Internal Merchant Ref</span>
+                              <span className="font-mono text-xs text-stone-600 break-all">{selectedBooking.merchantTransactionId}</span>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -589,20 +613,29 @@ export default function AdminBookingsPage() {
                 {/* Original Awaiting Payment Proof Actions */}
                 {['PENDING_PROOF', 'PENDING_CONFIRMATION'].includes(selectedBooking.status) && (
                   <>
-                    <button
-                      onClick={() => handleAction(selectedBooking.publicId, 'REJECT')}
-                      disabled={actionLoading}
-                      className="bg-red-50 border border-red-200 hover:bg-red-100 text-red-700 font-black px-4 py-2.5 rounded-xl text-xs transition-colors cursor-pointer"
-                    >
-                      Reject Proof
-                    </button>
-                    <button
-                      onClick={() => handleAction(selectedBooking.publicId, 'APPROVE')}
-                      disabled={actionLoading}
-                      className="bg-stone-900 hover:bg-amber-700 text-white font-black px-4 py-2.5 rounded-xl text-xs transition-colors shadow-md cursor-pointer"
-                    >
-                      Approve & Confirm
-                    </button>
+                    {selectedBooking.paymentProofUrl ? (
+                      <>
+                        <button
+                          onClick={() => handleAction(selectedBooking.publicId, 'REJECT')}
+                          disabled={actionLoading}
+                          className="bg-red-50 border border-red-200 hover:bg-red-100 text-red-700 font-black px-4 py-2.5 rounded-xl text-xs transition-colors cursor-pointer"
+                        >
+                          Reject Proof
+                        </button>
+                        <button
+                          onClick={() => handleAction(selectedBooking.publicId, 'APPROVE')}
+                          disabled={actionLoading}
+                          className="bg-stone-900 hover:bg-amber-700 text-white font-black px-4 py-2.5 rounded-xl text-xs transition-colors shadow-md cursor-pointer"
+                        >
+                          Approve & Confirm
+                        </button>
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3.5 text-amber-800 text-[10px] font-bold uppercase tracking-wider w-full">
+                        <AlertCircle className="h-4.5 w-4.5 text-amber-600 shrink-0" />
+                        <span>Awaiting automated PhonePe payment confirmation...</span>
+                      </div>
+                    )}
                   </>
                 )}
 

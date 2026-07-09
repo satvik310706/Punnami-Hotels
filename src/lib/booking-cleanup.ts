@@ -2,8 +2,9 @@ import prisma from './db';
 import { broadcastRoomInventoryUpdate } from './sse';
 
 /**
- * Transactionally releases inventory reservations for all expired PENDING_PROOF bookings,
- * updating their status to EXPIRED.
+ * Transactionally releases inventory reservations for all expired PENDING_PROOF bookings
+ * and permanently deletes them from the database (cascade-deletes linked payment records).
+ * Bookings expire 5 minutes after creation if the guest does not complete payment.
  */
 export async function cleanupExpiredBookings() {
   try {
@@ -66,10 +67,9 @@ export async function cleanupExpiredBookings() {
           });
         }
 
-        // Mark booking as EXPIRED
-        await tx.booking.update({
+        // Delete the expired booking from database completely (cascade deletes payment logs)
+        await tx.booking.delete({
           where: { id: booking.id },
-          data: { status: 'EXPIRED' },
         });
       }
     });

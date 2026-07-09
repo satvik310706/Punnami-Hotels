@@ -1,9 +1,9 @@
 import { Metadata } from 'next';
-import { Wallet, CheckCircle2, Clock, HelpCircle, FileX } from 'lucide-react';
+import { Wallet, CheckCircle2, Clock, HelpCircle, FileX, ShieldCheck } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Refund Policy | Punnami Southern Residency',
-  description: 'Refund guidelines and timelines for cancellations at Punnami Southern Residency.',
+  description: 'Refund guidelines, cancellation policy, and timelines for stays at Punnami Southern Residency.',
 };
 
 export default function RefundPage() {
@@ -17,11 +17,11 @@ export default function RefundPage() {
             <Wallet className="h-8 w-8 text-amber-500" />
           </div>
           <h1 className="text-4xl md:text-5xl font-black text-white mb-4" style={{ fontFamily: 'var(--font-cormorant), Georgia, serif' }}>
-            Refund Policy
+            Cancellation & Refund Policy
           </h1>
           <div className="w-24 h-1 bg-amber-600 mx-auto rounded-full mb-6"></div>
           <p className="text-stone-300 max-w-2xl mx-auto text-lg leading-relaxed">
-            This policy outlines the parameters, modes of payment, and processing timelines for customer transactions managed by Telangana Boat Tourism.
+            This policy outlines the parameters, cancellation rules, and processing timelines for stay bookings operated under lease by Telangana Godavari Boat Tourism.
           </p>
         </div>
       </div>
@@ -34,15 +34,49 @@ export default function RefundPage() {
             <section>
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
-                  <FileX className="h-4 w-4 text-red-700" />
+                  <FileX className="h-4 w-4 text-amber-700" />
                 </div>
                 <h2 className="text-2xl font-bold text-stone-900 m-0" style={{ fontFamily: 'var(--font-cormorant), Georgia, serif' }}>
-                  1. Strict Non-Refundable Policy
+                  1. Room Stay Cancellation & Refund Rules
+                </h2>
+              </div>
+              <div className="pl-11">
+                <div className="text-base text-stone-600 bg-stone-50 p-6 rounded-2xl border border-stone-100 space-y-4">
+                  <p>
+                    All stay bookings at Punnami Southern Residency (operated under lease by <strong>Telangana Godavari Boat Tourism</strong>) are governed by the following refund parameters:
+                  </p>
+                  <ul className="list-disc pl-5 space-y-2">
+                    <li>
+                      <strong>50% Advance Bookings:</strong> If you paid a 50% advance amount to secure your reservation, the advance is completely <strong>non-refundable</strong> under any cancellation window.
+                    </li>
+                    <li>
+                      <strong>100% Full Payment Bookings:</strong>
+                      <ul className="list-circle pl-5 mt-1 space-y-1">
+                        <li>
+                          If cancelled <strong>4 or more days before the scheduled check-in date</strong>: You are eligible for a <strong>50% refund</strong> of the total booking value.
+                        </li>
+                        <li>
+                          If cancelled <strong>less than 4 days before the check-in date</strong> (or in case of a no-show): The booking is completely <strong>non-refundable</strong>.
+                        </li>
+                      </ul>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                  <Clock className="h-4 w-4 text-amber-700" />
+                </div>
+                <h2 className="text-2xl font-bold text-stone-900 m-0" style={{ fontFamily: 'var(--font-cormorant), Georgia, serif' }}>
+                  2. Rescheduling Policy (Postponement / Preponement)
                 </h2>
               </div>
               <div className="pl-11">
                 <p className="text-base text-stone-600 bg-stone-50 p-6 rounded-2xl border border-stone-100">
-                  All room stays booked at Punnami Southern Residency (operated by Telangana Boat Tourism) are <strong>strictly non-refundable</strong>. Once a reservation is paid for and confirmed, payments cannot be refunded, returned, or credited back to the customer under any circumstances, including cancellations, booking modifications, or guest no-shows.
+                  Rescheduling requests (to postpone or prepone stay dates) can only be submitted <strong>4 or more days before the scheduled check-in date</strong>. Any rescheduling requests submitted within 4 days of check-in cannot be entertained and will be subject to standard cancellation rules.
                 </p>
               </div>
             </section>
@@ -53,12 +87,12 @@ export default function RefundPage() {
                   <HelpCircle className="h-4 w-4 text-amber-700" />
                 </div>
                 <h2 className="text-2xl font-bold text-stone-900 m-0" style={{ fontFamily: 'var(--font-cormorant), Georgia, serif' }}>
-                  2. Failed Online Payments
+                  3. Failed Online Payments
                 </h2>
               </div>
               <div className="pl-11">
                 <p className="text-base text-stone-600 bg-stone-50 p-6 rounded-2xl border border-stone-100">
-                  In the event of a transaction failure where funds are debited from your bank account/card but the booking confirmation/voucher fails to generate on our site, the gateway provider (PhonePe) will automatically reconcile the transaction. The debited money will be refunded directly back to your original source account (UPI, Card, or Bank Account) within <strong>2 to 3 business days</strong>.
+                  In the event of a transaction failure where funds are debited from your bank account/card but the booking confirmation/stay ticket fails to generate on our site, the gateway provider (PhonePe) will automatically reconcile the transaction. The debited money will be refunded directly back to your original source account (UPI, Card, or Bank Account) within <strong>2 to 3 business days</strong>.
                 </p>
               </div>
             </section>
@@ -66,17 +100,23 @@ export default function RefundPage() {
             <section>
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
-                  <Clock className="h-4 w-4 text-amber-700" />
+                  <ShieldCheck className="h-4 w-4 text-amber-700" />
                 </div>
                 <h2 className="text-2xl font-bold text-stone-900 m-0" style={{ fontFamily: 'var(--font-cormorant), Georgia, serif' }}>
-                  3. Duplicate Stay Bookings
+                  4. Refund Processing & Mode of Payment
                 </h2>
               </div>
               <div className="pl-11">
                 <p className="text-base text-stone-600 bg-stone-50 p-6 rounded-2xl border border-stone-100">
-                  If you have made a duplicate booking by mistake for the same stay dates and room type, please contact our support team immediately at <strong>info@punnamihotels.com</strong> or call <strong>+91 95420 69573</strong>. Following verification, any approved exceptions will be refunded to the original payment source within <strong>5 to 7 working days</strong>.
+                  All eligible refunds (e.g. duplicate payment or cancellation of a 100% prepaid booking 4+ days prior) will be credited directly back to the original source account (UPI, credit/debit card, or net banking) used during checkout. Refund transactions are initiated within 48 hours of verification and take <strong>5 to 7 business days</strong> to reflect in your account.
                 </p>
               </div>
+            </section>
+
+            <section className="border-t border-stone-200 pt-6">
+              <p className="text-xs text-stone-500 italic">
+                For any help regarding cancellations, duplicate payments, or refund status, please email us at <strong>info@punnamihotels.com</strong> or call <strong>+91 95420 69573</strong>.
+              </p>
             </section>
 
           </div>

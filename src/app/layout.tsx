@@ -9,6 +9,7 @@ import InstallPromptModal from "@/components/InstallPromptModal";
 import NavigationLoader from "@/components/NavigationLoader";
 import GlobalModal from "@/components/GlobalModal";
 import PaymentReconciliation from "@/components/PaymentReconciliation";
+import MobileBottomNav from "@/components/MobileBottomNav";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -25,6 +26,7 @@ const cormorant = Cormorant_Garamond({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://punnamihotels.com"),
+  manifest: "/manifest.json",
   applicationName: "Punnami Southern Residency",
   title: {
     default: "Punnami Southern Residency Bhadrachalam | Best Hotel Stays, Luxury Rooms & Temple Lodge Booking",
@@ -118,10 +120,11 @@ export default function RootLayout({
         style={{ fontFamily: "var(--font-inter), sans-serif" }}
       >
         <Navbar />
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 pb-16 md:pb-0">{children}</main>
         <div className="print:hidden">
           <Footer />
           <WhatsAppFAB />
+          <MobileBottomNav />
         </div>
         <InstallPromptModal />
         <Suspense fallback={null}>

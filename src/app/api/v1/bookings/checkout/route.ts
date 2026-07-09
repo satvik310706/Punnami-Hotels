@@ -5,6 +5,7 @@ import { calculateStayTotal, calculateGST } from '@/lib/utils';
 import { jwtVerify } from 'jose';
 import { broadcastRoomInventoryUpdate } from '@/lib/sse';
 import { cleanupExpiredBookings } from '@/lib/booking-cleanup';
+import { getTodayISTUTC, isAfter6amIST } from '@/lib/ist';
 
 // Verhoeff Checksum Algorithm matrices for Aadhaar validation
 const VERHOEFF_D = [
@@ -75,8 +76,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    if (!isAdmin && (typeof paymentPercentage !== 'number' || paymentPercentage < 35 || paymentPercentage > 100)) {
-      return NextResponse.json({ error: 'Payment percentage must be between 35% and 100%' }, { status: 400 });
+    const normalizeTime = (timeStr: string) => {
+      if (!timeStr) return '12:00:00';
+      if (/^\d{2}:\d{2}:\d{2}$/.test(timeStr)) return timeStr;
+      if (/^\d{2}:\d{2}$/.test(timeStr)) return `${timeStr}:00`;
+      const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+      if (match) {
+        let hours = parseInt(match[1], 10);
+        const minutes = match[2];
+        const ampm = match[3].toUpperCase();
+        if (ampm === 'PM' && hours < 12) hours += 12;
+        if (ampm === 'AM' && hours === 12) hours = 0;
+        return `${hours.toString().padStart(2, '0')}:${minutes}:00`;
+      }
+      return timeStr;
+    };
+
+    const normalizedSlotStart = normalizeTime(slotStart);
+    const normalizedSlotEnd = normalizeTime(slotEnd);
+
+    if (!isAdmin && (typeof paymentPercentage !== 'number' || paymentPercentage < 50 || paymentPercentage > 100)) {
+      return NextResponse.json({ error: 'Payment percentage must be either 50% or 100%' }, { status: 400 });
     }
 
     // Aadhaar and guest count validation for non-admin checkouts
@@ -121,6 +141,19 @@ export async function POST(req: NextRequest) {
 
     if (checkOut < checkIn) {
       return NextResponse.json({ error: 'Check-out cannot be before check-in' }, { status: 400 });
+    }
+
+    // Reject today's check-in if it's already past 6:00 AM IST (non-admin only)
+    if (!isAdmin) {
+      const todayIST = getTodayISTUTC();
+      const checkInUTC = new Date(Date.UTC(checkIn.getUTCFullYear(), checkIn.getUTCMonth(), checkIn.getUTCDate()));
+
+      if (checkInUTC.getTime() === todayIST.getTime() && isAfter6amIST()) {
+        return NextResponse.json(
+          { error: 'Check-in for today is closed after 6:00 AM IST. Please select tomorrow or a future date.' },
+          { status: 400 }
+        );
+      }
     }
 
     // Check if logged in as agent via cookies
@@ -186,7 +219,7 @@ export async function POST(req: NextRequest) {
         const slotConfig = (roomType.bookingSlots as any[])?.find((s: any) => {
           const sS = s.slotStart || s.slot_start;
           const sE = s.slotEnd || s.slot_end;
-          return sS && sE && sS.slice(0, 5) === slotStart.slice(0, 5) && sE.slice(0, 5) === slotEnd.slice(0, 5);
+          return sS && sE && sS.slice(0, 5) === normalizedSlotStart.slice(0, 5) && sE.slice(0, 5) === normalizedSlotEnd.slice(0, 5);
         });
         const defaultSlotCapacity =
           slotConfig?.totalRooms ?? slotConfig?.total_rooms ?? roomType.totalInventory;
@@ -197,16 +230,16 @@ export async function POST(req: NextRequest) {
             roomTypeId_date_slotStart_slotEnd: {
               roomTypeId: BigInt(roomTypeId),
               date,
-              slotStart,
-              slotEnd,
+              slotStart: normalizedSlotStart,
+              slotEnd: normalizedSlotEnd,
             },
           },
           update: {}, // no-op — just guarantee the row is present
           create: {
             roomTypeId: BigInt(roomTypeId),
             date,
-            slotStart,
-            slotEnd,
+            slotStart: normalizedSlotStart,
+            slotEnd: normalizedSlotEnd,
             totalRooms: defaultSlotCapacity,
             bookedRooms: 0,
             reservedRooms: 0,
@@ -230,8 +263,8 @@ export async function POST(req: NextRequest) {
           FROM "RoomInventory"
           WHERE "roomTypeId" = ${BigInt(roomTypeId)}
             AND date = ${dateStr}::date
-            AND "slotStart" = ${slotStart}
-            AND "slotEnd" = ${slotEnd}
+            AND "slotStart" = ${normalizedSlotStart}
+            AND "slotEnd" = ${normalizedSlotEnd}
           FOR UPDATE
         `;
 
@@ -292,27 +325,10 @@ export async function POST(req: NextRequest) {
 
       const expiresAt = isAdmin 
         ? new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours for admin
-        : new Date(Date.now() + 30 * 60 * 1000);    // 30 minutes for public online checkout
+        : new Date(Date.now() + 5 * 60 * 1000);     // 5 minutes for public online checkout
       const publicId = generatePublicId();
 
-      // Upsert User profile details
-      const normalizedPhone = guestPhone.replace(/\D/g, '').slice(-10);
-      if (normalizedPhone.length === 10) {
-        await tx.user.upsert({
-          where: { phone: normalizedPhone },
-          update: {
-            fullName: guestName,
-            email: guestEmail || undefined,
-          },
-          create: {
-            phone: normalizedPhone,
-            fullName: guestName,
-            email: guestEmail || undefined,
-            role: 'USER',
-            accountStatus: 'ACTIVE',
-          },
-        });
-      }
+      // Guest info is stored on the booking record itself — no user account created
 
       const adminTxnId = isAdmin 
         ? `ADMIN-${publicId}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
@@ -324,8 +340,8 @@ export async function POST(req: NextRequest) {
           roomTypeId: BigInt(roomTypeId),
           checkInDate: checkIn,
           checkOutDate: checkOut,
-          slotStart,
-          slotEnd,
+          slotStart: normalizedSlotStart,
+          slotEnd: normalizedSlotEnd,
           totalNights: nights,
           roomsBooked: rooms,
           guestName,
@@ -375,7 +391,7 @@ export async function POST(req: NextRequest) {
 
     // Broadcast availability update to SSE clients
     for (const date of dateRange) {
-      broadcastRoomInventoryUpdate(BigInt(roomTypeId), date, slotStart, slotEnd);
+      broadcastRoomInventoryUpdate(BigInt(roomTypeId), date, normalizedSlotStart, normalizedSlotEnd);
     }
 
     return NextResponse.json({

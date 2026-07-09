@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { getPhonePeClient } from '@/lib/phonepe';
-import { StandardCheckoutPayRequest, PrefillUserLoginDetails } from '@phonepe-pg/pg-sdk-node';
+import { getPhonePeClient, StandardCheckoutPayRequest, PrefillUserLoginDetails } from '@/lib/phonepe';
 
 export async function POST(req: NextRequest) {
   try {

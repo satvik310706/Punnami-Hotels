@@ -264,7 +264,7 @@ export default function RoomsListClient({ initialData, initialParams, allRooms }
         ) : (
           <div className={`grid gap-6 ${view === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
             {filteredRooms.map((room, idx) => (
-              <RoomCard key={room.id} room={room} priority={idx < 3} checkIn={checkIn} checkOut={checkOut} />
+              <RoomCard key={room.id} room={room} priority={idx < 3} checkIn={checkIn} checkOut={checkOut} view={view} />
             ))}
           </div>
         )}

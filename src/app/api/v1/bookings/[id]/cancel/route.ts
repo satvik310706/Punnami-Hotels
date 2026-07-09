@@ -27,7 +27,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'Only confirmed or partially paid bookings can be cancelled.' }, { status: 400 });
     }
 
-    // Enforce 4-day cancellation restriction (checkInDate >= today + 4 days)
+    // Enforce 4-day cancellation restriction
     const checkIn = new Date(booking.checkInDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -38,11 +38,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'Cancellation is unavailable within 4 days of check-in.' }, { status: 400 });
     }
 
-    // For room bookings in ts-tours, cancellation incurs 100% charge
-    const cancellationFee = Number(booking.totalAmount);
-    const refundAmount = 0;
+    const paidAmount = Number(booking.paidAmount ?? 0);
+    const totalAmount = Number(booking.totalAmount);
+    const paymentPct = Number(booking.paymentPercentage ?? 100);
 
-    const updated = await prisma.booking.update({
+    // Cancellation policy:
+    // - 50% advance (partial paid): no refund — advance is non-refundable
+    // - 100% full paid + cancelled before 4 days: 50% refund
+    let cancellationFee: number;
+    let refundAmount: number;
+
+    if (paymentPct < 100) {
+      // Paid 50% advance — no refund
+      cancellationFee = paidAmount;
+      refundAmount = 0;
+    } else {
+      // Paid 100% full — 50% refund upon admin approval
+      cancellationFee = Math.round(totalAmount * 0.5);
+      refundAmount = Math.round(totalAmount * 0.5);
+    }
+
+    await prisma.booking.update({
       where: { publicId: id },
       data: {
         status: 'CANCEL_REQUESTED',
@@ -57,6 +73,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       message: 'Cancellation request submitted successfully.',
       cancellationFee,
       refundAmount,
+      paymentPct,
     });
   } catch (err) {
     console.error('[Booking Cancel Request API] Error:', err);

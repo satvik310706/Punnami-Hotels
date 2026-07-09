@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sendRoomConfirmationSMS } from '@/lib/sms';
-import { sendBookingConfirmationEmail } from '@/lib/zohoMail';
+import { sendOtpEmail } from '@/lib/zohoMail';
 
 // Global memory store for admin OTP code
 const globalAny = global as any;
@@ -19,8 +18,8 @@ export async function POST(req: NextRequest) {
     }
 
     const isValidAdmin = 
-      email === 'admin@punnamihotels.com' && 
-      (password === 'admin123' || password === 'cwABmQ7wbVkn');
+      email === 'punnamirooms@gmail.com' && 
+      password === 'Punnami@2026';
 
     if (!isValidAdmin) {
       return NextResponse.json({ error: 'Invalid administrator credentials' }, { status: 401 });
@@ -33,29 +32,15 @@ export async function POST(req: NextRequest) {
     adminStore.set(email, { otp, expires });
     console.log(`[Admin Login OTP] Generated OTP for ${email}: ${otp}`);
 
-    // Optionally send real SMS notification to admin phone or email
+    // Send real OTP email to the admin
     try {
-      // Let's send a quick SMS to the admin contact phone if configured
-      const adminPhone = process.env.ADMIN_CONTACT_PHONE || '9542069573';
-      await sendRoomConfirmationSMS({
-        customerName: 'Administrator',
-        customerPhone: adminPhone,
-        publicId: 'SECURE-GATEWAY',
-        hotelName: 'Admin Verification Console',
-        roomName: 'OTP Code Token',
-        checkInDate: otp, // Hack MSG91 template fields to deliver OTP safely
-        checkInTime: 'N/A',
-        checkOutDate: 'N/A',
-        checkOutTime: 'N/A',
-        paidAmount: '0',
-        totalAmount: '0',
-      });
+      await sendOtpEmail(email, otp);
     } catch (e) {
-      console.warn('Failed to send Admin OTP SMS, fallback to console log:', e);
+      console.error('Failed to send Admin OTP email:', e);
     }
 
     return NextResponse.json({
-      message: 'Secure authorization code generated and dispatched.',
+      message: 'Secure authorization code generated and dispatched via email.',
       email,
     });
   } catch (err) {

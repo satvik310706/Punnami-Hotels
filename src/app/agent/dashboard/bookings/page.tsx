@@ -161,7 +161,7 @@ export default function AgentBookingsPage() {
                           : b.status === 'PENDING_CONFIRMATION'
                           ? 'bg-amber-50 text-amber-700 border border-amber-200'
                           : b.status === 'PENDING_PROOF'
-                          ? 'bg-stone-100 text-stone-600 border border-stone-200'
+                          ? 'bg-purple-50 text-purple-750 border border-purple-200'
                           : 'bg-red-50 text-red-700 border border-red-200'
                       }`}>
                         {b.status === 'CONFIRMED' ? (
@@ -169,7 +169,7 @@ export default function AgentBookingsPage() {
                         ) : b.status === 'PENDING_CONFIRMATION' ? (
                           <><Clock className="h-3 w-3 animate-spin" /> Verifying</>
                         ) : b.status === 'PENDING_PROOF' ? (
-                          <><Clock className="h-3 w-3" /> Upload Proof</>
+                          <><Clock className="h-3 w-3 animate-pulse" /> Pending Payment</>
                         ) : (
                           <><XCircle className="h-3 w-3" /> Rejected</>
                         )}
@@ -179,7 +179,7 @@ export default function AgentBookingsPage() {
                       <button 
                         onClick={() => router.push(`/booking/${b.publicId}`)}
                         className="p-2 text-stone-400 hover:text-stone-900 rounded-lg hover:bg-stone-100 transition-all cursor-pointer"
-                        title="View Voucher"
+                        title="View Ticket"
                       >
                         <Eye className="h-4 w-4" />
                       </button>

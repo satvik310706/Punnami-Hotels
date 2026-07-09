@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   CalendarDays, ChevronLeft, ChevronRight, Lock, Unlock, 
-  Info, Sliders, Bed, Search, ShieldAlert, CheckCircle2, Clock
+  Info, Sliders, Bed, Search, ShieldAlert, CheckCircle2, Clock, RefreshCw
 } from 'lucide-react';
 import { format, addMonths, subMonths, startOfMonth, getDay, getDaysInMonth } from 'date-fns';
 import CustomDatePicker from '@/components/CustomDatePicker';
@@ -25,6 +25,8 @@ interface InventoryItem {
   hasOverride: boolean;
   id: string | null;
   priceOverride: number | null;
+  defaultWeekdayPrice: number;
+  defaultWeekendPrice: number;
 }
 
 interface CalendarDay {
@@ -38,6 +40,8 @@ interface RoomType {
   name: string;
   totalInventory: number;
   bookingSlots?: any;
+  standardSlotStart?: string;
+  standardSlotEnd?: string;
 }
 
 export default function AdminInventoryPage() {
@@ -238,14 +242,7 @@ export default function AdminInventoryPage() {
     const rt = roomTypes.find((r) => r.id === selectedRoomId);
     if (!rt) return [];
     
-    const combined = [
-      {
-        title: 'Standard Stay',
-        slotStart: '12:00:00',
-        slotEnd: '11:00:00',
-      },
-    ];
-
+    const combined: { title: string; slotStart: string; slotEnd: string }[] = [];
     const customSlots = rt.bookingSlots;
     if (Array.isArray(customSlots)) {
       customSlots.forEach((s: any) => {
@@ -264,14 +261,7 @@ export default function AdminInventoryPage() {
     const rt = roomTypes.find((r) => r.id === bulkRoomId);
     if (!rt) return [];
     
-    const combined = [
-      {
-        title: 'Standard Stay',
-        slotStart: '12:00:00',
-        slotEnd: '11:00:00',
-      },
-    ];
-
+    const combined: { title: string; slotStart: string; slotEnd: string }[] = [];
     const customSlots = rt.bookingSlots;
     if (Array.isArray(customSlots)) {
       customSlots.forEach((s: any) => {
@@ -295,20 +285,32 @@ export default function AdminInventoryPage() {
           </h1>
           <p className="text-stone-500 mt-1">Visually monitor booking availability, sold out dates, slots, and block closures.</p>
         </div>
-        <button
-          onClick={() => {
-            if (roomTypes.length > 0) {
-              setBulkRoomId(roomTypes[0].id);
+        <div className="flex items-center gap-3 self-start">
+          <button
+            onClick={() => fetchInventoryData()}
+            disabled={loading}
+            className="flex items-center gap-2 rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm font-bold text-stone-700 shadow-sm transition-all hover:bg-stone-50 hover:border-stone-300 disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin text-amber-600' : 'text-stone-500'}`} />
+            Refresh
+          </button>
+          <button
+            onClick={() => {
+              if (selectedRoomId) {
+                setBulkRoomId(selectedRoomId);
+              } else if (roomTypes.length > 0) {
+                setBulkRoomId(roomTypes[0].id);
+              }
               setBulkSlotStart('12:00:00');
               setBulkSlotEnd('11:00:00');
-            }
-            setIsBulkModalOpen(true);
-          }}
-          className="flex items-center gap-2 self-start rounded-xl bg-amber-600 px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:bg-amber-700"
-        >
-          <Sliders className="h-4 w-4" />
-          Bulk Block Date Range
-        </button>
+              setIsBulkModalOpen(true);
+            }}
+            className="flex items-center gap-2 rounded-xl bg-amber-600 px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:bg-amber-700"
+          >
+            <Sliders className="h-4 w-4" />
+            Bulk Block Date Range
+          </button>
+        </div>
       </div>
 
       {/* Navigation and Indicators */}
@@ -354,25 +356,39 @@ export default function AdminInventoryPage() {
         <div className="flex flex-wrap gap-4 items-center text-xs font-bold uppercase tracking-wider text-stone-500 justify-start lg:justify-end">
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded bg-green-50 border border-green-200 inline-block" />
-            <span>Open / Available</span>
+            <span>Open</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded bg-red-50 border border-red-200 inline-block" />
-            <span>Blocked / Closed</span>
+            <span>Closed / Blocked</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded bg-amber-50 border border-amber-200 inline-block" />
-            <span>Sold Out / Full</span>
+            <span className="w-3 h-3 rounded bg-amber-50 border border-amber-250 inline-block" />
+            <span>Sold Out</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-amber-700 bg-amber-50/50 px-2 py-0.5 rounded-lg border border-amber-200/50">
+            <span className="w-3.5 h-3.5 rounded bg-gradient-to-tr from-amber-500/10 to-amber-500/40 border border-amber-300 inline-block" />
+            <span className="font-extrabold text-[10px]">Weekend (Saturday & Sunday)</span>
           </div>
         </div>
       </div>
 
       {/* Grid Container */}
-      <div className="bg-white border border-stone-200 rounded-2xl shadow-md overflow-x-auto">
+      <div className="bg-white border border-stone-200 rounded-3xl shadow-lg overflow-x-auto">
         <div className="min-w-[900px]">
           {/* Days Header */}
           <div className="grid grid-cols-7 border-b border-stone-200 text-center bg-stone-50 text-stone-500 py-3.5 text-xs font-bold uppercase tracking-widest">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => <div key={d}>{d}</div>)}
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d, idx) => {
+              const isWeekendHeader = idx === 0 || idx === 6;
+              return (
+                <div 
+                  key={d} 
+                  className={`py-1 ${isWeekendHeader ? 'text-amber-800 bg-amber-100/40 border-b-2 border-amber-500/80 font-black rounded-t-lg' : ''}`}
+                >
+                  {d}
+                </div>
+              );
+            })}
           </div>
 
           {/* Calendar Day Cells */}
@@ -384,29 +400,49 @@ export default function AdminInventoryPage() {
           ) : (
             <>
               {blankCells.map((_, idx) => (
-                <div key={`blank-${idx}`} className="border border-stone-100 bg-stone-50/50" />
+                <div key={`blank-${idx}`} className="border border-stone-100 bg-stone-50/30" />
               ))}
               
               {calendarData.map((day) => {
                 const isPast = isPastDate(day.date);
+                const cellDate = new Date(day.date + 'T00:00:00');
+                const dayOfWeek = cellDate.getDay();
+                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
                 return (
                   <div
                     key={day.date}
                     onClick={() => handleOpenEdit(day)}
-                    className={`border border-stone-100 p-3 min-h-[120px] text-left align-top transition-colors flex flex-col justify-between cursor-pointer ${
+                    className={`border border-stone-100 p-3 min-h-[135px] text-left align-top transition-all flex flex-col justify-between cursor-pointer relative group ${
                       isPast 
-                        ? 'bg-red-50/40 hover:bg-red-50/60' 
-                        : 'hover:bg-stone-50 bg-white'
+                        ? 'bg-red-50/30 hover:bg-red-50/50' 
+                        : isWeekend
+                        ? 'bg-gradient-to-br from-amber-500/[0.03] to-amber-500/[0.08] hover:from-amber-500/[0.06] hover:to-amber-500/[0.12] border-amber-200/50 border-l-4 border-l-amber-500/80 shadow-[inset_0_1px_2px_rgba(245,158,11,0.03)]'
+                        : 'hover:bg-stone-50 bg-white hover:shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05),0_4px_12px_rgba(0,0,0,0.03)]'
                     }`}
                   >
-                    {/* Day number */}
-                    <span className={`text-sm font-bold ${isPast ? 'text-red-700' : 'text-stone-900'}`}>
-                      {day.dayOfMonth} {isPast && <span className="text-[9px] uppercase tracking-wider text-red-550 ml-1 font-semibold">(Past)</span>}
-                    </span>
+                    {/* Day number & weekend indicator */}
+                    <div className="flex items-center justify-between w-full">
+                      <span className={`text-sm font-extrabold flex items-baseline gap-1 ${
+                        isPast ? 'text-red-700/60' : isWeekend ? 'text-amber-900 font-black' : 'text-stone-900'
+                      }`}>
+                        <span className="text-base">{day.dayOfMonth}</span>
+                        {isWeekend && !isPast && (
+                          <span className="text-[9px] text-amber-600/80 font-bold">
+                            ({dayOfWeek === 6 ? 'Sat' : 'Sun'})
+                          </span>
+                        )}
+                        {isPast && <span className="text-[8px] uppercase tracking-wider text-red-500/70 font-semibold">(Past)</span>}
+                      </span>
+                      {isWeekend && !isPast && (
+                        <span className="text-[7.5px] tracking-widest text-amber-800 bg-amber-100/90 border border-amber-200/40 px-2 py-0.5 rounded-full font-black uppercase shadow-xs shrink-0">
+                          Wknd
+                        </span>
+                      )}
+                    </div>
 
                     {/* Room Variant status items */}
-                    <div className="mt-2 space-y-1.5 w-full">
+                    <div className="mt-3.5 space-y-2.5 w-full">
                       {day.inventories
                         .filter((inv) => inv.roomTypeId === selectedRoomId)
                         .map((inv) => {
@@ -417,10 +453,14 @@ export default function AdminInventoryPage() {
                             ? 'bg-amber-50 text-amber-700 border-amber-200'
                             : 'bg-green-50 text-green-700 border-green-200';
 
-                          // Show custom rate override in display if set
-                          const labelValue = inv.priceOverride !== null 
-                            ? `${inv.bookedRooms}/${inv.totalRooms} (₹${inv.priceOverride})`
-                            : `${inv.bookedRooms}/${inv.totalRooms}`;
+                          // Resolve the active price for this inventory slot day
+                          const activePrice = inv.priceOverride !== null 
+                            ? inv.priceOverride
+                            : (isWeekend ? inv.defaultWeekendPrice : inv.defaultWeekdayPrice);
+
+                          const labelValue = inv.isClosed
+                            ? 'Closed'
+                            : `${inv.bookedRooms}/${inv.totalRooms} rooms`;
 
                           return (
                             <div 
@@ -429,20 +469,23 @@ export default function AdminInventoryPage() {
                                 e.stopPropagation();
                                 handleOpenEdit(day, inv.roomTypeId, inv.slotStart, inv.slotEnd);
                               }}
-                              className={`p-2 rounded-xl text-[10px] font-bold border flex flex-col justify-between items-start cursor-pointer transition-colors hover:opacity-90 ${statusClass} ${
-                                inv.priceOverride !== null ? 'border-dashed border-amber-500 shadow-sm' : ''
+                              className={`p-2.5 rounded-2xl text-[10px] font-bold border flex flex-col justify-between items-start cursor-pointer transition-all hover:scale-[1.02] active:scale-98 duration-100 shadow-xs ${statusClass} ${
+                                inv.priceOverride !== null ? 'border-dashed border-amber-500 shadow-sm bg-amber-50/50' : ''
                               }`}
                               title={inv.priceOverride !== null ? `Slot: ${inv.slotTitle} (${inv.slotStart?.slice(0, 5)} - ${inv.slotEnd?.slice(0, 5)}), Custom Price Override: ₹${inv.priceOverride}` : `Slot: ${inv.slotTitle}`}
                             >
-                              <div className="flex justify-between w-full gap-1">
-                                <span className="truncate font-black">{inv.slotTitle}</span>
-                                <span className="text-[8px] opacity-75 shrink-0 font-extrabold">
+                              <div className="flex justify-between w-full gap-1 items-center">
+                                <span className="truncate font-black text-stone-800">{inv.slotTitle}</span>
+                                <span className="text-[8px] opacity-75 shrink-0 font-extrabold bg-white/60 px-1 py-0.5 rounded">
                                   {inv.slotStart?.slice(0, 5)} - {inv.slotEnd?.slice(0, 5)}
                                 </span>
                               </div>
-                              <span className="text-[10px] opacity-90 font-black mt-1">
-                                {inv.isClosed ? 'Blocked / Closed' : labelValue}
-                              </span>
+                              <div className="flex items-center justify-between w-full mt-2 border-t border-current/10 pt-2">
+                                <span className="text-[10px] font-black">{labelValue}</span>
+                                <span className="text-[9px] font-black text-stone-900 bg-white px-1.5 py-0.5 rounded shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+                                  ₹{activePrice.toLocaleString('en-IN')}
+                                </span>
+                              </div>
                             </div>
                           );
                         })}
@@ -459,9 +502,9 @@ export default function AdminInventoryPage() {
       {/* Drawer popup modal for editing a day's settings */}
       {selectedDay && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl overflow-hidden max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-150 relative">
             {/* Header */}
-            <div className="bg-stone-900 px-6 py-5 text-white">
+            <div className="bg-stone-900 px-6 py-5 text-white rounded-t-3xl">
               <h3 className="text-lg font-bold" style={{ fontFamily: 'Georgia, serif' }}>Configure Inventory</h3>
               <p className="text-xs text-stone-400 mt-1">{format(new Date(selectedDay.date + 'T00:00:00'), 'EEEE, dd MMMM yyyy')}</p>
             </div>
@@ -649,9 +692,9 @@ export default function AdminInventoryPage() {
       {/* Bulk date blockage modal popup */}
       {isBulkModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl overflow-hidden max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-150 relative">
             {/* Header */}
-            <div className="bg-stone-900 px-6 py-5 text-white">
+            <div className="bg-stone-900 px-6 py-5 text-white rounded-t-3xl">
               <h3 className="text-lg font-bold" style={{ fontFamily: 'Georgia, serif' }}>Bulk Inventory Block</h3>
               <p className="text-xs text-stone-400 mt-1">Configure closures over a range of dates.</p>
             </div>

@@ -21,7 +21,7 @@ export default function ShippingPolicyPage() {
           </h1>
           <div className="w-24 h-1 bg-amber-600 mx-auto rounded-full mb-6"></div>
           <p className="text-stone-300 max-w-2xl mx-auto text-lg leading-relaxed">
-            Fulfillment terms and service delivery protocols for reservations booked at Punnami Southern Residency (operated by Telangana Boat Tourism).
+            Fulfillment terms and service delivery protocols for reservations booked at Punnami Southern Residency (operated under lease by <strong>Telangana Godavari Boat Tourism</strong> | Proprietor: Mr. Nalla Saibabu | GSTIN: 36AWFPN4986M2ZO).
           </p>
         </div>
       </div>
@@ -53,12 +53,12 @@ export default function ShippingPolicyPage() {
                   <Inbox className="h-4 w-4 text-amber-700" />
                 </div>
                 <h2 className="text-2xl font-bold text-stone-900 m-0" style={{ fontFamily: 'var(--font-cormorant), Georgia, serif' }}>
-                  2. Digital Voucher Delivery
+                  2. Digital Ticket Delivery
                 </h2>
               </div>
               <div className="pl-11">
                 <p className="text-base text-stone-600 bg-stone-50 p-6 rounded-2xl border border-stone-100">
-                  Upon a successful online payment transaction through our secure PhonePe gateway, your reservation is verified instantly. A booking confirmation receipt and a digital stay voucher are delivered <strong>immediately</strong> (typically within 1 to 5 minutes) to the email address and mobile number you provided during the booking process.
+                  Upon a successful online payment transaction through our secure PhonePe gateway, your reservation is verified instantly. A booking confirmation receipt and a digital stay ticket are delivered <strong>immediately</strong> (typically within 1 to 5 minutes) to the email address you provided during the booking process.
                 </p>
               </div>
             </section>
@@ -74,7 +74,7 @@ export default function ShippingPolicyPage() {
               </div>
               <div className="pl-11">
                 <p className="text-base text-stone-600 bg-stone-50 p-6 rounded-2xl border border-stone-100">
-                  The actual physical stay service is rendered on the dates specified in your booking voucher, directly at our lodge property located at:
+                  The actual physical stay service is rendered on the dates specified in your booking stay ticket, directly at our lodge property located at:
                   <br />
                   <strong className="text-stone-900 block mt-2 text-base">
                     Punnami Southern Residency, Shilpi Nagar, Bhadrachalam, Telangana, 507111

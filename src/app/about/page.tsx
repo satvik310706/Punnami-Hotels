@@ -18,6 +18,7 @@ export default function AboutPage() {
             alt="Punnami Southern Residency"
             fill
             className="object-cover"
+            sizes="100vw"
           />
         </div>
         <div className="relative z-10 max-w-4xl mx-auto px-4">
@@ -41,8 +42,11 @@ export default function AboutPage() {
             <p className="text-stone-600 text-sm leading-relaxed mb-4">
               Punnami Southern Residency was founded on a simple principle: to offer travelers, pilgrims, and families visiting Bhadrachalam a luxurious, tranquil, and comforting home away from home.
             </p>
-            <p className="text-stone-600 text-sm leading-relaxed">
+            <p className="text-stone-600 text-sm leading-relaxed mb-4">
               We focus on premium room options, instant booking confirmation, and highly personalized service so that our guests can focus entirely on their visit or spiritual journey.
+            </p>
+            <p className="text-stone-600 text-sm leading-relaxed">
+              Today, Punnami Southern Residency is operated under lease by <strong>Telangana Godavari Boat Tourism</strong> (Proprietor: Mr. Nalla Saibabu | GSTIN: 36AWFPN4986M2ZO). Under this stewardship, we continue to bring the highest standards of safety, cleanliness, and comfort to Bhadrachalam.
             </p>
           </div>
           <div className="relative h-72 rounded-2xl overflow-hidden shadow-lg border border-stone-200">
@@ -51,6 +55,7 @@ export default function AboutPage() {
               alt="About Punnami Southern Residency"
               fill
               className="object-cover"
+              sizes="(max-width: 768px) 100vw, 50vw"
             />
           </div>
         </div>

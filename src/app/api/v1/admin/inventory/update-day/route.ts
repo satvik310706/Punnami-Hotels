@@ -11,8 +11,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
     }
 
-    const dateObj = new Date(date);
-    dateObj.setHours(0, 0, 0, 0);
+    // Parse the date timezone-neutrally as UTC midnight to match DB Date format
+    const [yearVal, monthVal, dayVal] = date.split('-').map(Number);
+    const dateObj = new Date(Date.UTC(yearVal, monthVal - 1, dayVal));
 
     const roomType = await prisma.roomType.findUnique({
       where: { id: BigInt(roomTypeId) },

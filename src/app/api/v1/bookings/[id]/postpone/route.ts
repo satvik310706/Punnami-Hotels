@@ -8,7 +8,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const { newDate, reason } = body;
 
     if (!newDate) {
-      return NextResponse.json({ error: 'Please select a valid new travel date.' }, { status: 400 });
+      return NextResponse.json({ error: 'Please select a valid new check-in date.' }, { status: 400 });
     }
 
     if (!reason || reason.trim().length < 5) {
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     today.setHours(0, 0, 0, 0);
 
     if (proposedDate <= today) {
-      return NextResponse.json({ error: 'Proposed travel date must be in the future.' }, { status: 400 });
+      return NextResponse.json({ error: 'Proposed new check-in date must be in the future.' }, { status: 400 });
     }
 
     const booking = await prisma.booking.findUnique({
@@ -36,19 +36,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     if (!['CONFIRMED', 'PARTIAL_PAID'].includes(booking.status)) {
-      return NextResponse.json({ error: 'Only confirmed or partially paid bookings can be postponed.' }, { status: 400 });
+      return NextResponse.json({ error: 'Only confirmed or partially paid bookings can be rescheduled.' }, { status: 400 });
     }
 
-    // Enforce 7-day postpone restriction (checkInDate >= today + 7 days)
+    // Enforce 4-day restriction — same as cancellation policy
     const checkIn = new Date(booking.checkInDate);
     const limitDate = new Date(today);
-    limitDate.setDate(limitDate.getDate() + 7);
+    limitDate.setDate(limitDate.getDate() + 4);
 
     if (checkIn < limitDate) {
-      return NextResponse.json({ error: 'Postponement is unavailable within 7 days of check-in.' }, { status: 400 });
+      return NextResponse.json({ error: 'Rescheduling is unavailable within 4 days of check-in.' }, { status: 400 });
     }
 
-    const updated = await prisma.booking.update({
+    await prisma.booking.update({
       where: { publicId: id },
       data: {
         status: 'POSTPONE_REQUESTED',
@@ -59,10 +59,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     return NextResponse.json({
       status: 'success',
-      message: 'Postponement request submitted successfully.',
+      message: 'Reschedule request submitted successfully.',
     });
   } catch (err) {
     console.error('[Booking Postpone Request API] Error:', err);
-    return NextResponse.json({ error: 'Failed to process postponement request.' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to process reschedule request.' }, { status: 500 });
   }
 }

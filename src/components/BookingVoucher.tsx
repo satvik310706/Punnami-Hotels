@@ -62,6 +62,21 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
 
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showPostponeModal, setShowPostponeModal] = useState(false);
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('status') === 'success' || params.get('download') === 'true') {
+      const timer = setTimeout(() => {
+        window.print();
+        // Remove status and download from URL parameters to prevent re-opening on reload
+        const url = new URL(window.location.href);
+        url.searchParams.delete('status');
+        url.searchParams.delete('download');
+        window.history.replaceState({}, '', url.toString());
+      }, 1200);
+      return () => clearTimeout(timer);
+    }
+  }, []);
   
   const [cancelReason, setCancelReason] = useState('');
   const [postponeReason, setPostponeReason] = useState('');
@@ -366,6 +381,45 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
           </div>
         </div>
 
+        {/* Office Location & Key Pickup Card */}
+        <div className="mx-8 mb-4 mt-2 bg-gradient-to-br from-amber-50/70 to-stone-50 border border-amber-200 rounded-2xl p-6 shadow-sm print-card">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+            <div className="flex items-start gap-3">
+              <MapPin className="h-5.5 w-5.5 text-amber-700 mt-0.5 shrink-0" />
+              <div>
+                <h3 className="font-extrabold text-stone-900 text-sm tracking-tight">
+                  📍 Required: Key Pickup & Registration Office
+                </h3>
+                <p className="text-stone-500 text-xs mt-1 font-medium leading-relaxed">
+                  Before heading to your room, you must visit our primary registration office to complete guest onboarding, verify photo IDs, and collect your room keys.
+                </p>
+              </div>
+            </div>
+            <a
+              href="https://www.google.com/maps/search/?api=1&query=17.669494,80.881138"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-stone-900 hover:bg-stone-800 text-amber-500 hover:text-amber-400 font-extrabold text-xs px-4 py-2.5 rounded-xl border border-stone-800 transition-all shadow-sm shrink-0 flex items-center gap-1.5 print:hidden cursor-pointer"
+            >
+              <MapPin className="h-3.5 w-3.5" />
+              <span>Navigate on Google Maps</span>
+            </a>
+          </div>
+          
+          <div className="w-full overflow-hidden rounded-xl border border-stone-200 shadow-inner h-[220px]">
+            <iframe
+              src="https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d3801.591537172071!2d80.88113787517149!3d17.669494583266612!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMTfCsDQwJzEwLjIiTiA4MMKwNTMnMDEuNCJF!5e0!3m2!1sen!2sin!4v1783592453408!5m2!1sen!2sin"
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              allowFullScreen={true}
+              loading="lazy"
+              referrerPolicy="strict-origin-when-cross-origin"
+              title="Office Location Map"
+            />
+          </div>
+        </div>
+
         {/* Main Details Section */}
         <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8 border-b border-stone-150">
           {/* Guest and Stay Profile */}
@@ -476,7 +530,7 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
               {booking.status === 'POSTPONED' && (
                 <div className="bg-blue-50/50 border border-blue-200 rounded-xl p-3.5 text-center mt-4">
                   <p className="text-[10px] text-blue-700 font-black uppercase tracking-wider">Booking Status: RESCHEDULED</p>
-                  <p className="text-[9px] text-blue-600 mt-0.5 font-medium">Check-in dates updated. New voucher is confirmed.</p>
+                  <p className="text-[9px] text-blue-600 mt-0.5 font-medium">Check-in dates updated. New booking details are confirmed.</p>
                 </div>
               )}
             </div>
@@ -547,7 +601,7 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
                   <button
                     onClick={handlePayBalance}
                     disabled={payingBalance}
-                    className="w-full bg-amber-600 hover:bg-amber-700 disabled:bg-stone-300 disabled:cursor-not-allowed text-white font-black rounded-2xl py-4 text-sm transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
+                    className="w-full bg-[#5f259f] hover:bg-[#4a1d7d] disabled:bg-stone-300 disabled:cursor-not-allowed text-white font-black rounded-2xl py-4 text-sm transition-all shadow-lg flex items-center justify-center gap-2.5 cursor-pointer active:scale-[0.98]"
                   >
                     {payingBalance ? (
                       <>
@@ -556,8 +610,12 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
                       </>
                     ) : (
                       <>
-                        <CreditCard className="h-4.5 w-4.5" />
-                        <span>Pay Remaining Balance Online (₹{(booking.totalAmount - (booking.paidAmount || 0)).toLocaleString('en-IN')})</span>
+                        <div className="bg-white p-0.5 rounded-full flex items-center justify-center">
+                          <svg fill="#5f259f" role="img" viewBox="0 0 24 24" className="h-4 w-4" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10.206 9.941h2.949v4.692c-.402.201-.938.268-1.34.268-1.072 0-1.609-.536-1.609-1.743V9.941zm13.47 4.816c-1.523 6.449-7.985 10.442-14.433 8.919C2.794 22.154-1.199 15.691.324 9.243 1.847 2.794 8.309-1.199 14.757.324c6.449 1.523 10.442 7.985 8.919 14.433zm-6.231-5.888a.887.887 0 0 0-.871-.871h-1.609l-3.686-4.222c-.335-.402-.871-.536-1.407-.402l-1.274.401c-.201.067-.268.335-.134.469l4.021 3.82H6.386c-.201 0-.335.134-.335.335v.67c0 .469.402.871.871.871h.938v3.217c0 2.413 1.273 3.82 3.418 3.82.67 0 1.206-.067 1.877-.335v2.145c0 .603.469 1.072 1.072 1.072h.938a.432.432 0 0 0 .402-.402V9.874h1.542c.201 0 .335-.134.335-.335v-.67z"/>
+                          </svg>
+                        </div>
+                        <span>Pay Remaining Balance Online (₹{(booking.totalAmount - (booking.paidAmount || 0)).toLocaleString('en-IN')}) via PhonePe</span>
                       </>
                     )}
                   </button>

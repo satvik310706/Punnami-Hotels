@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { sendRoomConfirmationSMS } from '@/lib/sms';
-import { sendBookingConfirmationEmail } from '@/lib/zohoMail';
+import { sendBookingConfirmationEmail, sendAdminBookingConfirmationEmail } from '@/lib/zohoMail';
 import { formatDate } from '@/lib/utils';
 import { broadcastRoomInventoryUpdate } from '@/lib/sse';
 
@@ -12,7 +12,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const body = await req.json();
     const { action, postponeNewDate } = body; // "APPROVE" | "REJECT" ...
 
-    if (!action || !['APPROVE_CANCEL', 'REJECT_CANCEL', 'APPROVE_POSTPONE', 'REJECT_POSTPONE', 'MARK_REFUNDED'].includes(action)) {
+    if (!action || !['APPROVE', 'REJECT', 'APPROVE_CANCEL', 'REJECT_CANCEL', 'APPROVE_POSTPONE', 'REJECT_POSTPONE', 'MARK_REFUNDED'].includes(action)) {
       return NextResponse.json({ error: 'Invalid action.' }, { status: 400 });
     }
 
@@ -25,7 +25,142 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
     }
 
-    if (action === 'MARK_REFUNDED') {
+    if (action === 'APPROVE') {
+      // Confirm booking — move reserved rooms to booked rooms
+      await prisma.$transaction(async (tx) => {
+        await tx.booking.update({
+          where: { publicId: id },
+          data: { status: 'CONFIRMED' },
+        });
+
+        // Move reservedRooms → bookedRooms for each date in range
+        const dateRange: Date[] = [];
+        const current = new Date(booking.checkInDate);
+        const checkOutTime = new Date(booking.checkOutDate).getTime();
+        if (booking.checkInDate.getTime() === checkOutTime) {
+          dateRange.push(new Date(booking.checkInDate));
+        } else {
+          while (current.getTime() < checkOutTime) {
+            dateRange.push(new Date(current));
+            current.setUTCDate(current.getUTCDate() + 1);
+          }
+        }
+
+        for (const date of dateRange) {
+          await tx.roomInventory.updateMany({
+            where: {
+              roomTypeId: booking.roomTypeId,
+              date,
+              slotStart: booking.slotStart,
+              slotEnd: booking.slotEnd,
+            },
+            data: {
+              reservedRooms: { decrement: booking.roomsBooked },
+              bookedRooms:   { increment: booking.roomsBooked },
+            },
+          });
+        }
+      });
+
+      // Send confirmation notifications (best-effort, non-blocking)
+      const hotel = booking.roomType.hotel as { checkInTime?: string; checkOutTime?: string; name: string };
+      try {
+        await sendRoomConfirmationSMS({
+          customerName: booking.guestName,
+          customerPhone: booking.guestPhone,
+          publicId: booking.publicId,
+          hotelName: hotel.name,
+          roomName: booking.roomType.name,
+          checkInDate: formatDate(booking.checkInDate),
+          checkInTime: hotel.checkInTime || '12:00 PM',
+          checkOutDate: formatDate(booking.checkOutDate),
+          checkOutTime: hotel.checkOutTime || '11:00 AM',
+          paidAmount: `₹${Number(booking.paidAmount || booking.totalAmount).toLocaleString('en-IN')}`,
+          totalAmount: `₹${Number(booking.totalAmount).toLocaleString('en-IN')}`,
+        });
+      } catch (smsErr) {
+        console.error('[Admin Approve] SMS send failed:', smsErr);
+      }
+      try {
+        await sendBookingConfirmationEmail({
+          guestEmail: booking.guestEmail,
+          guestName: booking.guestName,
+          publicId: booking.publicId,
+          roomName: booking.roomType.name,
+          checkInDate: formatDate(booking.checkInDate),
+          checkInTime: hotel.checkInTime || '12:00 PM',
+          checkOutDate: formatDate(booking.checkOutDate),
+          checkOutTime: hotel.checkOutTime || '11:00 AM',
+          nights: booking.totalNights,
+          rooms: booking.roomsBooked,
+          paidAmount: (booking.paidAmount || booking.totalAmount).toString(),
+          totalAmount: booking.totalAmount.toString(),
+        });
+      } catch (mailErr) {
+        console.error('[Admin Approve] Email send failed:', mailErr);
+      }
+      try {
+        await sendAdminBookingConfirmationEmail({
+          guestName: booking.guestName,
+          guestEmail: booking.guestEmail,
+          guestPhone: booking.guestPhone,
+          publicId: booking.publicId,
+          roomName: booking.roomType.name,
+          checkInDate: formatDate(booking.checkInDate),
+          checkInTime: hotel.checkInTime || '12:00 PM',
+          checkOutDate: formatDate(booking.checkOutDate),
+          checkOutTime: hotel.checkOutTime || '11:00 AM',
+          nights: booking.totalNights,
+          rooms: booking.roomsBooked,
+          paidAmount: (booking.paidAmount || booking.totalAmount).toString(),
+          totalAmount: booking.totalAmount.toString(),
+        });
+      } catch (adminMailErr) {
+        console.error('[Admin Approve] Admin Email send failed:', adminMailErr);
+      }
+
+      return NextResponse.json({ message: 'Booking approved and confirmed successfully.', status: 'CONFIRMED' });
+
+    } else if (action === 'REJECT') {
+      // Reject booking — release reserved inventory and mark as REJECTED
+      await prisma.$transaction(async (tx) => {
+        await tx.booking.update({
+          where: { publicId: id },
+          data: { status: 'REJECTED' },
+        });
+
+        // Release any reserved (held, unpaid) inventory
+        const dateRange: Date[] = [];
+        const current = new Date(booking.checkInDate);
+        const checkOutTime = new Date(booking.checkOutDate).getTime();
+        if (booking.checkInDate.getTime() === checkOutTime) {
+          dateRange.push(new Date(booking.checkInDate));
+        } else {
+          while (current.getTime() < checkOutTime) {
+            dateRange.push(new Date(current));
+            current.setUTCDate(current.getUTCDate() + 1);
+          }
+        }
+
+        for (const date of dateRange) {
+          await tx.roomInventory.updateMany({
+            where: {
+              roomTypeId: booking.roomTypeId,
+              date,
+              slotStart: booking.slotStart,
+              slotEnd: booking.slotEnd,
+            },
+            data: {
+              reservedRooms: { decrement: booking.roomsBooked },
+            },
+          });
+          broadcastRoomInventoryUpdate(booking.roomTypeId, date, booking.slotStart, booking.slotEnd);
+        }
+      });
+
+      return NextResponse.json({ message: 'Booking rejected and inventory released.', status: 'REJECTED' });
+
+    } else if (action === 'MARK_REFUNDED') {
       await prisma.booking.update({
         where: { publicId: id },
         data: { status: 'REFUNDED' },

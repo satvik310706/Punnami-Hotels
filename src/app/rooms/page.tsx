@@ -100,18 +100,11 @@ async function getRoomsWithInventory(checkIn?: string, checkOut?: string) {
 
     const availableRooms = parsedRooms.filter((room: any) => {
       const slotsList: { title: string; slotStart: string; slotEnd: string; totalRooms: number }[] = [];
-      slotsList.push({
-        title: 'Standard Stay',
-        slotStart: normalizeTime(room.hotel?.checkInTime || '12:00:00'),
-        slotEnd: normalizeTime(room.hotel?.checkOutTime || '11:00:00'),
-        totalRooms: room.totalInventory,
-      });
-
       const customSlots = room.bookingSlots || [];
       if (Array.isArray(customSlots)) {
         customSlots.forEach((s: any) => {
           slotsList.push({
-            title: s.title,
+            title: s.title || 'Custom Slot',
             slotStart: normalizeTime(s.slotStart || s.slot_start || '12:00:00'),
             slotEnd: normalizeTime(s.slotEnd || s.slot_end || '11:00:00'),
             totalRooms: Number(s.totalRooms || s.total_rooms || room.totalInventory),

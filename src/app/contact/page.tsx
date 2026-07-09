@@ -30,7 +30,7 @@ export default function ContactPage() {
             Contact Information
           </h2>
           <p className="text-stone-600 text-sm leading-relaxed">
-            Reach out to our customer support or visit our lodging directly. Punnami Southern Residency is owned and operated by <strong>Telangana Boat Tourism</strong> (Proprietor: Mr. Nalla Saibabu).
+            Reach out to our customer support or visit our lodging directly. Punnami Southern Residency is operated under lease by <strong>Telangana Godavari Boat Tourism</strong> (Proprietor: Mr. Nalla Saibabu | GSTIN: 36AWFPN4986M2ZO).
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -88,17 +88,80 @@ export default function ContactPage() {
 
       {/* Google Maps Embed Section */}
       <section className="max-w-6xl mx-auto px-4 pb-20">
-        <div className="bg-white rounded-3xl border border-stone-200 overflow-hidden shadow-md p-2">
-          <iframe 
-            src="https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d3801.591537172071!2d80.88113787517149!3d17.669494583266612!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMTfCsDQwJzEwLjIiTiA4MMKwNTMnMDEuNCJF!5e0!3m2!1sen!2sin!4v1783320394235!5m2!1sen!2sin" 
-            width="100%" 
-            height="400" 
-            style={{ border: 0 }} 
-            allowFullScreen={true} 
-            loading="lazy" 
-            referrerPolicy="strict-origin-when-cross-origin"
-            className="rounded-2xl"
-          ></iframe>
+        <div className="bg-white rounded-3xl border border-stone-200 overflow-hidden shadow-xl grid grid-cols-1 lg:grid-cols-3 gap-0">
+          {/* Map Sidebar / Info Card */}
+          <div className="p-6 sm:p-8 bg-stone-900 text-white flex flex-col justify-between lg:col-span-1 gap-6">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-bold uppercase tracking-wider mb-6">
+                <MapPin className="h-3.5 w-3.5" /> Location Guide
+              </div>
+              <h3 className="text-2xl font-black text-white mb-2" style={{ fontFamily: 'var(--font-cormorant), Georgia, serif' }}>
+                Find Your Way
+              </h3>
+              <p className="text-stone-400 text-xs font-semibold leading-relaxed mb-6">
+                Conveniently located in Shilpi Nagar, Bhadrachalam. Easily accessible from the main bus station and major pilgrimage routes.
+              </p>
+
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                  <div>
+                    <h4 className="text-[11px] font-black text-stone-200 uppercase tracking-wider">Sri Sita Ramachandra Swamy Temple</h4>
+                    <p className="text-[10px] text-stone-400 font-semibold">900m away (3 mins drive / 10 mins walk)</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                  <div>
+                    <h4 className="text-[11px] font-black text-stone-200 uppercase tracking-wider">Godavari River Ghats</h4>
+                    <p className="text-[10px] text-stone-400 font-semibold">300m away (Short walk to the sacred river banks)</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                  <div>
+                    <h4 className="text-[11px] font-black text-stone-200 uppercase tracking-wider">Bhadrachalam Bus Station</h4>
+                    <p className="text-[10px] text-stone-400 font-semibold">1.2 km away (Easy local auto-rickshaw availability)</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 sm:pt-4">
+              <a
+                href="https://maps.google.com/?q=17.6694945,80.8811378"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-black uppercase tracking-wider rounded-xl py-3.5 transition shadow-lg shadow-amber-900/20"
+              >
+                <span>Open in Google Maps</span>
+              </a>
+            </div>
+          </div>
+
+          {/* Map Frame */}
+          <div className="lg:col-span-2 relative min-h-[300px] lg:min-h-[450px]">
+            {/* Mobile-only overlay to prevent gesture interception and allow page scroll */}
+            <a 
+              href="https://maps.google.com/?q=17.6694945,80.8811378" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="absolute inset-0 z-10 lg:hidden block cursor-pointer"
+              aria-label="Open in Google Maps"
+            />
+            <iframe 
+              src="https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d3801.591537172071!2d80.88113787517149!3d17.669494583266612!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMTfCsDQwJzEwLjIiTiA4MMKwNTMnMDEuNCJF!5e0!3m2!1sen!2sin!4v1783320394235!5m2!1sen!2sin" 
+              width="100%" 
+              height="100%" 
+              style={{ border: 0, minHeight: '300px' }} 
+              allowFullScreen={true} 
+              loading="lazy" 
+              referrerPolicy="strict-origin-when-cross-origin"
+              className="w-full h-full object-cover pointer-events-none lg:pointer-events-auto"
+            />
+          </div>
         </div>
       </section>
     </div>

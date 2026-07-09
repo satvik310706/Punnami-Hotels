@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isBefore, getDay } from 'date-fns';
-import { getTodayIST, isISTToday } from '@/lib/ist';
+import { getTodayIST, isISTToday, isAfter6amIST, addDays as addDaysIST } from '@/lib/ist';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -21,7 +21,7 @@ interface CustomDatePickerProps {
 export default function CustomDatePicker({
   selected,
   onChange,
-  minDate = getTodayIST(),
+  minDate,
   label,
   badge,
   availableDates,
@@ -29,6 +29,8 @@ export default function CustomDatePicker({
   onMonthChange,
   align = 'left',
 }: CustomDatePickerProps) {
+  // If it's after 6 AM IST, today is blocked — minimum selectable date is tomorrow
+  const effectiveMinDate = minDate ?? (isAfter6amIST() ? addDaysIST(getTodayIST(), 1) : getTodayIST());
   const [isOpen, setIsOpen] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(selected);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -66,7 +68,7 @@ export default function CustomDatePicker({
 
   const prevMonth = () => {
     const prev = subMonths(currentMonth, 1);
-    if (!isBefore(endOfMonth(prev), minDate)) {
+    if (!isBefore(endOfMonth(prev), effectiveMinDate)) {
       triggerMonthChange(prev);
     }
   };
@@ -119,7 +121,7 @@ export default function CustomDatePicker({
               <button
                 type="button"
                 onClick={prevMonth}
-                disabled={isBefore(endOfMonth(subMonths(currentMonth, 1)), minDate)}
+                disabled={isBefore(endOfMonth(subMonths(currentMonth, 1)), effectiveMinDate)}
                 className="p-1 hover:bg-stone-100 rounded-lg text-stone-600 disabled:opacity-30 disabled:hover:bg-transparent"
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -155,12 +157,15 @@ export default function CustomDatePicker({
               {/* Day cells */}
               {days.map((day) => {
                 const dateStr = format(day, 'yyyy-MM-dd');
-                const isPast = isBefore(day, minDate) && !isSameDay(day, minDate);
+                // isPast: strictly before effective min date
+                const isPast = isBefore(day, effectiveMinDate) && !isSameDay(day, effectiveMinDate);
+                // Today is blocked if we're past 6 AM IST
+                const isTodayBlocked = isAfter6amIST() && isISTToday(day);
                 
                 // Closed if in closedDates OR if availableDates is set and doesn't contain this date
                 const isClosed = closedDates?.has(dateStr) || (availableDates !== undefined && !availableDates.has(dateStr));
                 
-                const isDisabled = isPast || isClosed;
+                const isDisabled = isPast || isTodayBlocked || isClosed;
                 const isSelected = isSameDay(day, selected);
                 const isCurrentToday = isISTToday(day);
                 const dayOfWeek = getDay(day);

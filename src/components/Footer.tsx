@@ -6,7 +6,7 @@ import { Hotel, Phone, Mail, MapPin, Facebook, Instagram } from 'lucide-react';
 
 export default function Footer() {
   const pathname = usePathname();
-  if (pathname && pathname.startsWith('/admin')) {
+  if (pathname && (pathname.startsWith('/admin') || pathname.startsWith('/agent'))) {
     return null;
   }
 
@@ -113,7 +113,12 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-6 pt-5 sm:mt-12 sm:pt-8 border-t border-stone-800 flex flex-col md:flex-row items-center justify-between gap-3 sm:gap-4 text-xs text-stone-500">
-          <p>© 2026 Punnami Southern Residency. All rights reserved.</p>
+          <div>
+            <p>© 2026 Punnami Southern Residency. All rights reserved.</p>
+            <p className="text-[10px] text-stone-600 mt-1 max-w-md">
+              Punnami Southern Residency is operated under lease by <strong>Telangana Godavari Boat Tourism</strong> (Proprietor: Nalla Saibabu | GSTIN: 36AWFPN4986M2ZO).
+            </p>
+          </div>
           <div className="flex gap-4">
             <Link href="/admin" className="hover:text-amber-400 transition-colors">Admin Portal</Link>
             <Link href="/agent/login" className="hover:text-amber-400 transition-colors">Agent Portal</Link>

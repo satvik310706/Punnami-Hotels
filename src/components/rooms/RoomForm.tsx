@@ -72,6 +72,8 @@ export default function RoomForm({ initialData, onSubmit, isLoading }: RoomFormP
   // Local helper states
   const [uploadingCover, setUploadingCover] = useState(false);
   const [uploadingGallery, setUploadingGallery] = useState(false);
+  const [isDragOverCover, setIsDragOverCover] = useState(false);
+  const [isDragOverGallery, setIsDragOverGallery] = useState(false);
 
   useEffect(() => {
     if (initialData) {
@@ -123,39 +125,67 @@ export default function RoomForm({ initialData, onSubmit, isLoading }: RoomFormP
     }
   };
 
-  // Image Upload helper
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, isGallery = false) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Multi-file Upload helper supporting drag-and-drop and input sources
+  const uploadFiles = async (files: FileList | File[], isGallery = false) => {
+    const fileArray = Array.from(files);
+    if (fileArray.length === 0) return;
 
     if (isGallery) setUploadingGallery(true);
     else setUploadingCover(true);
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folder', 'rooms');
+      const uploadTargets = isGallery ? fileArray : [fileArray[0]];
+      const uploadPromises = uploadTargets.map(async (file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', 'rooms');
 
-      const res = await fetch('/api/v1/admin/upload', {
-        method: 'POST',
-        body: formData,
+        const res = await fetch('/api/v1/admin/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await res.json();
+        if (res.ok && data.url) {
+          return data.url as string;
+        } else {
+          throw new Error(data.error || 'Upload failed');
+        }
       });
 
-      const data = await res.json();
-      if (res.ok && data.url) {
-        if (isGallery) {
-          setGalleryImages((prev) => [...prev, data.url]);
-        } else {
-          setCoverImageUrl(data.url);
-        }
-      } else {
-        showAlert('Upload Failed', data.error || 'Upload failed', 'error');
+      const urls = await Promise.all(uploadPromises);
+      if (isGallery) {
+        setGalleryImages((prev) => [...prev, ...urls]);
+      } else if (urls.length > 0) {
+        setCoverImageUrl(urls[0]);
       }
-    } catch {
-      showAlert('Upload Failed', 'Failed to upload image.', 'error');
+    } catch (err: any) {
+      showAlert('Upload Failed', err.message || 'Failed to upload one or more images.', 'error');
     } finally {
       setUploadingGallery(false);
       setUploadingCover(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent, isGallery = false) => {
+    e.preventDefault();
+    if (isGallery) setIsDragOverGallery(true);
+    else setIsDragOverCover(true);
+  };
+
+  const handleDragLeave = (isGallery = false) => {
+    if (isGallery) setIsDragOverGallery(false);
+    else setIsDragOverCover(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent, isGallery = false) => {
+    e.preventDefault();
+    if (isGallery) setIsDragOverGallery(false);
+    else setIsDragOverCover(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      await uploadFiles(files, isGallery);
     }
   };
 
@@ -759,20 +789,33 @@ export default function RoomForm({ initialData, onSubmit, isLoading }: RoomFormP
                 />
               </div>
               <div className="flex flex-col justify-end">
-                <label className="w-full bg-stone-900 hover:bg-stone-850 text-white text-xs font-bold uppercase tracking-wider rounded-xl py-3 px-4 text-center cursor-pointer shadow-md transition-colors flex items-center justify-center gap-1.5">
-                  {uploadingCover ? (
-                    <><Loader2 className="h-4 w-4 animate-spin text-white" /> Uploading...</>
-                  ) : (
-                    <>Upload Cover Image</>
-                  )}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    disabled={uploadingCover}
-                    onChange={(e) => handleImageUpload(e, false)}
-                  />
-                </label>
+                <div
+                  onDragOver={(e) => handleDragOver(e, false)}
+                  onDragLeave={() => handleDragLeave(false)}
+                  onDrop={(e) => handleDrop(e, false)}
+                  className={`border-2 border-dashed rounded-xl p-0.5 transition-all ${
+                    isDragOverCover ? 'border-amber-500 bg-amber-50/50 shadow-md shadow-amber-600/10' : 'border-transparent'
+                  }`}
+                >
+                  <label className="w-full bg-stone-900 hover:bg-stone-850 text-white text-xs font-bold uppercase tracking-wider rounded-xl py-3 px-4 text-center cursor-pointer shadow-md transition-colors flex items-center justify-center gap-1.5">
+                    {uploadingCover ? (
+                      <><Loader2 className="h-4 w-4 animate-spin text-white" /> Uploading...</>
+                    ) : (
+                      <>Upload Cover Image</>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={uploadingCover}
+                      onChange={async (e) => {
+                        if (e.target.files) {
+                          await uploadFiles(e.target.files, false);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
               </div>
 
               {coverImageUrl && (
@@ -794,35 +837,59 @@ export default function RoomForm({ initialData, onSubmit, isLoading }: RoomFormP
                 <h3 className="text-base font-bold text-stone-900" style={{ fontFamily: 'Georgia, serif' }}>
                   Gallery Images Slideshow
                 </h3>
-                <label className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl py-2.5 px-4 text-center cursor-pointer shadow-md transition-all flex items-center justify-center gap-1.5">
-                  {uploadingGallery ? (
-                    <><Loader2 className="h-3.5 w-3.5 animate-spin text-white" /> Uploading...</>
-                  ) : (
-                    <>Add to Gallery</>
-                  )}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    disabled={uploadingGallery}
-                    onChange={(e) => handleImageUpload(e, true)}
-                  />
-                </label>
               </div>
 
-              {galleryImages.length === 0 ? (
-                <p className="text-stone-400 text-xs py-8 text-center border border-dashed border-stone-200 rounded-2xl">
-                  No gallery images added yet. Click 'Add to Gallery' above to upload screenshots.
-                </p>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {/* Drag and Drop Zone for Gallery */}
+              <div
+                onDragOver={(e) => handleDragOver(e, true)}
+                onDragLeave={() => handleDragLeave(true)}
+                onDrop={(e) => handleDrop(e, true)}
+                className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center transition-all ${
+                  isDragOverGallery
+                    ? 'border-amber-500 bg-amber-50/50'
+                    : 'border-stone-300 bg-stone-50 hover:bg-stone-100/50'
+                }`}
+              >
+                <div className="text-center space-y-3">
+                  <div className="text-stone-500 font-bold text-sm">
+                    Drag & Drop multiple images here, or
+                  </div>
+                  <label className="inline-block bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl py-2.5 px-6 text-center cursor-pointer shadow-md transition-all">
+                    {uploadingGallery ? (
+                      <span className="flex items-center gap-1.5 justify-center">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-white" /> Uploading...
+                      </span>
+                    ) : (
+                      <span>Browse Files</span>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      disabled={uploadingGallery}
+                      onChange={async (e) => {
+                        if (e.target.files) {
+                          await uploadFiles(e.target.files, true);
+                        }
+                      }}
+                    />
+                  </label>
+                  <p className="text-[10px] text-stone-400 font-semibold uppercase tracking-wider">
+                    Select multiple JPG, PNG, WebP up to 10MB each
+                  </p>
+                </div>
+              </div>
+
+              {galleryImages.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
                   {galleryImages.map((img, idx) => (
                     <div key={idx} className="relative rounded-2xl overflow-hidden border border-stone-250 aspect-video bg-stone-50 group shadow-sm">
                       <img src={img} alt="" className="w-full h-full object-cover" />
                       <button
                         type="button"
                         onClick={() => removeGalleryImage(idx)}
-                        className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                        className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-650"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>

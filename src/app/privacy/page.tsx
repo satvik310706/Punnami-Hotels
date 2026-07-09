@@ -21,7 +21,7 @@ export default function PrivacyPage() {
           </h1>
           <div className="w-24 h-1 bg-amber-600 mx-auto rounded-full mb-6"></div>
           <p className="text-stone-300 max-w-2xl mx-auto text-lg leading-relaxed">
-            At Punnami Southern Residency, we protect your personal information. This Privacy Policy details how Telangana Boat Tourism collects, uses, and secures your data.
+            At Punnami Southern Residency, we protect your personal information. This Privacy Policy details how <strong>Telangana Godavari Boat Tourism</strong> (Proprietor: Mr. Nalla Saibabu | GSTIN: 36AWFPN4986M2ZO) collects, uses, and secures your data.
           </p>
         </div>
       </div>

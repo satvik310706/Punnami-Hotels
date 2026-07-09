@@ -30,7 +30,20 @@ export async function GET(req: NextRequest) {
       }),
       prisma.roomType.findMany({
         where: { isActive: true, status: 'PUBLISHED' },
-        select: { id: true, name: true, totalInventory: true, bookingSlots: true },
+        select: { 
+          id: true, 
+          name: true, 
+          totalInventory: true, 
+          bookingSlots: true,
+          weekdayPrice: true,
+          weekendPrice: true,
+          hotel: {
+            select: {
+              checkInTime: true,
+              checkOutTime: true,
+            }
+          }
+        },
       }),
     ]);
 
@@ -38,19 +51,36 @@ export async function GET(req: NextRequest) {
     
     // Map dates to grid items
     const calendarData = days.map((day) => {
-      const dateStr = day.toISOString().split('T')[0];
+      // Construct date string using local date parts to prevent timezone offsets from shifting the date
+      const y = day.getFullYear();
+      const m = String(day.getMonth() + 1).padStart(2, '0');
+      const d = String(day.getDate()).padStart(2, '0');
+      const dateStr = `${y}-${m}-${d}`;
       
       const dayInventories: any[] = [];
       
       for (const rt of roomTypes) {
+        const normalizeTime = (timeStr: string) => {
+          if (!timeStr) return '12:00:00';
+          if (/^\d{2}:\d{2}:\d{2}$/.test(timeStr)) return timeStr;
+          if (/^\d{2}:\d{2}$/.test(timeStr)) return `${timeStr}:00`;
+          const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+          if (match) {
+            let hours = parseInt(match[1], 10);
+            const minutes = match[2];
+            const ampm = match[3].toUpperCase();
+            if (ampm === 'PM' && hours < 12) hours += 12;
+            if (ampm === 'AM' && hours === 12) hours = 0;
+            return `${hours.toString().padStart(2, '0')}:${minutes}:00`;
+          }
+          return timeStr;
+        };
+
+        const standardSlotStart = normalizeTime((rt as any).hotel?.checkInTime || '12:00:00');
+        const standardSlotEnd = normalizeTime((rt as any).hotel?.checkOutTime || '11:00:00');
+
         // Build slots list
-        const slots = [
-          {
-            title: 'Standard Stay',
-            slotStart: '12:00:00',
-            slotEnd: '11:00:00',
-          },
-        ];
+        const slots: { title: string; slotStart: string; slotEnd: string }[] = [];
 
         const customSlots = rt.bookingSlots as any;
         if (Array.isArray(customSlots)) {
@@ -72,6 +102,18 @@ export async function GET(req: NextRequest) {
               i.slotEnd === slot.slotEnd
           );
 
+          // Resolve slot pricing configuration
+          const customSlotConfig = Array.isArray(rt.bookingSlots)
+            ? (rt.bookingSlots as any[]).find((s: any) => {
+                const sS = s.slotStart || s.slot_start;
+                const sE = s.slotEnd || s.slot_end;
+                return sS && sE && sS.slice(0, 5) === slot.slotStart.slice(0, 5) && sE.slice(0, 5) === slot.slotEnd.slice(0, 5);
+              })
+            : null;
+
+          const defaultWeekdayPrice = customSlotConfig?.priceWeekday ?? customSlotConfig?.price_weekday ?? Number(rt.weekdayPrice);
+          const defaultWeekendPrice = customSlotConfig?.priceWeekend ?? customSlotConfig?.price_weekend ?? Number(rt.weekendPrice);
+
           dayInventories.push({
             roomTypeId: rt.id.toString(),
             roomTypeName: rt.name,
@@ -86,6 +128,8 @@ export async function GET(req: NextRequest) {
             hasOverride: !!inv,
             id: inv ? inv.id.toString() : null,
             priceOverride: inv && inv.priceOverride !== null ? Number(inv.priceOverride) : null,
+            defaultWeekdayPrice,
+            defaultWeekendPrice,
           });
         }
       }
@@ -99,11 +143,32 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       calendarData,
-      roomTypes: roomTypes.map((rt) => ({
-        id: rt.id.toString(),
-        name: rt.name,
-        bookingSlots: rt.bookingSlots,
-      })),
+      roomTypes: roomTypes.map((rt) => {
+        const checkInTime = rt.hotel?.checkInTime || '12:00:00';
+        const checkOutTime = rt.hotel?.checkOutTime || '11:00:00';
+        const normalizeTime = (timeStr: string) => {
+          if (!timeStr) return '12:00:00';
+          if (/^\d{2}:\d{2}:\d{2}$/.test(timeStr)) return timeStr;
+          if (/^\d{2}:\d{2}$/.test(timeStr)) return `${timeStr}:00`;
+          const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+          if (match) {
+            let hours = parseInt(match[1], 10);
+            const minutes = match[2];
+            const ampm = match[3].toUpperCase();
+            if (ampm === 'PM' && hours < 12) hours += 12;
+            if (ampm === 'AM' && hours === 12) hours = 0;
+            return `${hours.toString().padStart(2, '0')}:${minutes}:00`;
+          }
+          return timeStr;
+        };
+        return {
+          id: rt.id.toString(),
+          name: rt.name,
+          bookingSlots: rt.bookingSlots,
+          standardSlotStart: normalizeTime(checkInTime),
+          standardSlotEnd: normalizeTime(checkOutTime),
+        };
+      }),
     });
   } catch (err) {
     console.error('[Admin Calendar Inventory API] Error:', err);

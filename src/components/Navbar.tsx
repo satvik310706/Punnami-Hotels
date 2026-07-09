@@ -1,60 +1,45 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
-import { Menu, X, Hotel, Phone } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Menu, X, Phone, Ticket } from 'lucide-react';
 import { usePathname } from 'next/navigation';
-
-import { useEffect } from 'react';
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const [isAdmin, setIsAdmin] = useState(false);
-  const [userProfile, setUserProfile] = useState<any>(null);
 
   useEffect(() => {
     const checkSession = async () => {
-      // 1. Check Admin session
+      // Check Admin session only
       try {
         const adminRes = await fetch('/api/v1/auth/admin/me');
         if (adminRes.ok) {
           const data = await adminRes.json();
           if (data.authenticated) {
             setIsAdmin(true);
+            localStorage.setItem('punnami_admin_auth', 'true');
             return;
           }
         }
       } catch {}
 
+      // If check fails or not authenticated, clear states
+      setIsAdmin(false);
       if (typeof window !== 'undefined') {
-        const adminAuth = localStorage.getItem('punnami_admin_auth') === 'true';
-        setIsAdmin(adminAuth);
-        if (adminAuth) return;
+        localStorage.removeItem('punnami_admin_auth');
       }
-
-      // 2. Check regular User session
-      try {
-        const userRes = await fetch('/api/v1/auth/me');
-        if (userRes.ok) {
-          const data = await userRes.json();
-          if (data.authenticated && data.user) {
-            setUserProfile(data.user);
-            return;
-          }
-        }
-      } catch {}
-      setUserProfile(null);
     };
     checkSession();
   }, [pathname]);
 
-  // Hide the public navbar in the admin panel
-  if (pathname && pathname.startsWith('/admin')) {
+  // Hide the public navbar in the admin and agent panels
+  if (pathname && (pathname.startsWith('/admin') || pathname.startsWith('/agent'))) {
     return null;
   }
 
-  const links = isAdmin 
+  const links = isAdmin
     ? [
         { href: '/', label: 'Home' },
         { href: '/rooms', label: 'Rooms' },
@@ -65,12 +50,6 @@ export default function Navbar() {
     : [
         { href: '/', label: 'Home' },
         { href: '/rooms', label: 'Rooms' },
-        { 
-          href: '/my-bookings', 
-          label: userProfile?.fullName 
-            ? `My Bookings (${userProfile.fullName.split(' ')[0]})` 
-            : 'My Bookings' 
-        },
         { href: '/about', label: 'About' },
         { href: '/contact', label: 'Contact' },
       ];
@@ -120,6 +99,18 @@ export default function Navbar() {
               <Phone className="h-4 w-4" />
               +91 95420 69573
             </a>
+            {/* Bookings lookup */}
+            <Link
+              href="/bookings"
+              className={`flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl border transition-colors ${
+                pathname === '/bookings'
+                  ? 'bg-stone-950 text-amber-400 border-stone-900'
+                  : 'text-stone-700 border-stone-200 hover:bg-stone-100'
+              }`}
+            >
+              <Ticket className="h-4 w-4" />
+              My Booking
+            </Link>
             <Link
               href="/rooms"
               className="bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold rounded-xl px-5 py-2 transition-colors shadow-sm"
@@ -153,6 +144,17 @@ export default function Navbar() {
                 {label}
               </Link>
             ))}
+            {/* My Booking link for mobile */}
+            <Link
+              href="/bookings"
+              onClick={() => setOpen(false)}
+              className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-colors ${
+                pathname === '/bookings' ? 'bg-amber-50 text-amber-700' : 'text-stone-700 hover:bg-stone-100'
+              }`}
+            >
+              <Ticket className="h-4 w-4" />
+              My Booking
+            </Link>
             <div className="pt-2 px-4">
               <Link
                 href="/rooms"

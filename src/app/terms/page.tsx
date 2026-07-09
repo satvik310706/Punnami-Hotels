@@ -42,7 +42,7 @@ export default function TermsPage() {
               </div>
               <div className="pl-11">
                 <p className="text-base text-stone-600 bg-stone-50 p-6 rounded-2xl border border-stone-100">
-                  The brand website <strong>Punnami Southern Residency</strong> (referred to as "Hotel", "We", "Us", or "Our" or "PSR Residency") is owned, managed, and operated by the registered legal business entity <strong>Telangana Boat Tourism</strong> (Proprietor: Sri Nalla Saibabu). All online booking services, stay operations, and digital payments are processed under this legal entity.
+                  The brand website <strong>Punnami Southern Residency</strong> (referred to as "Hotel", "We", "Us", or "Our" or "PSR Residency") is operated under lease by the registered legal business entity <strong>Telangana Godavari Boat Tourism</strong> (Proprietor: Sri Nalla Saibabu | GSTIN: 36AWFPN4986M2ZO). All online booking services, stay operations, and digital payments are processed under this legal entity.
                 </p>
               </div>
             </section>
@@ -62,7 +62,7 @@ export default function TermsPage() {
                     All stay reservations are subject to room availability. A room is temporarily held for up to 30 minutes during the checkout process.
                   </p>
                   <p>
-                    Your booking is strictly confirmed only when the full payment (or selected advance amount) is successfully processed through our integrated online payment gateway (PhonePe). Upon successful payment, a digital booking voucher/stay ticket is automatically generated and sent to your registered email and mobile number.
+                    Your booking is strictly confirmed only when the full payment (or selected advance amount) is successfully processed through our integrated online payment gateway (PhonePe). Upon successful payment, a digital stay ticket is automatically generated and sent to your registered email.
                   </p>
                 </div>
               </div>
