@@ -20,12 +20,10 @@ function normalizeTime(timeStr: string) {
 
 async function getRoomsWithInventory(checkIn?: string, checkOut?: string) {
   try {
-    // Run cleanup of expired pending bookings first to release locked inventory in real-time
-    try {
-      await cleanupExpiredBookings();
-    } catch (cleanupErr) {
+    // Run cleanup of expired pending bookings asynchronously to release locked inventory in real-time
+    cleanupExpiredBookings().catch((cleanupErr) => {
       console.error('[Rooms page SSR] Expired bookings cleanup failed:', cleanupErr);
-    }
+    });
 
     const includeObj: any = {
       hotel: {

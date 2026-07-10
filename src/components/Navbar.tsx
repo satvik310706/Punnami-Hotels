@@ -61,7 +61,7 @@ export default function Navbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 group">
             <div className="w-12 h-12 bg-stone-950 rounded-xl flex items-center justify-center overflow-hidden shadow-md group-hover:shadow-amber-500/30 transition-all border border-amber-500/20">
-              <img src="/logo.png" alt="PSR Logo" className="w-full h-full object-contain" />
+              <img src="/logo.png" alt="PSR Logo" width={48} height={48} className="w-full h-full object-contain" />
             </div>
             <div>
               <div className="font-bold text-stone-900 text-base leading-tight tracking-wide" style={{ fontFamily: 'var(--font-cormorant), Georgia, serif', fontSize: '18px' }}>

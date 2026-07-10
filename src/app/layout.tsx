@@ -93,7 +93,7 @@ export const metadata: Metadata = {
     images: ["/logo.png"],
   },
   alternates: {
-    canonical: "/",
+    canonical: "https://punnamihotels.com",
   },
   robots: {
     index: true,
@@ -113,8 +113,48 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Hotel",
+    "name": "Punnami Southern Residency",
+    "alternateName": ["Punnami Hotels", "Punnami Residency Bhadrachalam", "Punnami Lodge Bhadrachalam"],
+    "image": "https://punnamihotels.com/logo.png",
+    "description": "Book luxury rooms at Punnami Southern Residency, the premier hotel near Bhadrachalam Temple. Experience premium amenities, family suites, AC deluxe lodging.",
+    "url": "https://punnamihotels.com",
+    "telephone": "+919542069573",
+    "hasMap": "https://maps.google.com/?q=17.6694945,80.8811378",
+    "keywords": "punnami, punnami hotels, best hotel in bhadrachalam, bhadrachalam hotel rooms booking, hotels near bhadrachalam temple, cheap hotels in bhadrachalam, deluxe rooms bhadrachalam",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "Shilpi Nagar",
+      "addressLocality": "Bhadrachalam",
+      "addressRegion": "Telangana",
+      "postalCode": "507111",
+      "addressCountry": "IN"
+    },
+    "geo": {
+      "@type": "GeoCoordinates",
+      "latitude": 17.6694945,
+      "longitude": 80.8811378
+    },
+    "priceRange": "₹1500 - ₹5000",
+    "checkinTime": "12:00:00",
+    "checkoutTime": "11:00:00",
+    "starRating": {
+      "@type": "Rating",
+      "ratingValue": "4.8",
+      "bestRating": "5"
+    }
+  };
+
   return (
     <html lang="en" suppressHydrationWarning className="scroll-smooth">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body
         className={`${inter.variable} ${cormorant.variable} antialiased min-h-screen flex flex-col bg-stone-50 text-stone-900`}
         style={{ fontFamily: "var(--font-inter), sans-serif" }}

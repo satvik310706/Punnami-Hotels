@@ -94,6 +94,18 @@
   }
 }
 
+@layer utilities {
+  .render-optimized {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 500px;
+  }
+  .gpu-accelerated {
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+  }
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
@@ -109,3 +121,4 @@
 ::-webkit-scrollbar-thumb:hover {
   background: color-mix(in srgb, var(--primary) 80%, black);
 }
+

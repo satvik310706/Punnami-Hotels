@@ -12,12 +12,10 @@ function normalizeTime(timeStr: string) {
 // GET /api/v1/rooms — Public room type listing with search/filter
 export async function GET(req: NextRequest) {
   try {
-    // Run cleanup of expired pending bookings first to release locked inventory in real-time
-    try {
-      await cleanupExpiredBookings();
-    } catch (cleanupErr) {
+    // Run cleanup of expired pending bookings asynchronously to release locked inventory in real-time
+    cleanupExpiredBookings().catch((cleanupErr) => {
       console.error('[Rooms List API] Expired bookings cleanup failed:', cleanupErr);
-    }
+    });
 
     const { searchParams } = req.nextUrl;
     const page = Math.max(1, parseInt(searchParams.get('page') || '1'));

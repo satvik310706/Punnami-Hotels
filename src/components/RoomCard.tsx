@@ -53,7 +53,6 @@ export default function RoomCard({ room, priority = false, checkIn, checkOut, vi
   return (
     <Link
       href={bookingUrl}
-      prefetch={false}
       className={`group block overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_8px_30px_rgba(0,0,0,0.07)] hover:shadow-[0_20px_60px_rgba(0,0,0,0.14)] hover:-translate-y-1 transition-all duration-300 ${
         isList ? 'flex flex-col md:flex-row' : ''
       }`}

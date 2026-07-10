@@ -18,7 +18,7 @@ export default function Footer() {
           <div className="lg:col-span-1">
             <div className="flex items-center gap-2.5 mb-3 sm:mb-4">
               <div className="w-12 h-12 bg-stone-950 rounded-xl flex items-center justify-center overflow-hidden border border-amber-500/20 shadow-md">
-                <img src="/logo.png" alt="PSR Logo" className="w-full h-full object-contain" />
+                <img src="/logo.png" alt="PSR Logo" width={48} height={48} className="w-full h-full object-contain" />
               </div>
               <div>
                 <div className="text-white font-bold text-lg leading-tight" style={{ fontFamily: 'Georgia, serif' }}>
