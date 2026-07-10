@@ -21,11 +21,13 @@ interface RoomCardProps {
     name: string;
     coverImageUrl: string | null;
     isFeatured: boolean;
+    isActive?: boolean;
     weekdayPrice: number;
     weekendPrice: number;
     maxAdults: number;
     totalInventory: number;
     facilities: unknown;
+    bookingSlots?: { priceWeekday?: number | null; priceWeekend?: number | null; [key: string]: any }[] | null;
     hotel: { name: string; address: string | null };
   };
   priority?: boolean;
@@ -45,15 +47,24 @@ export default function RoomCard({ room, priority = false, checkIn, checkOut, vi
 
   const isList = view === 'list';
 
+  // Use first slot price if available — slot pricing takes priority over category base price
+  const slots = Array.isArray(room.bookingSlots) ? room.bookingSlots : [];
+  const firstSlot = slots[0] || null;
+  const displayPrice = firstSlot?.priceWeekday != null ? Number(firstSlot.priceWeekday) : room.weekdayPrice;
+
   // Deterministic discount percentage (e.g. 15%, 20%, or 25%) based on room ID
   const discountPercent = 15 + (parseInt(room.id || '1') % 3) * 5; 
   // Back-calculated original rack rate, rounded to the nearest 100
-  const originalPrice = Math.round((room.weekdayPrice / (1 - discountPercent / 100)) / 100) * 100;
+  const originalPrice = Math.round((displayPrice / (1 - discountPercent / 100)) / 100) * 100;
+
+  const isActiveRoom = room.isActive !== false;
 
   return (
     <Link
       href={bookingUrl}
-      className={`group block overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_8px_30px_rgba(0,0,0,0.07)] hover:shadow-[0_20px_60px_rgba(0,0,0,0.14)] hover:-translate-y-1 transition-all duration-300 ${
+      className={`group block overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_8px_30px_rgba(0,0,0,0.07)] ${
+        isActiveRoom ? 'hover:shadow-[0_20px_60px_rgba(0,0,0,0.14)] hover:-translate-y-1 transition-all duration-300' : 'hover:shadow-[0_20px_60px_rgba(0,0,0,0.14)] transition-all duration-300'
+      } ${
         isList ? 'flex flex-col md:flex-row' : ''
       }`}
     >
@@ -67,30 +78,36 @@ export default function RoomCard({ room, priority = false, checkIn, checkOut, vi
           fill
           priority={priority}
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
+          className={`object-cover ${isActiveRoom ? 'transition-transform duration-500 group-hover:scale-105' : ''}`}
         />
         {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
 
-        {/* Featured badge */}
-        {room.isFeatured && (
+        {/* Status / Inactive / Featured badges */}
+        {!isActiveRoom ? (
+          <div className="absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 rounded-full bg-stone-500 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-white shadow-lg">
+            Currently Unavailable
+          </div>
+        ) : room.isFeatured ? (
           <div className="absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 rounded-full bg-amber-400 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-amber-950 shadow-lg">
             <Sparkles className="h-3 w-3" />
             Featured
           </div>
-        )}
+        ) : null}
 
         {/* Discount Badge on Image */}
-        <div className="absolute top-3 right-3 z-10 inline-flex items-center rounded-full bg-red-650 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-lg border border-red-500/10">
-          {discountPercent}% OFF
-        </div>
+        {isActiveRoom && (
+          <div className="absolute top-3 right-3 z-10 inline-flex items-center rounded-full bg-red-650 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-lg border border-red-500/10">
+            {discountPercent}% OFF
+          </div>
+        )}
 
         {/* Price overlay (Only show in Grid View on Image) */}
         {!isList && (
           <div className="absolute bottom-3 right-3 z-10 bg-black/75 backdrop-blur-sm rounded-xl px-3 py-2 text-white border border-white/5">
             <div className="text-[10px] text-stone-400 line-through leading-none mb-0.5">₹{originalPrice.toLocaleString('en-IN')}</div>
             <div className="font-black text-lg leading-tight flex items-center gap-1.5">
-              <span>₹{room.weekdayPrice.toLocaleString('en-IN')}</span>
+              <span>₹{displayPrice.toLocaleString('en-IN')}</span>
             </div>
             <div className="text-[9px] text-stone-300 leading-tight">per night</div>
           </div>
@@ -106,7 +123,7 @@ export default function RoomCard({ room, priority = false, checkIn, checkOut, vi
           </p>
 
           {/* Room name */}
-          <h3 className="text-xl font-bold text-stone-900 leading-tight mb-2 group-hover:text-amber-700 transition-colors">
+          <h3 className={`text-xl font-bold leading-tight mb-2 transition-colors ${isActiveRoom ? 'text-stone-900 group-hover:text-amber-700' : 'text-stone-500'}`}>
             {room.name}
           </h3>
 
@@ -183,17 +200,25 @@ export default function RoomCard({ room, priority = false, checkIn, checkOut, vi
           <div>
             <div className="text-[10px] uppercase font-bold text-stone-400 tracking-wider mb-0.5">Price starting from</div>
             <div className="flex items-baseline gap-2 flex-wrap">
-              <span className="text-2xl font-black text-stone-900">₹{room.weekdayPrice.toLocaleString('en-IN')}</span>
+              <span className="text-2xl font-black text-stone-900">₹{displayPrice.toLocaleString('en-IN')}</span>
               <span className="text-xs font-bold text-stone-400 line-through">₹{originalPrice.toLocaleString('en-IN')}</span>
-              <span className="text-[9px] font-black uppercase tracking-wider bg-red-50 text-red-650 px-2 py-0.5 rounded border border-red-150">
-                Save {discountPercent}%
-              </span>
+              {isActiveRoom && (
+                <span className="text-[9px] font-black uppercase tracking-wider bg-red-50 text-red-650 px-2 py-0.5 rounded border border-red-150">
+                  Save {discountPercent}%
+                </span>
+              )}
             </div>
             <span className="text-[10px] text-stone-400 block mt-0.5">/ night (excluding taxes)</span>
           </div>
-          <span className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-black uppercase tracking-wider rounded-xl px-5 py-3 transition duration-200">
-            Book Now
-          </span>
+          {isActiveRoom ? (
+            <span className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-black uppercase tracking-wider rounded-xl px-5 py-3 transition duration-200">
+              Book Now
+            </span>
+          ) : (
+            <span className="bg-stone-300 text-stone-500 text-xs font-black uppercase tracking-wider rounded-xl px-5 py-3 cursor-not-allowed">
+              Unavailable
+            </span>
+          )}
         </div>
       </div>
     </Link>

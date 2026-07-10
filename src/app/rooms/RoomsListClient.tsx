@@ -11,6 +11,7 @@ interface Room {
   id: string;
   slug: string;
   name: string;
+  isActive?: boolean;
   coverImageUrl: string | null;
   isFeatured: boolean;
   weekdayPrice: number;
@@ -18,6 +19,7 @@ interface Room {
   maxAdults: number;
   totalInventory: number;
   facilities: unknown;
+  bookingSlots?: { priceWeekday?: number | null; priceWeekend?: number | null; [key: string]: any }[] | null;
   hotel: { name: string; address: string | null };
 }
 

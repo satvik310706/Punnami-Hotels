@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   Wifi, Wind, Car, Flame, Tv, UtensilsCrossed, CheckCircle2, Star, MapPin,
   Clock, Users, BedDouble, CalendarDays, ChevronLeft, ChevronRight, X,
-  ChevronDown, Shield, Sparkles, Minus, Plus,
+  ChevronDown, Shield, Sparkles, Minus, Plus, Calendar,
 } from 'lucide-react';
 import { format, addDays, addMonths } from 'date-fns';
 import { getTodayIST, isAfter6amIST } from '@/lib/ist';
@@ -354,9 +354,9 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
           minCapacity = avail;
         }
       } else {
-        if (defaultCapacity < minCapacity) {
-          minCapacity = defaultCapacity;
-        }
+        // Block by default if there's no pre-registered inventory in DB
+        minCapacity = 0;
+        break;
       }
       current.setDate(current.getDate() + 1);
     }
@@ -364,12 +364,11 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
   }, [checkIn, checkOut, selectedSlotIndex, slots, availability, room, isAdmin]);
 
   useEffect(() => {
-    const capacity = room.capacityPerRoom || 3;
-    const maxAdultsAllowed = maxAvailableForSelectedSlot * capacity;
+    const maxAdultsAllowed = maxAvailableForSelectedSlot * (room.maxAdults || room.capacityPerRoom || 3);
     if (adults > maxAdultsAllowed && maxAvailableForSelectedSlot > 0) {
       setAdults(maxAdultsAllowed);
     }
-  }, [maxAvailableForSelectedSlot, adults, room.capacityPerRoom]);
+  }, [maxAvailableForSelectedSlot, adults, room.maxAdults, room.capacityPerRoom]);
 
   useEffect(() => {
     const maxChildrenAllowed = maxAvailableForSelectedSlot * (room.maxChildren || 2);
@@ -381,7 +380,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
   const pricing = useMemo(() => {
     let subtotal = 0;
     const current = new Date(checkIn);
-    const breakdown = [];
+    const breakdown: { date: string; pricePerRoom: number; price: number; isWeekend: boolean }[] = [];
 
     // Support same-day day-use stays
     let limit = new Date(checkOut);
@@ -399,18 +398,20 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
       const invKey = `${dateStr}_${sStart}_${sEnd}`;
       
       const inv = availability[invKey];
-      // Resolve custom slot base prices
+      // Resolve custom slot base prices (slot-level pricing takes priority over room category pricing)
       const slotWeekdayPrice = slot?.priceWeekday ?? room.weekdayPrice;
       const slotWeekendPrice = slot?.priceWeekend ?? room.weekendPrice;
       const basePrice = isWeekendDay ? Number(slotWeekendPrice) : Number(slotWeekdayPrice);
-      const price = inv && inv.priceOverride !== null ? inv.priceOverride : basePrice;
+      // If inventory has an admin price override, use that; otherwise use slot/category base price
+      const pricePerRoom = inv && inv.priceOverride !== null && inv.priceOverride !== undefined ? Number(inv.priceOverride) : basePrice;
 
       breakdown.push({
         date: dateStr,
-        price: price * rooms,
+        pricePerRoom,
+        price: pricePerRoom * rooms,
         isWeekend: isWeekendDay,
       });
-      subtotal += price * rooms;
+      subtotal += pricePerRoom * rooms;
       current.setDate(current.getDate() + 1);
     }
 
@@ -428,7 +429,9 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
     }
 
     const total = Math.max(0, subtotal + gst - agentDiscount);
-    return { subtotal, gst, total, nights: breakdown.length, breakdown, agentDiscount };
+    // Compute a representative per-room price for the label (average across nights, per room)
+    const avgPricePerRoom = breakdown.length > 0 ? Math.round(subtotal / rooms / breakdown.length) : 0;
+    return { subtotal, gst, total, nights: breakdown.length, breakdown, agentDiscount, avgPricePerRoom };
   }, [checkIn, checkOut, rooms, room.weekdayPrice, room.weekendPrice, agentProfile, availability, selectedSlotIndex, slots]);
 
   const executeCheckout = async (
@@ -529,20 +532,39 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
             align="left"
           />
           {isOvernight ? (
-            <CustomDatePicker
-              selected={checkOut}
-              onChange={(d) => setCheckOut(d)}
-              minDate={addDays(checkIn, 1)}
-              label="Check-out"
-              closedDates={closedDatesSet}
-              onMonthChange={(m) => fetchAvailability(m)}
-              align="right"
-            />
+            <div className="relative">
+              <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-1.5 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5 text-amber-600" />
+                  Check-out
+                </span>
+              </label>
+              <div className="w-full border-2 border-stone-200 bg-stone-50 rounded-xl px-3.5 py-3 text-stone-400 font-semibold text-sm cursor-not-allowed flex items-center justify-between shadow-sm">
+                <span className="flex items-center gap-2">
+                  <span>{format(addDays(checkIn, 1), 'dd MMM yyyy')}</span>
+                  <span className="text-[9px] bg-amber-100 text-amber-800 font-black px-2 py-0.5 rounded-md normal-case shrink-0">
+                    Next Day
+                  </span>
+                </span>
+                <Calendar className="h-4 w-4 text-stone-400 opacity-50" />
+              </div>
+            </div>
           ) : (
-            <div className="flex flex-col">
-              <span className="block text-[10px] font-bold text-stone-400 uppercase mb-1">Check-out</span>
-              <div className="w-full flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-xs font-bold text-stone-500 cursor-not-allowed">
-                Same Day Stay
+            <div className="relative">
+              <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-1.5 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5 text-amber-600" />
+                  Check-out
+                </span>
+              </label>
+              <div className="w-full border-2 border-stone-200 bg-stone-50 rounded-xl px-3.5 py-3 text-stone-400 font-semibold text-sm cursor-not-allowed flex items-center justify-between shadow-sm">
+                <span className="flex items-center gap-2">
+                  <span>{format(checkIn, 'dd MMM yyyy')}</span>
+                  <span className="text-[9px] bg-amber-100 text-amber-800 font-black px-2 py-0.5 rounded-md normal-case shrink-0">
+                    Same Day
+                  </span>
+                </span>
+                <Calendar className="h-4 w-4 text-stone-400 opacity-50" />
               </div>
             </div>
           )}
@@ -594,7 +616,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
                 <span className="text-sm font-black text-stone-800">{adults}</span>
                 <button
                   type="button"
-                  onClick={() => setAdults((v) => Math.min((maxAvailableForSelectedSlot || 5) * room.maxAdults, v + 1))}
+                  onClick={() => setAdults((v) => Math.min(maxAvailableForSelectedSlot * (room.maxAdults || room.capacityPerRoom || 3), v + 1))}
                   className="flex h-8 w-8 items-center justify-center rounded-full text-stone-500 hover:text-amber-700 hover:bg-stone-50 active:scale-95 transition cursor-pointer"
                 >
                   <Plus className="h-4 w-4" />
@@ -616,7 +638,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
                 <span className="text-sm font-black text-stone-800">{childrenCount}</span>
                 <button
                   type="button"
-                  onClick={() => setChildrenCount((v) => Math.min((maxAvailableForSelectedSlot || 5) * room.maxChildren, v + 1))}
+                  onClick={() => setChildrenCount((v) => Math.min(maxAvailableForSelectedSlot * (room.maxChildren || 2), v + 1))}
                   className="flex h-8 w-8 items-center justify-center rounded-full text-stone-500 hover:text-amber-700 hover:bg-stone-50 active:scale-95 transition cursor-pointer"
                 >
                   <Plus className="h-4 w-4" />
@@ -643,7 +665,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
       {nights > 0 && (
         <div className="bg-stone-50 rounded-xl p-4 space-y-2">
           <div className="flex justify-between text-xs">
-            <span className="text-stone-500">₹{room.weekdayPrice.toLocaleString('en-IN')} × {nights} night{nights > 1 ? 's' : ''} × {rooms} room{rooms > 1 ? 's' : ''}</span>
+            <span className="text-stone-500">₹{pricing.avgPricePerRoom.toLocaleString('en-IN')} × {nights} night{nights > 1 ? 's' : ''} × {rooms} room{rooms > 1 ? 's' : ''}</span>
             <span className="font-semibold text-stone-700">{formatCurrency(pricing.subtotal)}</span>
           </div>
           <div className="flex justify-between text-xs">
@@ -672,16 +694,20 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
       {/* Book Button */}
       <button
         onClick={handleBookingClick}
-        disabled={bookingLoading || nights <= 0}
-        className="w-full bg-amber-600 hover:bg-amber-700 disabled:bg-stone-300 disabled:cursor-not-allowed text-white font-black rounded-xl py-3.5 text-sm transition-colors shadow-lg hover:shadow-amber-600/30 cursor-pointer"
+        disabled={bookingLoading || nights <= 0 || room.isActive === false || maxAvailableForSelectedSlot === 0}
+        className="w-full bg-amber-600 hover:bg-amber-700 disabled:bg-stone-300 disabled:text-stone-500 disabled:cursor-not-allowed text-white font-black rounded-xl py-3.5 text-sm transition-colors shadow-lg hover:shadow-amber-600/30 cursor-pointer"
       >
-        {bookingLoading
+        {room.isActive === false
+          ? 'Unavailable'
+          : maxAvailableForSelectedSlot === 0
+          ? 'Sold Out'
+          : bookingLoading
           ? 'Processing...'
           : `Book Now – ${formatCurrency(pricing.total)}`}
       </button>
 
       <p className="text-center text-[10px] text-stone-400 font-bold uppercase tracking-wider">
-        No payment charged yet — you'll pay after verification
+        {room.isActive === false ? 'Reservations Closed' : "No payment charged yet — you'll pay after verification"}
       </p>
     </div>
     );
@@ -941,6 +967,20 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
           {/* Left: Room Details */}
           <div className="lg:col-span-2 space-y-10">
+            {/* Inactive Room Category Banner Alert */}
+            {room.isActive === false && (
+              <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-5 shadow-sm flex items-start gap-3">
+                <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center shrink-0 text-amber-700 font-black text-lg">
+                  ⚠️
+                </div>
+                <div>
+                  <h4 className="text-amber-950 font-black text-sm uppercase tracking-wide">Currently Unavailable</h4>
+                  <p className="text-amber-800 text-xs mt-1 font-semibold leading-relaxed">
+                    This room category is currently not available for bookings. We are not accepting reservations at the moment. You can browse other available categories.
+                  </p>
+                </div>
+              </div>
+            )}
             {/* Title block */}
             <div>
               <div className="flex items-center gap-2 mb-2">
@@ -1138,18 +1178,27 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
           <div className="hidden lg:block lg:col-span-1">
             <div className="sticky top-20">
               <div className="bg-white rounded-2xl shadow-xl border border-stone-200 overflow-hidden">
-                {/* Price header */}
+                {/* Price header - shows selected slot pricing, not raw category base price */}
                 <div className="bg-gradient-to-br from-stone-900 to-stone-800 p-6">
-                  <div className="text-stone-400 text-xs uppercase tracking-wider mb-1">Starting from</div>
-                  <div className="text-3xl font-black text-white">
-                    ₹{room.weekdayPrice.toLocaleString('en-IN')}
-                    <span className="text-sm font-normal text-stone-300 ml-1">/night</span>
-                  </div>
-                  {room.weekendPrice > room.weekdayPrice && (
-                    <div className="text-xs text-amber-400 mt-1">
-                      Weekend: ₹{room.weekendPrice.toLocaleString('en-IN')}/night
-                    </div>
-                  )}
+                  {(() => {
+                    const slot = slots[selectedSlotIndex] || slots[0];
+                    const slotWeekdayPrice = slot?.priceWeekday ?? room.weekdayPrice;
+                    const slotWeekendPrice = slot?.priceWeekend ?? room.weekendPrice;
+                    return (
+                      <>
+                        <div className="text-stone-400 text-xs uppercase tracking-wider mb-1">Starting from</div>
+                        <div className="text-3xl font-black text-white">
+                          ₹{Number(slotWeekdayPrice).toLocaleString('en-IN')}
+                          <span className="text-sm font-normal text-stone-300 ml-1">/night</span>
+                        </div>
+                        {Number(slotWeekendPrice) > Number(slotWeekdayPrice) && (
+                          <div className="text-xs text-amber-400 mt-1">
+                            Weekend: ₹{Number(slotWeekendPrice).toLocaleString('en-IN')}/night
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
 
                 <div className="p-6">
@@ -1169,19 +1218,28 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
           </span>
           <div className="flex items-baseline gap-1 mt-0.5">
             <span className="text-xl font-black text-amber-700 tracking-tight">
-              ₹{(nights > 0 ? pricing.total : room.weekdayPrice).toLocaleString('en-IN')}
+              ₹{(nights > 0 ? pricing.total : (slots[selectedSlotIndex]?.priceWeekday ?? slots[0]?.priceWeekday ?? room.weekdayPrice)).toLocaleString('en-IN')}
             </span>
             <span className="text-[10px] font-bold text-stone-400 uppercase">
               {nights > 0 ? `(${nights} nights)` : '/night'}
             </span>
           </div>
         </div>
-        <button
-          onClick={() => setIsMobileDrawerOpen(true)}
-          className="flex-1 max-w-[200px] bg-amber-600 hover:bg-amber-700 text-white font-black rounded-xl py-3 text-xs uppercase tracking-wider transition-all flex items-center justify-center cursor-pointer shadow-md"
-        >
-          Book Room
-        </button>
+        {room.isActive === false ? (
+          <button
+            disabled
+            className="flex-1 max-w-[200px] bg-stone-300 text-stone-500 font-black rounded-xl py-3 text-xs uppercase tracking-wider transition-all flex items-center justify-center cursor-not-allowed"
+          >
+            Closed
+          </button>
+        ) : (
+          <button
+            onClick={() => setIsMobileDrawerOpen(true)}
+            className="flex-1 max-w-[200px] bg-amber-600 hover:bg-amber-700 text-white font-black rounded-xl py-3 text-xs uppercase tracking-wider transition-all flex items-center justify-center cursor-pointer shadow-md"
+          >
+            Book Room
+          </button>
+        )}
       </div>
 
       {/* Mobile Booking Drawer Modal */}

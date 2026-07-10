@@ -43,7 +43,7 @@ async function getRoomsWithInventory(checkIn?: string, checkOut?: string) {
     }
 
     const rooms = await prisma.roomType.findMany({
-      where: { status: 'PUBLISHED', isActive: true },
+      where: { status: 'PUBLISHED' },
       orderBy: [{ isFeatured: 'desc' }, { orderPriority: 'asc' }],
       include: includeObj,
     });
@@ -52,6 +52,7 @@ async function getRoomsWithInventory(checkIn?: string, checkOut?: string) {
       id: r.id.toString(),
       slug: r.slug,
       name: r.name,
+      isActive: r.isActive,
       coverImageUrl: r.coverImageUrl,
       isFeatured: r.isFeatured,
       weekdayPrice: Number(r.weekdayPrice),
@@ -127,6 +128,9 @@ async function getRoomsWithInventory(checkIn?: string, checkOut?: string) {
             if (isClosed || (total - booked - reserved) <= 0) {
               return false;
             }
+          } else {
+            // Block by default if there's no pre-registered inventory in DB
+            return false;
           }
           return true;
         });

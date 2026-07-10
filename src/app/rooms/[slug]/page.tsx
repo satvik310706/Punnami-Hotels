@@ -11,7 +11,7 @@ import { cache } from 'react';
 const getRoomDetail = cache(async (slug: string) => {
   try {
     const room = await prisma.roomType.findUnique({
-      where: { slug, status: 'PUBLISHED', isActive: true },
+      where: { slug, status: 'PUBLISHED' },
       include: {
         hotel: {
           select: {

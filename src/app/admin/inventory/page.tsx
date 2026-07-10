@@ -154,7 +154,7 @@ export default function AdminInventoryPage() {
       } else {
         const rt = roomTypes.find((r) => r.id === roomId);
         setEditTotalRooms(rt?.totalInventory ?? 5);
-        setEditIsClosed(false);
+        setEditIsClosed(true); // Closed by default as per user request
         setEditPriceOverride('');
       }
     }

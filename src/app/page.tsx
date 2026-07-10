@@ -36,7 +36,7 @@ const REVIEWS = [
 async function getFeaturedRooms() {
   try {
     const rooms = await prisma.roomType.findMany({
-      where: { status: 'PUBLISHED', isActive: true, isFeatured: true },
+      where: { status: 'PUBLISHED', isFeatured: true },
       take: 3,
       orderBy: { orderPriority: 'asc' },
       include: { hotel: { select: { name: true, address: true } } },
@@ -189,6 +189,7 @@ export default async function HomePage() {
                     id: room.id.toString(),
                     weekdayPrice: Number(room.weekdayPrice),
                     weekendPrice: Number(room.weekendPrice),
+                    bookingSlots: (room.bookingSlots as any[] | null) ?? undefined,
                   }}
                 />
               </ScrollReveal>

@@ -246,10 +246,7 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        // Step 2 — Acquire an exclusive row-level lock (SELECT FOR UPDATE)
-        // Any other concurrent transaction trying to lock the same row will
-        // block here until we commit — preventing all race conditions.
-        // Format date parameter timezone-neutrally as string YYYY-MM-DD to avoid database-level timezone offset shifts.
+        // Step 2 — Acquire an exclusive row-level lock (SELECT FOR UPDATE) for the specific slot
         const dateStr = date.toISOString().split('T')[0];
         const lockedRows = await tx.$queryRaw<{
           id: bigint;
@@ -280,7 +277,7 @@ export async function POST(req: NextRequest) {
           throw new Error(`Only ${available} room(s) available on ${date.toISOString().slice(0, 10)}`);
         }
 
-        // Step 4 — Atomically increment counts
+        // Step 4 — Atomically increment counts for the specific slot
         await tx.roomInventory.update({
           where: { id: inv.id },
           data: isAdmin

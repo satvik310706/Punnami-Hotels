@@ -29,7 +29,6 @@ export async function GET(req: NextRequest) {
 
     const where: any = {
       status: 'PUBLISHED',
-      isActive: true,
     };
 
     if (q) {
@@ -131,6 +130,9 @@ export async function GET(req: NextRequest) {
               if (isClosed || (total - booked - reserved) <= 0) {
                 return false;
               }
+            } else {
+              // Block by default if there's no pre-registered inventory in DB
+              return false;
             }
             return true;
           });
