@@ -1298,6 +1298,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
         guestName={guestName}
         guestPhone={guestPhone}
         totalAmount={pricing.total}
+        isAdmin={isAdmin}
       />
 
       {/* Checkout Pending Check Modal */}

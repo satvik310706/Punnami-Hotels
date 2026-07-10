@@ -65,6 +65,7 @@ interface CheckoutPassengerModalProps {
   guestName?: string;
   guestPhone?: string;
   totalAmount?: number;
+  isAdmin?: boolean;
 }
 
 export default function CheckoutPassengerModal({
@@ -77,6 +78,7 @@ export default function CheckoutPassengerModal({
   guestName = '',
   guestPhone = '',
   totalAmount,
+  isAdmin = false,
 }: CheckoutPassengerModalProps) {
   const totalGuests = adults + childrenCount;
 
@@ -535,7 +537,7 @@ export default function CheckoutPassengerModal({
           </form>
 
           {/* Payment Percentage Selector */}
-          {totalAmount !== undefined && (
+          {totalAmount !== undefined && !isAdmin && (
             <div className="bg-stone-50 border border-stone-200 rounded-xl p-4 space-y-4">
               <h4 className="text-xs font-black text-stone-700 uppercase tracking-wider">
                 Select Payment Option
@@ -632,6 +634,8 @@ export default function CheckoutPassengerModal({
           >
             {isProcessing ? (
               <span className="flex items-center gap-1"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Submitting...</span>
+            ) : isAdmin ? (
+              'Confirm Admin Booking'
             ) : (
               'Confirm Guest Details'
             )}
