@@ -240,9 +240,10 @@ export async function POST(req: NextRequest) {
             date,
             slotStart: normalizedSlotStart,
             slotEnd: normalizedSlotEnd,
-            totalRooms: defaultSlotCapacity,
+            totalRooms: 0,
             bookedRooms: 0,
             reservedRooms: 0,
+            isClosed: true,
           },
         });
 

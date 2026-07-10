@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   CalendarDays, ChevronLeft, ChevronRight, Lock, Unlock, 
-  Info, Sliders, Bed, Search, ShieldAlert, CheckCircle2, Clock, RefreshCw
+  Info, Sliders, Bed, Search, ShieldAlert, CheckCircle2, Clock, RefreshCw, Minus, Plus, X
 } from 'lucide-react';
 import { format, addMonths, subMonths, startOfMonth, getDay, getDaysInMonth } from 'date-fns';
 import CustomDatePicker from '@/components/CustomDatePicker';
@@ -57,6 +57,7 @@ export default function AdminInventoryPage() {
   const [editSlotStart, setEditSlotStart] = useState<string>('12:00:00');
   const [editSlotEnd, setEditSlotEnd] = useState<string>('11:00:00');
   const [editTotalRooms, setEditTotalRooms] = useState<number>(5);
+  const [editMinRooms, setEditMinRooms] = useState<number>(0);
   const [editIsClosed, setEditIsClosed] = useState<boolean>(false);
   const [editPriceOverride, setEditPriceOverride] = useState<string>('');
   const [saving, setSaving] = useState(false);
@@ -125,12 +126,14 @@ export default function AdminInventoryPage() {
 
     if (inv) {
       setEditTotalRooms(inv.totalRooms);
+      setEditMinRooms(inv.bookedRooms + inv.reservedRooms);
       setEditIsClosed(inv.isClosed);
       setEditPriceOverride(inv.priceOverride !== null ? String(inv.priceOverride) : '');
     } else {
       const rt = roomTypes.find((r) => r.id === activeId);
       setEditTotalRooms(rt?.totalInventory ?? 5);
-      setEditIsClosed(false);
+      setEditMinRooms(0);
+      setEditIsClosed(true);
       setEditPriceOverride('');
     }
   };
@@ -149,12 +152,14 @@ export default function AdminInventoryPage() {
       );
       if (inv) {
         setEditTotalRooms(inv.totalRooms);
+        setEditMinRooms(inv.bookedRooms + inv.reservedRooms);
         setEditIsClosed(inv.isClosed);
         setEditPriceOverride(inv.priceOverride !== null ? String(inv.priceOverride) : '');
       } else {
         const rt = roomTypes.find((r) => r.id === roomId);
         setEditTotalRooms(rt?.totalInventory ?? 5);
-        setEditIsClosed(true); // Closed by default as per user request
+        setEditMinRooms(0);
+        setEditIsClosed(true); 
         setEditPriceOverride('');
       }
     }
@@ -504,9 +509,18 @@ export default function AdminInventoryPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-150 relative">
             {/* Header */}
-            <div className="bg-stone-900 px-6 py-5 text-white rounded-t-3xl">
-              <h3 className="text-lg font-bold" style={{ fontFamily: 'Georgia, serif' }}>Configure Inventory</h3>
-              <p className="text-xs text-stone-400 mt-1">{format(new Date(selectedDay.date + 'T00:00:00'), 'EEEE, dd MMMM yyyy')}</p>
+            <div className="bg-stone-900 px-6 py-5 text-white rounded-t-3xl flex items-start justify-between relative overflow-hidden">
+              <div className="relative z-10">
+                <h3 className="text-lg font-bold" style={{ fontFamily: 'Georgia, serif' }}>Configure Inventory</h3>
+                <p className="text-xs text-stone-400 mt-1">{format(new Date(selectedDay.date + 'T00:00:00'), 'EEEE, dd MMMM yyyy')}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedDay(null)}
+                className="relative z-10 flex h-8 w-8 items-center justify-center rounded-full bg-stone-800/80 text-stone-300 hover:bg-stone-700 hover:text-white transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
 
             {/* Body Form */}
@@ -551,27 +565,71 @@ export default function AdminInventoryPage() {
                 />
               )}
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-1.5">Rooms Available</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={editTotalRooms}
-                    onChange={(e) => setEditTotalRooms(parseInt(e.target.value) || 0)}
-                    className="w-full border-2 border-stone-200 rounded-xl px-4 py-2.5 text-sm font-bold text-stone-900 focus:outline-none focus:border-amber-500"
-                  />
+                  <div className="flex items-center justify-between border-2 border-stone-200 rounded-xl px-2 py-1.5 bg-white shadow-sm">
+                    <button
+                      type="button"
+                      disabled={editTotalRooms <= editMinRooms}
+                      onClick={() => setEditTotalRooms(Math.max(editMinRooms, editTotalRooms - 1))}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg text-stone-500 hover:bg-stone-100 hover:text-amber-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </button>
+                    <input
+                      type="number"
+                      min={editMinRooms}
+                      value={editTotalRooms}
+                      onChange={(e) => setEditTotalRooms(Math.max(editMinRooms, parseInt(e.target.value) || editMinRooms))}
+                      className="w-12 text-center text-sm font-bold text-stone-900 focus:outline-none appearance-none bg-transparent"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setEditTotalRooms(editTotalRooms + 1)}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg text-stone-500 hover:bg-stone-100 hover:text-amber-700 transition-colors"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
+                  {editMinRooms > 0 && (
+                    <p className="text-[10px] text-stone-400 mt-1 font-medium">
+                      Minimum {editMinRooms} required for existing bookings.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-1.5">Price Override</label>
-                  <input
-                    type="number"
-                    min={0}
-                    placeholder="Use default"
-                    value={editPriceOverride}
-                    onChange={(e) => setEditPriceOverride(e.target.value)}
-                    className="w-full border-2 border-stone-200 rounded-xl px-4 py-2.5 text-sm font-bold text-stone-900 focus:outline-none focus:border-amber-500"
-                  />
+                  <div className="flex items-center justify-between border-2 border-stone-200 rounded-xl px-2 py-1.5 bg-white shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const current = parseInt(editPriceOverride) || 0;
+                        if (current > 0) setEditPriceOverride(String(Math.max(0, current - 50)));
+                      }}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg text-stone-500 hover:bg-stone-100 hover:text-amber-700 transition-colors"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </button>
+                    <input
+                      type="number"
+                      min={0}
+                      placeholder="Default"
+                      value={editPriceOverride}
+                      onChange={(e) => setEditPriceOverride(e.target.value)}
+                      className="w-20 text-center text-sm font-bold text-stone-900 focus:outline-none appearance-none placeholder:font-normal placeholder:text-stone-300 bg-transparent"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const current = parseInt(editPriceOverride) || 0;
+                        setEditPriceOverride(String(current + 50));
+                      }}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg text-stone-500 hover:bg-stone-100 hover:text-amber-700 transition-colors"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -694,9 +752,18 @@ export default function AdminInventoryPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-150 relative">
             {/* Header */}
-            <div className="bg-stone-900 px-6 py-5 text-white rounded-t-3xl">
-              <h3 className="text-lg font-bold" style={{ fontFamily: 'Georgia, serif' }}>Bulk Inventory Block</h3>
-              <p className="text-xs text-stone-400 mt-1">Configure closures over a range of dates.</p>
+            <div className="bg-stone-900 px-6 py-5 text-white rounded-t-3xl flex items-start justify-between relative overflow-hidden">
+              <div className="relative z-10">
+                <h3 className="text-lg font-bold" style={{ fontFamily: 'Georgia, serif' }}>Bulk Inventory Block</h3>
+                <p className="text-xs text-stone-400 mt-1">Configure closures over a range of dates.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsBulkModalOpen(false)}
+                className="relative z-10 flex h-8 w-8 items-center justify-center rounded-full bg-stone-800/80 text-stone-300 hover:bg-stone-700 hover:text-white transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
 
             {/* Form */}

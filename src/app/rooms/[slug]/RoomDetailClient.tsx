@@ -197,64 +197,42 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
   };
 
   useEffect(() => {
+    // Initial fetch
     fetchAvailability(format(new Date(), 'yyyy-MM'));
     fetchAvailability(format(addMonths(new Date(), 1), 'yyyy-MM'));
-  }, [room.slug]);
 
-  useEffect(() => {
-    const es = new ReconnectingEventSource(`/api/v1/stream/rooms/${room.id}`);
-
-    es.addEventListener('INVENTORY_UPDATE', (e: any) => {
-      try {
-        const payload = JSON.parse(e.data);
-        if (String(payload.roomTypeId) === String(room.id)) {
-          const { travel_date, available, booked, reserved, is_closed, priceOverride, slot_start, slot_end } = payload;
-          const sStart = normalizeTime(slot_start);
-          const sEnd = normalizeTime(slot_end);
-          const key = `${travel_date}_${sStart}_${sEnd}`;
-          setAvailability((prev) => ({
-            ...prev,
-            [key]: {
-              totalRooms: (available + booked + reserved),
-              bookedRooms: booked,
-              reservedRooms: reserved,
-              isClosed: is_closed,
-              priceOverride: priceOverride !== undefined ? priceOverride : null,
-            },
-          }));
-        }
-      } catch (err) {
-        console.error('[SSE] Failed to parse room update payload', err);
+    // Poll every 30 seconds when tab is active
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchAvailability(format(new Date(), 'yyyy-MM'));
+        fetchAvailability(format(addMonths(new Date(), 1), 'yyyy-MM'));
       }
-    });
+    }, 30000);
 
-    es.addEventListener('BULK_REFRESH', () => {
-      fetchAvailability(format(new Date(), 'yyyy-MM'));
-      fetchAvailability(format(addMonths(new Date(), 1), 'yyyy-MM'));
-    });
-
-    return () => {
-      es.close();
-    };
+    return () => clearInterval(interval);
   }, [room.id, room.slug]);
 
   const currentSlot = slots[selectedSlotIndex] || slots[0];
 
-  const closedDatesSet = useMemo(() => {
-    const closed = new Set<string>();
-    if (!currentSlot) return closed;
-    const startStr = currentSlot.slotStart;
-    const endStr = currentSlot.slotEnd;
-    for (const [key, info] of Object.entries(availability)) {
-      if (key.endsWith(`_${startStr}_${endStr}`)) {
-        const dateStr = key.split('_')[0];
-        if (info.isClosed || (info.bookedRooms + info.reservedRooms) >= info.totalRooms) {
-          closed.add(dateStr);
+  const availableDatesSet = useMemo(() => {
+    const available = new Set<string>();
+    if (!currentSlot) return available;
+    const suffix = `_${currentSlot.slotStart}_${currentSlot.slotEnd}`;
+    
+    // Convert object entries to arrays to avoid Object.entries overhead inside the loop
+    const keys = Object.keys(availability);
+    
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      if (key.endsWith(suffix)) {
+        const info = availability[key];
+        if (!info.isClosed && (info.totalRooms - info.bookedRooms - info.reservedRooms) > 0) {
+          available.add(key.slice(0, 10)); // Extract 'YYYY-MM-DD' directly using slice instead of split
         }
       }
     }
-    return closed;
-  }, [availability, selectedSlotIndex, slots, currentSlot]);
+    return available;
+  }, [availability, currentSlot]);
 
   useEffect(() => {
     const prof = localStorage.getItem('punnami_agent_profile');
@@ -349,6 +327,10 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
       const invKey = `${dateStr}_${sStart}_${sEnd}`;
       const inv = availability[invKey];
       if (inv) {
+        if (inv.isClosed && !isAdmin) {
+          minCapacity = 0;
+          break;
+        }
         const avail = inv.totalRooms - inv.bookedRooms - inv.reservedRooms;
         if (avail < minCapacity) {
           minCapacity = avail;
@@ -377,8 +359,17 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
     }
   }, [maxAvailableForSelectedSlot, childrenCount, room.maxChildren]);
 
+  useEffect(() => {
+    if (bookingError) {
+      setBookingError('');
+    }
+  }, [checkIn, checkOut, rooms, adults, childrenCount, selectedSlotIndex]);
+
   const pricing = useMemo(() => {
     let subtotal = 0;
+    let pureBaseSubtotal = 0;
+    let surgeSubtotal = 0;
+    let discountSubtotal = 0;
     const current = new Date(checkIn);
     const breakdown: { date: string; pricePerRoom: number; price: number; isWeekend: boolean }[] = [];
 
@@ -412,6 +403,14 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
         isWeekend: isWeekendDay,
       });
       subtotal += pricePerRoom * rooms;
+      pureBaseSubtotal += basePrice * rooms;
+      
+      if (pricePerRoom > basePrice) {
+        surgeSubtotal += (pricePerRoom - basePrice) * rooms;
+      } else if (pricePerRoom < basePrice) {
+        discountSubtotal += (basePrice - pricePerRoom) * rooms;
+      }
+
       current.setDate(current.getDate() + 1);
     }
 
@@ -430,8 +429,8 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
 
     const total = Math.max(0, subtotal + gst - agentDiscount);
     // Compute a representative per-room price for the label (average across nights, per room)
-    const avgPricePerRoom = breakdown.length > 0 ? Math.round(subtotal / rooms / breakdown.length) : 0;
-    return { subtotal, gst, total, nights: breakdown.length, breakdown, agentDiscount, avgPricePerRoom };
+    const avgPricePerRoom = breakdown.length > 0 ? Math.round(pureBaseSubtotal / rooms / breakdown.length) : 0;
+    return { subtotal, pureBaseSubtotal, surgeSubtotal, discountSubtotal, gst, total, nights: breakdown.length, breakdown, agentDiscount, avgPricePerRoom };
   }, [checkIn, checkOut, rooms, room.weekdayPrice, room.weekendPrice, agentProfile, availability, selectedSlotIndex, slots]);
 
   const executeCheckout = async (
@@ -527,7 +526,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
               }
             }}
             label="Check-in"
-            closedDates={closedDatesSet}
+            availableDates={availableDatesSet}
             onMonthChange={(m) => fetchAvailability(m)}
             align="left"
           />
@@ -605,19 +604,21 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
             {/* Adults Counter */}
             <div>
               <span className="block text-[10px] font-bold text-stone-400 uppercase mb-1.5">Adults</span>
-              <div className="flex items-center justify-between rounded-xl border border-stone-200 bg-white px-3 py-1.5 shadow-sm">
+              <div className={`flex items-center justify-between rounded-xl border border-stone-200 px-3 py-1.5 shadow-sm ${maxAvailableForSelectedSlot === 0 ? 'bg-stone-100 opacity-70' : 'bg-white'}`}>
                 <button
                   type="button"
+                  disabled={maxAvailableForSelectedSlot === 0 || adults <= 1}
                   onClick={() => setAdults((v) => Math.max(1, v - 1))}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-stone-500 hover:text-amber-700 hover:bg-stone-50 active:scale-95 transition cursor-pointer"
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-stone-500 hover:text-amber-700 hover:bg-stone-50 active:scale-95 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Minus className="h-4 w-4" />
                 </button>
                 <span className="text-sm font-black text-stone-800">{adults}</span>
                 <button
                   type="button"
+                  disabled={maxAvailableForSelectedSlot === 0 || adults >= maxAvailableForSelectedSlot * (room.maxAdults || room.capacityPerRoom || 3)}
                   onClick={() => setAdults((v) => Math.min(maxAvailableForSelectedSlot * (room.maxAdults || room.capacityPerRoom || 3), v + 1))}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-stone-500 hover:text-amber-700 hover:bg-stone-50 active:scale-95 transition cursor-pointer"
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-stone-500 hover:text-amber-700 hover:bg-stone-50 active:scale-95 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Plus className="h-4 w-4" />
                 </button>
@@ -627,19 +628,21 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
             {/* Children Counter */}
             <div>
               <span className="block text-[10px] font-bold text-stone-400 uppercase mb-1.5">Children (Ages 0 - 10)</span>
-              <div className="flex items-center justify-between rounded-xl border border-stone-200 bg-white px-3 py-1.5 shadow-sm">
+              <div className={`flex items-center justify-between rounded-xl border border-stone-200 px-3 py-1.5 shadow-sm ${maxAvailableForSelectedSlot === 0 ? 'bg-stone-100 opacity-70' : 'bg-white'}`}>
                 <button
                   type="button"
+                  disabled={maxAvailableForSelectedSlot === 0 || childrenCount <= 0}
                   onClick={() => setChildrenCount((v) => Math.max(0, v - 1))}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-stone-500 hover:text-amber-700 hover:bg-stone-50 active:scale-95 transition cursor-pointer"
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-stone-500 hover:text-amber-700 hover:bg-stone-50 active:scale-95 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Minus className="h-4 w-4" />
                 </button>
                 <span className="text-sm font-black text-stone-800">{childrenCount}</span>
                 <button
                   type="button"
+                  disabled={maxAvailableForSelectedSlot === 0 || childrenCount >= maxAvailableForSelectedSlot * (room.maxChildren || 2)}
                   onClick={() => setChildrenCount((v) => Math.min(maxAvailableForSelectedSlot * (room.maxChildren || 2), v + 1))}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-stone-500 hover:text-amber-700 hover:bg-stone-50 active:scale-95 transition cursor-pointer"
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-stone-500 hover:text-amber-700 hover:bg-stone-50 active:scale-95 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Plus className="h-4 w-4" />
                 </button>
@@ -666,8 +669,20 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
         <div className="bg-stone-50 rounded-xl p-4 space-y-2">
           <div className="flex justify-between text-xs">
             <span className="text-stone-500">₹{pricing.avgPricePerRoom.toLocaleString('en-IN')} × {nights} night{nights > 1 ? 's' : ''} × {rooms} room{rooms > 1 ? 's' : ''}</span>
-            <span className="font-semibold text-stone-700">{formatCurrency(pricing.subtotal)}</span>
+            <span className="font-semibold text-stone-700">{formatCurrency(pricing.pureBaseSubtotal)}</span>
           </div>
+          {pricing.surgeSubtotal > 0 && (
+            <div className="flex justify-between text-xs">
+              <span className="text-stone-500">Surge Fee <span className="text-[10px] opacity-70">(High Demand)</span></span>
+              <span className="font-bold text-red-600">+₹{pricing.surgeSubtotal.toLocaleString('en-IN')}</span>
+            </div>
+          )}
+          {pricing.discountSubtotal > 0 && (
+            <div className="flex justify-between text-xs">
+              <span className="text-stone-500">Special Discount</span>
+              <span className="font-bold text-emerald-600">-₹{pricing.discountSubtotal.toLocaleString('en-IN')}</span>
+            </div>
+          )}
           <div className="flex justify-between text-xs">
             <span className="text-stone-500">GST (12%)</span>
             <span className="font-semibold text-stone-700">{formatCurrency(pricing.gst)}</span>
