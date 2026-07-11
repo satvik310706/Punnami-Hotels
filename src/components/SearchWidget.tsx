@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { CalendarDays, Users, Search, ChevronDown } from 'lucide-react';
-import { format, addDays, isAfter, isBefore } from 'date-fns';
+import { format, addDays, isAfter, isBefore, parseISO } from 'date-fns';
 import { getTodayIST } from '@/lib/ist';
 import CustomDatePicker from '@/components/CustomDatePicker';
 
@@ -13,12 +13,17 @@ interface SearchWidgetProps {
 
 export default function SearchWidget({ compact = false }: SearchWidgetProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const today = getTodayIST();
   const tomorrow = addDays(today, 1);
 
-  const [checkIn, setCheckIn] = useState<Date>(today);
-  const [checkOut, setCheckOut] = useState<Date>(tomorrow);
-  const [guests, setGuests] = useState(2);
+  const urlCheckIn = searchParams.get('checkIn');
+  const urlCheckOut = searchParams.get('checkOut');
+  const urlGuests = searchParams.get('guests');
+
+  const [checkIn, setCheckIn] = useState<Date>(urlCheckIn ? parseISO(urlCheckIn) : today);
+  const [checkOut, setCheckOut] = useState<Date>(urlCheckOut ? parseISO(urlCheckOut) : tomorrow);
+  const [guests, setGuests] = useState(urlGuests ? parseInt(urlGuests, 10) : 2);
   const [showGuests, setShowGuests] = useState(false);
 
   const handleSearch = useCallback(() => {

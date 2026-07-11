@@ -592,7 +592,13 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
           />
         )}
 
-        {maxAvailableForSelectedSlot === 0 && (
+        {slots.length === 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-750 font-bold">
+            ⚠️ No timing slots are configured for this room. Booking is unavailable.
+          </div>
+        )}
+
+        {maxAvailableForSelectedSlot === 0 && slots.length > 0 && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-750 font-bold">
             ⚠️ Slot sold out or blocked on these dates. Please try another timing slot or check-in date.
           </div>
@@ -709,11 +715,13 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
       {/* Book Button */}
       <button
         onClick={handleBookingClick}
-        disabled={bookingLoading || nights <= 0 || room.isActive === false || maxAvailableForSelectedSlot === 0}
+        disabled={bookingLoading || nights <= 0 || room.isActive === false || slots.length === 0 || maxAvailableForSelectedSlot === 0}
         className="w-full bg-amber-600 hover:bg-amber-700 disabled:bg-stone-300 disabled:text-stone-500 disabled:cursor-not-allowed text-white font-black rounded-xl py-3.5 text-sm transition-colors shadow-lg hover:shadow-amber-600/30 cursor-pointer"
       >
         {room.isActive === false
           ? 'Unavailable'
+          : slots.length === 0
+          ? 'No Slots Configured'
           : maxAvailableForSelectedSlot === 0
           ? 'Sold Out'
           : bookingLoading
@@ -1246,6 +1254,13 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
             className="flex-1 max-w-[200px] bg-stone-300 text-stone-500 font-black rounded-xl py-3 text-xs uppercase tracking-wider transition-all flex items-center justify-center cursor-not-allowed"
           >
             Closed
+          </button>
+        ) : slots.length === 0 ? (
+          <button
+            disabled
+            className="flex-1 max-w-[200px] bg-stone-300 text-stone-500 font-black rounded-xl py-3 text-xs uppercase tracking-wider transition-all flex items-center justify-center cursor-not-allowed"
+          >
+            No Slots
           </button>
         ) : (
           <button
