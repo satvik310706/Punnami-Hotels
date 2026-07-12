@@ -111,7 +111,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Sidebar navigation */}
       <aside className={`
-        fixed md:static inset-y-0 left-0 z-50 w-64 bg-stone-900 text-stone-300 flex flex-col justify-between shrink-0 p-6 
+        fixed md:sticky inset-y-0 left-0 md:top-0 md:h-screen z-50 w-64 bg-stone-900 text-stone-300 flex flex-col justify-between shrink-0 p-6 
         transition-transform duration-300 ease-in-out md:translate-x-0
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
