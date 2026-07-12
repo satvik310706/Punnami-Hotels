@@ -155,46 +155,56 @@ export default function CustomDatePicker({
               ))}
 
               {/* Day cells */}
-              {days.map((day) => {
-                const dateStr = format(day, 'yyyy-MM-dd');
-                // isPast: strictly before effective min date
-                const isPast = isBefore(day, effectiveMinDate) && !isSameDay(day, effectiveMinDate);
-                // Today is blocked if we're past 6 AM IST
-                const isTodayBlocked = isAfter6amIST() && isISTToday(day);
-                
-                // Closed if in closedDates OR if availableDates is set and doesn't contain this date
-                const isClosed = closedDates?.has(dateStr) || (availableDates !== undefined && !availableDates.has(dateStr));
-                
-                const isDisabled = isPast || isTodayBlocked || isClosed;
-                const isSelected = isSameDay(day, selected);
-                const isCurrentToday = isISTToday(day);
-                const dayOfWeek = getDay(day);
-                const isWeekendDay = dayOfWeek === 0 || dayOfWeek === 6;
+              {(() => {
+                const todayIST = getTodayIST();
+                const isTodayAfter6 = isAfter6amIST();
 
-                return (
-                  <button
-                    key={day.toISOString()}
-                    type="button"
-                    disabled={isDisabled}
-                    onClick={() => handleDateSelect(day)}
-                    className={`h-8 w-8 rounded-lg flex items-center justify-center text-xs font-semibold transition-all ${
-                      isSelected
-                        ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
-                        : isClosed
-                        ? 'bg-red-100 text-red-500 border border-red-200 cursor-not-allowed hover:bg-red-100'
-                        : isDisabled
-                        ? 'text-stone-300 cursor-not-allowed line-through'
-                        : isCurrentToday
-                        ? 'border border-amber-500 text-amber-700 hover:bg-amber-50'
-                        : isWeekendDay
-                        ? 'text-amber-600 hover:bg-stone-50'
-                        : 'text-stone-700 hover:bg-stone-50'
-                    }`}
-                  >
-                    {format(day, 'd')}
-                  </button>
-                );
-              })}
+                return days.map((day) => {
+                  const dateStr = format(day, 'yyyy-MM-dd');
+                  // isPast: strictly before effective min date
+                  const isPast = isBefore(day, effectiveMinDate) && !isSameDay(day, effectiveMinDate);
+                  
+                  const isCurrentToday =
+                    day.getFullYear() === todayIST.getFullYear() &&
+                    day.getMonth() === todayIST.getMonth() &&
+                    day.getDate() === todayIST.getDate();
+
+                  // Today is blocked if we're past 6 AM IST
+                  const isTodayBlocked = isTodayAfter6 && isCurrentToday;
+                  
+                  // Closed if in closedDates OR if availableDates is set and doesn't contain this date
+                  const isClosed = closedDates?.has(dateStr) || (availableDates !== undefined && !availableDates.has(dateStr));
+                  
+                  const isDisabled = isPast || isTodayBlocked || isClosed;
+                  const isSelected = isSameDay(day, selected);
+                  const dayOfWeek = getDay(day);
+                  const isWeekendDay = dayOfWeek === 0 || dayOfWeek === 6;
+
+                  return (
+                    <button
+                      key={day.toISOString()}
+                      type="button"
+                      disabled={isDisabled}
+                      onClick={() => handleDateSelect(day)}
+                      className={`h-8 w-8 rounded-lg flex items-center justify-center text-xs font-semibold transition-all ${
+                        isSelected
+                          ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
+                          : isClosed
+                          ? 'bg-red-100 text-red-500 border border-red-200 cursor-not-allowed hover:bg-red-100'
+                          : isDisabled
+                          ? 'text-stone-300 cursor-not-allowed line-through'
+                          : isCurrentToday
+                          ? 'border border-amber-500 text-amber-700 hover:bg-amber-50'
+                          : isWeekendDay
+                          ? 'text-amber-600 hover:bg-stone-50'
+                          : 'text-stone-700 hover:bg-stone-50'
+                      }`}
+                    >
+                      {format(day, 'd')}
+                    </button>
+                  );
+                });
+              })()}
             </div>
           </motion.div>
         )}

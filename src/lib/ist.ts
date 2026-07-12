@@ -4,19 +4,21 @@ export const IST_OFFSET = 5.5 * 60 * 60 * 1000; // ms
  * Returns the date and time parts in the Asia/Kolkata (IST) timezone.
  * Immune to server host timezone settings.
  */
+// Globally cached Intl formatter for performance, avoiding overhead on repeated rendering
+const istFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'Asia/Kolkata',
+  year: 'numeric',
+  month: 'numeric',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: 'numeric',
+  second: 'numeric',
+  hour12: false,
+});
+
 export function getISTParts(): { year: number; month: number; day: number; hour: number; minute: number; second: number } {
   const now = new Date();
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Kolkata',
-    year: 'numeric',
-    month: 'numeric',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: 'numeric',
-    second: 'numeric',
-    hour12: false,
-  });
-  const parts = formatter.formatToParts(now);
+  const parts = istFormatter.formatToParts(now);
   const year = parseInt(parts.find((p) => p.type === 'year')?.value ?? '0', 10);
   const month = parseInt(parts.find((p) => p.type === 'month')?.value ?? '1', 10);
   const day = parseInt(parts.find((p) => p.type === 'day')?.value ?? '1', 10);

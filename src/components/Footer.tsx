@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Hotel, Phone, Mail, MapPin, Facebook, Instagram } from 'lucide-react';
+import { Phone, Mail, MapPin, Facebook, Instagram, Heart } from 'lucide-react';
 
 export default function Footer() {
   const pathname = usePathname();
@@ -123,8 +123,9 @@ export default function Footer() {
             <Link href="/admin" className="hover:text-amber-400 transition-colors">Admin Portal</Link>
             <Link href="/agent/login" className="hover:text-amber-400 transition-colors">Agent Portal</Link>
           </div>
-          <p>
-            Made with <span className="text-red-500">❤️</span> by <a href="https://wa.me/918886154275" target="_blank" rel="noopener noreferrer" className="text-white font-bold hover:text-amber-400 transition-colors">Satvik</a>
+          <p className="flex items-center gap-1">
+            Made with <Heart className="h-3 w-3 fill-red-500 text-red-500 shrink-0" /> by{' '}
+            <a href="https://wa.me/918886154275" target="_blank" rel="noopener noreferrer" className="text-white font-bold hover:text-amber-400 transition-colors">Satvik</a>
           </p>
         </div>
       </div>

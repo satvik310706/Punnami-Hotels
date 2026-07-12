@@ -35,15 +35,15 @@
 }
 
 :root {
-  --background: oklch(0.98 0.01 70); /* Warm ivory */
-  --foreground: oklch(0.15 0.01 70); /* Charcoal */
+  --background: oklch(0.98 0.01 70);
+  --foreground: oklch(0.15 0.01 70);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.15 0.01 70);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.15 0.01 70);
-  --primary: oklch(0.7 0.15 80); /* Champagne Gold */
+  --primary: oklch(0.7 0.15 80);
   --primary-foreground: oklch(0.98 0.01 70);
-  --secondary: oklch(0.3 0.05 140); /* Forest Green */
+  --secondary: oklch(0.3 0.05 140);
   --secondary-foreground: oklch(0.98 0.01 70);
   --muted: oklch(0.95 0.01 70);
   --muted-foreground: oklch(0.5 0.01 70);
@@ -55,6 +55,7 @@
   --input: oklch(0.9 0.01 70);
   --ring: oklch(0.7 0.15 80);
   --radius: 0.5rem;
+  --navbar-height: 64px;
 }
 
 .dark {
@@ -106,19 +107,154 @@
   }
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-track {
-  background: var(--background);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--primary);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--primary) 80%, black);
+/* ─── Keyframe Animations ─────────────────────────────────────────────── */
+
+@keyframes hero-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
+@keyframes hero-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes marquee-scroll {
+  0%   { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes scroll-line {
+  0%   { transform: scaleY(0); transform-origin: top; opacity: 1; }
+  50%  { transform: scaleY(1); transform-origin: top; opacity: 1; }
+  51%  { transform: scaleY(1); transform-origin: bottom; }
+  100% { transform: scaleY(0); transform-origin: bottom; opacity: 0; }
+}
+
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-8px); }
+}
+
+@keyframes kb-zoom {
+  from { transform: scale(1.08); }
+  to   { transform: scale(1.0); }
+}
+
+@keyframes progress {
+  0%   { left: -50%; width: 30%; }
+  50%  { width: 45%; }
+  100% { left: 110%; width: 30%; }
+}
+
+@keyframes shimmer-slide {
+  from { transform: translateX(-150%) skewX(-15deg); }
+  to   { transform: translateX(350%) skewX(-15deg); }
+}
+
+/* ─── Animation Utility Classes ──────────────────────────────────────── */
+
+.animate-hero-fade-up {
+  animation: hero-fade-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-hero-fade-in {
+  animation: hero-fade-in 0.8s ease both;
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee-scroll 45s linear infinite;
+}
+
+.animate-scroll-line {
+  animation: scroll-line 2s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float-y 4s ease-in-out infinite;
+}
+
+/* ─── Navbar ────────────────────────────────────────────────────────── */
+.navbar-link-underline {
+  position: relative;
+}
+.navbar-link-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #f59e0b;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.navbar-link-underline:hover::after,
+.navbar-link-underline.active::after {
+  transform: scaleX(1);
+}
+
+/* ─── Book Now shimmer ───────────────────────────────────────────────── */
+.btn-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.btn-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+  transform: translateX(-150%) skewX(-15deg);
+  transition: none;
+}
+.btn-shimmer:hover::after {
+  animation: shimmer-slide 0.7s ease forwards;
+}
+
+/* ─── Custom Scrollbar ──────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #44403c;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #78716c;
+}
+
+/* Hide mobile bottom navigation bar when full-screen mobile menu is open */
+html[data-menu-open] .mobile-bottom-nav {
+  display: none !important;
+}
+
+/* Performance: GPU accelerate marquee animation */
+.animate-marquee {
+  will-change: transform;
+}
+
+/* Performance: GPU hint for hero carousel */
+.hero-carousel-img {
+  will-change: transform, opacity;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+}
+
+/* Smooth mobile menu backdrop */
+.mobile-menu-backdrop {
+  will-change: opacity;
+  transform: translate3d(0, 0, 0);
+}

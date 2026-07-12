@@ -38,7 +38,7 @@ export default function SearchWidget({ compact = false }: SearchWidgetProps) {
   const nights = Math.round((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
 
   return (
-    <div className={`bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-white/20 ${compact ? 'p-4' : 'p-6 md:p-8'}`}>
+    <div className={`relative z-30 bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-white/20 ${compact ? 'p-4' : 'p-6 md:p-8'}`}>
       {!compact && (
         <p className="text-sm font-semibold text-amber-700 uppercase tracking-widest mb-4">
           Find Your Perfect Room
@@ -71,8 +71,8 @@ export default function SearchWidget({ compact = false }: SearchWidgetProps) {
         </div>
 
         {/* Guests */}
-        <div className="col-span-2 md:col-span-1 relative">
-          <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-1.5 flex items-center gap-1.5">
+        <div className="col-span-1 relative">
+          <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-stone-500 mb-1.5">
             <Users className="h-3.5 w-3.5 text-amber-600" />
             Guests
           </label>
@@ -104,13 +104,13 @@ export default function SearchWidget({ compact = false }: SearchWidgetProps) {
         </div>
 
         {/* Search Button */}
-        <div className="col-span-2 md:col-span-1 flex items-end">
+        <div className="col-span-1 flex items-end">
           <button
             onClick={handleSearch}
-            className="w-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white font-bold rounded-xl px-6 py-3.5 flex items-center justify-center gap-2 transition-all duration-200 shadow-lg hover:shadow-amber-500/30 hover:-translate-y-0.5 active:translate-y-0"
+            className="w-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white font-bold rounded-xl px-4 py-3 flex items-center justify-center gap-1.5 transition-all duration-200 shadow-lg hover:shadow-amber-500/30 hover:-translate-y-0.5 active:translate-y-0 text-xs sm:text-sm h-12"
           >
-            <Search className="h-4 w-4" />
-            Search Rooms
+            <Search className="h-4 w-4 shrink-0" />
+            <span className="truncate">Search</span>
           </button>
         </div>
       </div>

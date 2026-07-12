@@ -69,22 +69,7 @@ export default function Loading() {
 
       </div>
 
-      {/* Embedded CSS keyframe animations */}
-      <style jsx global>{`
-        @keyframes progress {
-          0% {
-            left: -50%;
-            width: 30%;
-          }
-          50% {
-            width: 45%;
-          }
-          100% {
-            left: 110%;
-            width: 30%;
-          }
-        }
-      `}</style>
+      {/* Progress CSS handled in globals.css */}
     </div>
   );
 }

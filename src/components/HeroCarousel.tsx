@@ -1,69 +1,100 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const IMAGES = [
   {
     url: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=1920&q=80',
-    alt: 'Punnami Hotels Grand Entrance',
+    alt: 'Punnami Southern Residency Grand Entrance',
   },
   {
     url: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1920&q=80',
-    alt: 'Luxury Lobby Lounge',
+    alt: 'Luxury Lobby and Lounge',
   },
   {
     url: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?w=1920&q=80',
-    alt: 'Deluxe Suite Comforts',
+    alt: 'Deluxe Suite Interior',
   },
   {
     url: 'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=1920&q=80',
-    alt: 'Scenic Bedside View',
+    alt: 'Scenic Bedroom with View',
   },
 ];
+
+// Preload the next image so transitions are instant
+function preloadImage(src: string) {
+  if (typeof window === 'undefined') return;
+  const img = new window.Image();
+  img.src = src;
+}
 
 export default function HeroCarousel() {
   const [index, setIndex] = useState(0);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setIndex((prev) => (prev + 1) % IMAGES.length);
-    }, 5000);
-    return () => clearInterval(timer);
+  const advance = useCallback(() => {
+    setIndex((prev) => {
+      const next = (prev + 1) % IMAGES.length;
+      // Pre-warm the image after that
+      preloadImage(IMAGES[(next + 1) % IMAGES.length].url);
+      return next;
+    });
   }, []);
+
+  useEffect(() => {
+    // Preload second image immediately
+    preloadImage(IMAGES[1].url);
+    const timer = setInterval(advance, 6500);
+    return () => clearInterval(timer);
+  }, [advance]);
 
   return (
     <div className="absolute inset-0 z-0">
-      <AnimatePresence mode="popLayout">
+      <AnimatePresence mode="sync" initial={false}>
         <motion.div
           key={index}
-          initial={{ opacity: 0, scale: 1.05 }}
-          animate={{ opacity: 0.5, scale: 1 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 1.5, ease: 'easeInOut' }}
-          className="absolute inset-0 w-full h-full"
+          transition={{ duration: 1.2, ease: 'easeInOut' }}
+          // GPU-accelerated positioning
+          className="absolute inset-0 hero-carousel-img"
         >
-          <Image
-            src={IMAGES[index].url}
-            alt={IMAGES[index].alt}
-            fill
-            priority={index === 0}
-            className="object-cover"
-            sizes="100vw"
-          />
+          {/* Ken Burns zoom — single CSS animation for performance */}
+          <div
+            className="absolute inset-0"
+            style={{
+              animation: 'kb-zoom 7s ease-in-out forwards',
+              transformOrigin: index % 2 === 0 ? 'center center' : '60% 40%',
+            }}
+          >
+            <Image
+              src={IMAGES[index].url}
+              alt={IMAGES[index].alt}
+              fill
+              priority={index === 0}
+              className="object-cover"
+              sizes="100vw"
+              quality={80}
+            />
+          </div>
         </motion.div>
       </AnimatePresence>
-      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/75" />
-      
+
+      {/* Multi-layer gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/25 to-black/85 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-black/20 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-amber-950/20 to-transparent pointer-events-none" />
+
       {/* Slide indicators */}
-      <div className="absolute bottom-10 right-10 z-20 flex gap-2">
+      <div className="absolute bottom-7 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
         {IMAGES.map((_, idx) => (
           <button
             key={idx}
             onClick={() => setIndex(idx)}
-            className={`h-1.5 rounded-full transition-all duration-300 ${
-              idx === index ? 'w-6 bg-amber-500' : 'w-1.5 bg-white/40'
+            className={`h-px rounded-full transition-all duration-500 ease-out ${
+              idx === index ? 'w-8 bg-amber-400' : 'w-4 bg-white/25 hover:bg-white/45'
             }`}
             aria-label={`Go to slide ${idx + 1}`}
           />
