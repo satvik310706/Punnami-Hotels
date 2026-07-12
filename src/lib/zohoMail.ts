@@ -428,6 +428,7 @@ export async function sendAdminBookingConfirmationEmail({
   rooms,
   totalAmount,
   paidAmount,
+  adminEmail,
 }: {
   guestName: string;
   guestEmail: string;
@@ -442,6 +443,7 @@ export async function sendAdminBookingConfirmationEmail({
   rooms: number;
   totalAmount: string;
   paidAmount: string;
+  adminEmail?: string;
 }): Promise<boolean> {
   const adminPanelUrl = `https://punnamihotels.com/admin/bookings`;
   const ticketUrl = `https://punnamihotels.com/ticket/${publicId}`;
@@ -470,7 +472,7 @@ export async function sendAdminBookingConfirmationEmail({
     `;
 
   return sendEmail({
-    to: 'punnamirooms@gmail.com',
+    to: adminEmail || 'punnamirooms@gmail.com',
     subject: `🔔 New Booking Confirmed – ${publicId} | Punnami Hotels`,
     preview: `New paid booking from ${guestName} (${roomName}) has been confirmed.`,
     html: `

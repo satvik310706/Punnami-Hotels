@@ -14,6 +14,7 @@ import AdminDatePicker from '@/components/AdminDatePicker';
 interface Booking {
   id: string;
   publicId: string;
+  sequenceId: string | null;
   roomTypeId: string;
   checkInDate: string;
   checkOutDate: string;

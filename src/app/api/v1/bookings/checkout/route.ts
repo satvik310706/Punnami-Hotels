@@ -180,6 +180,7 @@ export async function POST(req: NextRequest) {
     // Fetch room type
     const roomType = await prisma.roomType.findUnique({
       where: { id: BigInt(roomTypeId), status: 'PUBLISHED', isActive: true },
+      include: { hotel: true },
     });
 
     if (!roomType) {
@@ -409,10 +410,10 @@ export async function POST(req: NextRequest) {
       subtotal: Number(booking.subtotalAmount),
       agentCommission: Number(booking.agentCommission),
       expiresAt: booking.expiresAt,
-      roomName: booking.roomType.name,
-      hotelName: booking.roomType.hotel.name,
-      checkInTime: booking.roomType.hotel.checkInTime,
-      checkOutTime: booking.roomType.hotel.checkOutTime,
+      roomName: roomType.name,
+      hotelName: roomType.hotel.name,
+      checkInTime: roomType.hotel.checkInTime,
+      checkOutTime: roomType.hotel.checkOutTime,
     });
   } catch (err: any) {
     console.error('[Checkout API] Error:', err);
