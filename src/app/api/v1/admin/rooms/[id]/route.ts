@@ -95,16 +95,33 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
     const existing = await prisma.roomType.findUnique({
       where: { id: BigInt(id) },
-      include: { bookings: { select: { id: true } } },
+      include: { bookings: { select: { id: true, status: true } } },
     });
 
     if (!existing) {
       return NextResponse.json({ error: 'Room variant not found' }, { status: 404 });
     }
 
-    // Prevent deletion if there are active bookings
+    // Prevent deletion if there are ACTIVE bookings
+    const activeBookings = existing.bookings.filter(b => !['CANCELLED', 'REJECTED', 'REFUNDED'].includes(b.status));
+    if (activeBookings.length > 0) {
+      return NextResponse.json({ error: 'Cannot delete room variant: It has ACTIVE bookings associated with it. Please cancel them or change the room status to ARCHIVED instead.' }, { status: 400 });
+    }
+
+    // If we reach here, any existing bookings are cancelled/rejected.
+    // We must hard-delete them and their payments to satisfy foreign key constraints.
     if (existing.bookings.length > 0) {
-      return NextResponse.json({ error: 'Cannot delete room variant: It has active bookings associated with it. Please cancel or archives those bookings first.' }, { status: 400 });
+      const bookingIds = existing.bookings.map(b => b.id);
+      
+      // Delete associated payments
+      await prisma.payment.deleteMany({
+        where: { bookingId: { in: bookingIds } }
+      });
+      
+      // Delete bookings
+      await prisma.booking.deleteMany({
+        where: { roomTypeId: BigInt(id) }
+      });
     }
 
     // Delete related inventory rows first to prevent foreign key errors

@@ -8,7 +8,11 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: 'desc' },
       include: {
         roomType: {
-          select: { name: true, coverImageUrl: true },
+          select: { 
+            name: true, 
+            coverImageUrl: true,
+            hotel: { select: { name: true } }
+          },
         },
         payments: {
           orderBy: { createdAt: 'desc' },

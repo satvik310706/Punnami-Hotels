@@ -8,6 +8,7 @@ import {
 
 interface Booking {
   publicId: string;
+  sequenceId?: string | null;
   guestName: string;
   guestPhone: string;
   guestEmail: string;
@@ -192,7 +193,7 @@ export default function AdminCancellationsPage() {
               ) : (
                 filteredBookings.map((b) => (
                   <tr key={b.publicId} className="hover:bg-stone-50/50 transition-colors">
-                    <td className="px-6 py-4 font-mono font-bold text-stone-900">{b.publicId}</td>
+                    <td className="px-6 py-4 font-mono font-bold text-stone-900">{b.sequenceId || b.publicId}</td>
                     <td className="px-6 py-4">
                       <div>
                         <p className="font-bold text-stone-800">{b.guestName}</p>
@@ -250,7 +251,7 @@ export default function AdminCancellationsPage() {
                   Cancellation Review
                 </span>
                 <h3 className="text-xl font-black text-stone-900 leading-tight">
-                  Booking #{selectedBooking.publicId}
+                  Booking #{selectedBooking.sequenceId || selectedBooking.publicId}
                 </h3>
               </div>
               <button 
