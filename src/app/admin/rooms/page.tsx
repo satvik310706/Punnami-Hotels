@@ -353,7 +353,7 @@ export default function AdminRoomsPage() {
               <tr className="border-b border-stone-100 bg-stone-50/50 text-xs font-bold text-stone-400 uppercase tracking-wider">
                 <th className="px-6 py-4">Room Variant</th>
                 <th className="px-6 py-4">Total Inventory</th>
-                <th className="px-6 py-4">Weekday / Weekend Price</th>
+                <th className="px-6 py-4">Pricing</th>
                 <th className="px-6 py-4">Active Booking</th>
                 <th className="px-6 py-4">Publish State</th>
                 <th className="px-6 py-4">Featured</th>
@@ -395,7 +395,13 @@ export default function AdminRoomsPage() {
                     </td>
                     <td className="px-6 py-4 font-semibold text-stone-700">{room.totalInventory} rooms</td>
                     <td className="px-6 py-4 font-semibold text-stone-700">
-                      ₹{room.weekdayPrice} / ₹{room.weekendPrice}
+                      {room.bookingSlots?.length > 0 ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-stone-100 px-3 py-1 text-xs font-bold text-stone-600 border border-stone-200">
+                          Slot Pricing
+                        </span>
+                      ) : (
+                        `₹${room.weekdayPrice} / ₹${room.weekendPrice}`
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <button

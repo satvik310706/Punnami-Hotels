@@ -185,11 +185,19 @@ export default async function HomePage() {
                 <RoomCard
                   priority={idx === 0}
                   room={{
-                    ...room,
                     id: room.id.toString(),
+                    slug: room.slug,
+                    name: room.name,
+                    coverImageUrl: room.coverImageUrl,
+                    isFeatured: room.isFeatured,
+                    isActive: room.isActive,
                     weekdayPrice: Number(room.weekdayPrice),
                     weekendPrice: Number(room.weekendPrice),
+                    maxAdults: room.maxAdults,
+                    totalInventory: room.totalInventory,
+                    facilities: room.facilities,
                     bookingSlots: (room.bookingSlots as any[] | null) ?? undefined,
+                    hotel: room.hotel,
                   }}
                 />
               </ScrollReveal>

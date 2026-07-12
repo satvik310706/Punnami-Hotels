@@ -58,16 +58,32 @@ export default function RoomForm({ initialData, onSubmit, isLoading }: RoomFormP
   const [status, setStatus] = useState('DRAFT');
 
   // Booking slots (multiple timeslots — like ts-tours)
-  const [bookingSlots, setBookingSlots] = useState<{ title: string; slotStart: string; slotEnd: string; totalRooms?: number; priceWeekday?: number | null; priceWeekend?: number | null }[]>([]);
+  const [bookingSlots, setBookingSlots] = useState<{ title: string; slotStart: string; slotEnd: string; totalRooms?: number; priceWeekday?: number | null; priceWeekend?: number | null }[]>([
+    { title: 'Full Day Night', slotStart: '20:00', slotEnd: '19:00', totalRooms: 2, priceWeekday: 1800, priceWeekend: 2000 },
+    { title: 'Full Day Morning', slotStart: '10:00', slotEnd: '09:00', totalRooms: 2, priceWeekday: 1800, priceWeekend: 2000 },
+    { title: 'Full Day Afternoon', slotStart: '12:00', slotEnd: '11:00', totalRooms: 2, priceWeekday: 1800, priceWeekend: 2000 },
+    { title: 'Full Day Evening', slotStart: '17:00', slotEnd: '16:00', totalRooms: 2, priceWeekday: 1800, priceWeekend: 2000 }
+  ]);
 
   // Facilities, highlights, FAQs, policies
-  const [facilities, setFacilities] = useState<string[]>([]);
+  const [facilities, setFacilities] = useState<string[]>([
+    'Wi-Fi', 'Air Conditioning', '24/7 Hot Water', 'Smart TV', 'In-Room Dining', 'Room Service', 'Free Parking'
+  ]);
   const [customFacilityInput, setCustomFacilityInput] = useState('');
   const [coverImageUrl, setCoverImageUrl] = useState('');
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [highlights, setHighlights] = useState<any[]>([]);
-  const [faqs, setFaqs] = useState<any[]>([]);
-  const [policies, setPolicies] = useState<any[]>([]);
+  const [faqs, setFaqs] = useState<any[]>([
+    { question: 'What is the check-in and check-out time?', answer: 'Our standard check-in time is 12:00 PM (Noon) and check-out time is 11:00 AM. Early check-in and late check-out are subject to availability.' },
+    { question: 'Does the room have complimentary Wi-Fi?', answer: 'Yes, high-speed wireless internet access is provided free of charge for all guests.' },
+    { question: 'Is parking available at the property?', answer: 'Yes, we provide secure and complimentary parking for all our registered guests.' }
+  ]);
+  const [policies, setPolicies] = useState<any[]>([
+    { title: 'Identification Policy', description: 'All adults must present a valid government-issued photo ID (Aadhaar, Passport, Driving License, or Voter ID) at the time of check-in. PAN cards are not accepted.' },
+    { title: 'Cancellation & Modification Policy', description: 'Bookings can be cancelled or postponed up to 48 hours before the scheduled check-in time without any penalty. Cancellations made within 48 hours of check-in will incur a one-night retention charge.' },
+    { title: 'Child Policy', description: 'Children under the age of 10 stay free of charge when using existing bedding. Children aged 11 and above are considered adults and will be charged accordingly.' },
+    { title: 'Smoking & Damage Policy', description: 'Smoking is strictly prohibited inside the rooms. A designated smoking area is available on the premises. Any damage to hotel property will be billed directly to the guest.' }
+  ]);
 
   // Local helper states
   const [uploadingCover, setUploadingCover] = useState(false);
