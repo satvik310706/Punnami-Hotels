@@ -46,8 +46,8 @@ export default function RoomForm({ initialData, onSubmit, isLoading }: RoomFormP
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [description, setDescription] = useState('');
-  const [weekdayPrice, setWeekdayPrice] = useState('2000');
-  const [weekendPrice, setWeekendPrice] = useState('2200');
+  const [weekdayPrice, setWeekdayPrice] = useState('0');
+  const [weekendPrice, setWeekendPrice] = useState('0');
   const [capacityPerRoom, setCapacityPerRoom] = useState(2);
   const [maxAdults, setMaxAdults] = useState(2);
   const [maxChildren, setMaxChildren] = useState(0);
@@ -383,7 +383,7 @@ export default function RoomForm({ initialData, onSubmit, isLoading }: RoomFormP
               />
             </div>
 
-            <div>
+            <div className="hidden">
               <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-1.5">Weekday Price (₹) *</label>
               <input
                 type="number"
@@ -392,7 +392,7 @@ export default function RoomForm({ initialData, onSubmit, isLoading }: RoomFormP
                 className="w-full border-2 border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-500 transition-colors font-bold text-stone-900"
               />
             </div>
-            <div>
+            <div className="hidden">
               <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-1.5">Weekend Price (₹) *</label>
               <input
                 type="number"
