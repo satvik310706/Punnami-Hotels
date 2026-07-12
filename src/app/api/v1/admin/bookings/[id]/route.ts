@@ -203,6 +203,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           },
           data: {
             bookedRooms: { decrement: booking.roomsBooked },
+            ...(booking.source === 'ADMIN' ? { totalRooms: { decrement: booking.roomsBooked } } : {}),
           },
         });
       }
@@ -304,7 +305,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             slotStart: booking.slotStart,
             slotEnd: booking.slotEnd,
           },
-          data: { bookedRooms: { decrement: booking.roomsBooked } },
+          data: { 
+            bookedRooms: { decrement: booking.roomsBooked },
+            ...(booking.source === 'ADMIN' ? { totalRooms: { decrement: booking.roomsBooked } } : {}),
+          },
         });
       }
 
@@ -328,11 +332,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             date,
             slotStart: booking.slotStart,
             slotEnd: booking.slotEnd,
-            totalRooms: booking.roomType.totalInventory,
+            totalRooms: booking.roomType.totalInventory + (booking.source === 'ADMIN' ? booking.roomsBooked : 0),
             bookedRooms: booking.roomsBooked,
           },
           update: {
             bookedRooms: { increment: booking.roomsBooked },
+            ...(booking.source === 'ADMIN' ? { totalRooms: { increment: booking.roomsBooked } } : {}),
           },
         });
       }

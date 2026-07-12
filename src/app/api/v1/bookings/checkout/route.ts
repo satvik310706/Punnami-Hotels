@@ -191,17 +191,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Requested rooms exceed available inventory' }, { status: 400 });
     }
 
+    const slotConfig = (roomType.bookingSlots as any[])?.find((s: any) => {
+      const sS = s.slotStart || s.slot_start;
+      const sE = s.slotEnd || s.slot_end;
+      return sS && sE && sS.slice(0, 5) === normalizedSlotStart.slice(0, 5) && sE.slice(0, 5) === normalizedSlotEnd.slice(0, 5);
+    });
+
+    const isOvernight = normalizedSlotStart > normalizedSlotEnd || 
+      (slotConfig?.title || '').toLowerCase().includes('overnight') || 
+      (slotConfig?.title || '').toLowerCase().includes('night') || 
+      (slotConfig?.title || '').toLowerCase().includes('24');
+
     // Check inventory availability date by date
     const dateRange: Date[] = [];
     const current = new Date(checkIn);
-    const checkOutTime = checkOut.getTime();
-    if (checkIn.getTime() === checkOutTime) {
-      dateRange.push(new Date(checkIn));
+    
+    let limit = new Date(checkOut);
+    if (!isOvernight) {
+      limit = new Date(limit.getTime() + 24 * 60 * 60 * 1000); // add 1 day (inclusive for day stays)
     } else {
-      while (current.getTime() < checkOutTime) {
-        dateRange.push(new Date(current));
-        current.setUTCDate(current.getUTCDate() + 1);
+      if (checkIn.getTime() === checkOut.getTime()) {
+        limit = new Date(limit.getTime() + 24 * 60 * 60 * 1000); // fallback protection
       }
+    }
+
+    const checkOutTime = limit.getTime();
+    while (current.getTime() < checkOutTime) {
+      dateRange.push(new Date(current));
+      current.setUTCDate(current.getUTCDate() + 1);
     }
 
     const booking = await prisma.$transaction(async (tx) => {
@@ -272,19 +289,24 @@ export async function POST(req: NextRequest) {
         if (!inv) throw new Error(`Inventory record missing for ${date.toISOString().slice(0, 10)}`);
 
         // Step 3 — Check availability with fresh locked data
-        if (!isAdmin && inv.isClosed) {
-          throw new Error(`Room is closed on ${date.toISOString().slice(0, 10)}`);
-        }
         const available = inv.totalRooms - inv.bookedRooms - inv.reservedRooms;
-        if (!isAdmin && available < rooms) {
-          throw new Error(`Only ${available} room(s) available on ${date.toISOString().slice(0, 10)}`);
+        if (!isAdmin) {
+          if (inv.isClosed) {
+            throw new Error(`Room is closed on ${date.toISOString().slice(0, 10)}`);
+          }
+          if (available < rooms) {
+            throw new Error(`Only ${available} room(s) available on ${date.toISOString().slice(0, 10)}`);
+          }
         }
 
         // Step 4 — Atomically increment counts for the specific slot
         await tx.roomInventory.update({
           where: { id: inv.id },
           data: isAdmin
-            ? { bookedRooms: { increment: rooms } }
+            ? { 
+                bookedRooms: { increment: rooms },
+                totalRooms: { increment: rooms } // Overbooking creates virtual capacity
+              }
             : { reservedRooms: { increment: rooms } },
         });
 
@@ -360,6 +382,7 @@ export async function POST(req: NextRequest) {
           agentId,
           agentCommission: commissionVal,
           status: isAdmin ? 'CONFIRMED' : 'PENDING_PROOF',
+          source: isAdmin ? 'ADMIN' : 'PUBLIC',
           transactionId: adminTxnId,
           expiresAt,
           aadharEncrypted: passengers[0]?.aadhaar || null,

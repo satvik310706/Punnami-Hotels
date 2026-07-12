@@ -226,7 +226,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
       const key = keys[i];
       if (key.endsWith(suffix)) {
         const info = availability[key];
-        if (!info.isClosed && (info.totalRooms - info.bookedRooms - info.reservedRooms) > 0) {
+        if (isAdmin || (!info.isClosed && (info.totalRooms - info.bookedRooms - info.reservedRooms) > 0)) {
           available.add(key.slice(0, 10)); // Extract 'YYYY-MM-DD' directly using slice instead of split
         }
       }
@@ -310,10 +310,9 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
     const defaultCapacity = slotConfig?.totalRooms ?? slotConfig?.total_rooms ?? room.totalInventory ?? 5;
 
     if (isAdmin) {
-      // Admin is not constrained by daily booked/reserved inventory but is capped by physical room capacity
-      return defaultCapacity;
+      return 999; // Admin can book as many rooms as they want (overbooking)
     }
-    
+
     // Check if we have overrides for the date range
     const current = new Date(checkIn);
     let limit = new Date(checkOut);
@@ -327,7 +326,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
       const invKey = `${dateStr}_${sStart}_${sEnd}`;
       const inv = availability[invKey];
       if (inv) {
-        if (inv.isClosed && !isAdmin) {
+        if (inv.isClosed) {
           minCapacity = 0;
           break;
         }
@@ -373,10 +372,21 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
     const current = new Date(checkIn);
     const breakdown: { date: string; pricePerRoom: number; price: number; isWeekend: boolean }[] = [];
 
-    // Support same-day day-use stays
+    const slot = slots[selectedSlotIndex] || slots[0];
+    const sStart = slot ? normalizeTime(slot.slotStart) : '12:00:00';
+    const sEnd = slot ? normalizeTime(slot.slotEnd) : '11:00:00';
+    const isOvernight = sStart > sEnd || 
+      (slot?.title || '').toLowerCase().includes('overnight') || 
+      (slot?.title || '').toLowerCase().includes('night') || 
+      (slot?.title || '').toLowerCase().includes('24');
+
     let limit = new Date(checkOut);
-    if (checkIn.getTime() === checkOut.getTime()) {
-      limit = addDays(checkIn, 1);
+    if (!isOvernight) {
+      limit = addDays(checkOut, 1); // For day stays, checkOut is inclusive
+    } else {
+      if (checkIn.getTime() === checkOut.getTime()) {
+        limit = addDays(checkIn, 1);
+      }
     }
 
     while (current < limit) {
@@ -522,7 +532,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
               if (isOvernight) {
                 if (checkOut <= d) setCheckOut(addDays(d, 1));
               } else {
-                setCheckOut(d);
+                if (checkOut < d) setCheckOut(d);
               }
             }}
             label="Check-in"
@@ -530,43 +540,15 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
             onMonthChange={(m) => fetchAvailability(m)}
             align="left"
           />
-          {isOvernight ? (
-            <div className="relative">
-              <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-1.5 flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5 text-amber-600" />
-                  Check-out
-                </span>
-              </label>
-              <div className="w-full border-2 border-stone-200 bg-stone-50 rounded-xl px-3.5 py-3 text-stone-400 font-semibold text-sm cursor-not-allowed flex items-center justify-between shadow-sm">
-                <span className="flex items-center gap-2">
-                  <span>{format(addDays(checkIn, 1), 'dd MMM yyyy')}</span>
-                  <span className="text-[9px] bg-amber-100 text-amber-800 font-black px-2 py-0.5 rounded-md normal-case shrink-0">
-                    Next Day
-                  </span>
-                </span>
-                <Calendar className="h-4 w-4 text-stone-400 opacity-50" />
-              </div>
-            </div>
-          ) : (
-            <div className="relative">
-              <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-1.5 flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5 text-amber-600" />
-                  Check-out
-                </span>
-              </label>
-              <div className="w-full border-2 border-stone-200 bg-stone-50 rounded-xl px-3.5 py-3 text-stone-400 font-semibold text-sm cursor-not-allowed flex items-center justify-between shadow-sm">
-                <span className="flex items-center gap-2">
-                  <span>{format(checkIn, 'dd MMM yyyy')}</span>
-                  <span className="text-[9px] bg-amber-100 text-amber-800 font-black px-2 py-0.5 rounded-md normal-case shrink-0">
-                    Same Day
-                  </span>
-                </span>
-                <Calendar className="h-4 w-4 text-stone-400 opacity-50" />
-              </div>
-            </div>
-          )}
+          <CustomDatePicker
+            selected={checkOut}
+            onChange={(d) => setCheckOut(d)}
+            label="Check-out"
+            availableDates={availableDatesSet}
+            onMonthChange={(m) => fetchAvailability(m)}
+            align="right"
+            minDate={isOvernight ? addDays(checkIn, 1) : checkIn}
+          />
         </div>
 
         {/* Timing Slot selector */}
@@ -579,9 +561,9 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
               const targetSlot = slots[idx];
               const slotOvernight = targetSlot ? normalizeTime(targetSlot.slotStart) > normalizeTime(targetSlot.slotEnd) : true;
               if (slotOvernight) {
-                setCheckOut(addDays(checkIn, 1));
+                if (checkOut <= checkIn) setCheckOut(addDays(checkIn, 1));
               } else {
-                setCheckOut(checkIn);
+                if (checkOut < checkIn) setCheckOut(checkIn);
               }
             }}
             options={slots.map((s, idx) => ({
