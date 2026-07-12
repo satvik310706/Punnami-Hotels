@@ -170,7 +170,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
 
   const fetchAvailability = async (monthStr: string) => {
     try {
-      const res = await fetch(`/api/v1/rooms/${room.slug}/availability?month=${monthStr}`);
+      const res = await fetch(`/api/v1/rooms/${room.slug}/availability?month=${monthStr}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         const datesList = data.dates || [];
@@ -232,7 +232,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
       }
     }
     return available;
-  }, [availability, currentSlot]);
+  }, [availability, currentSlot, isAdmin]);
 
   useEffect(() => {
     const prof = localStorage.getItem('punnami_agent_profile');
@@ -310,7 +310,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
     const defaultCapacity = slotConfig?.totalRooms ?? slotConfig?.total_rooms ?? room.totalInventory ?? 5;
 
     if (isAdmin) {
-      return 999; // Admin can book as many rooms as they want (overbooking)
+      return 999;
     }
 
     // Check if we have overrides for the date range
@@ -536,7 +536,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
               }
             }}
             label="Check-in"
-            availableDates={availableDatesSet}
+            availableDates={isAdmin ? undefined : availableDatesSet}
             onMonthChange={(m) => fetchAvailability(m)}
             align="left"
           />
@@ -544,7 +544,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
             selected={checkOut}
             onChange={(d) => setCheckOut(d)}
             label="Check-out"
-            availableDates={availableDatesSet}
+            availableDates={isAdmin ? undefined : availableDatesSet}
             onMonthChange={(m) => fetchAvailability(m)}
             align="right"
             minDate={isOvernight ? addDays(checkIn, 1) : checkIn}
@@ -572,12 +572,6 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
             }))}
             label="Timing Slot"
           />
-        )}
-
-        {slots.length === 0 && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-750 font-bold">
-            ⚠️ No timing slots are configured for this room. Booking is unavailable.
-          </div>
         )}
 
         {maxAvailableForSelectedSlot === 0 && slots.length > 0 && (

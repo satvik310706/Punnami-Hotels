@@ -54,11 +54,13 @@ export default async function HomePage() {
     <div className="flex w-full flex-col overflow-x-clip bg-stone-50">
       {/* ─── Sticky Hero Section (Textbook Effect) ───────────────────────── */}
       <section className="sticky top-16 w-full overflow-visible bg-stone-900 h-[calc(100svh-64px)] flex flex-col">
-        <div className="relative flex-1 flex items-center justify-center overflow-hidden">
+        <div className="relative flex-1 flex items-center justify-center">
           {/* Background Carousel */}
-          <HeroCarousel />
+          <div className="absolute inset-0 overflow-hidden rounded-b-[2rem] sm:rounded-b-[4rem]">
+            <HeroCarousel />
+          </div>
 
-          <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-6 sm:py-16 md:py-20 flex flex-col justify-center h-full">
+          <div className="relative z-30 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-6 sm:py-16 md:py-20 flex flex-col justify-center h-full">
             <ScrollReveal delay={100} className="text-center mb-4 sm:mb-8">
               {/* Badge */}
               <div className="inline-flex items-center gap-2 bg-amber-500/20 backdrop-blur-sm border border-amber-400/30 rounded-full px-3 py-1 mb-3 sm:mb-6">

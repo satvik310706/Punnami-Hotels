@@ -12,6 +12,7 @@ function normalizeTime(timeStr: string) {
 // GET /api/v1/rooms — Public room type listing with search/filter
 export async function GET(req: NextRequest) {
   try {
+    const isAdmin = req.cookies.has('punnami_admin_token');
     // Run cleanup of expired pending bookings asynchronously to release locked inventory in real-time
     cleanupExpiredBookings().catch((cleanupErr) => {
       console.error('[Rooms List API] Expired bookings cleanup failed:', cleanupErr);
@@ -36,9 +37,6 @@ export async function GET(req: NextRequest) {
     }
     if (minPrice > 0 || maxPrice < 99999) {
       where.weekdayPrice = { gte: minPrice, lte: maxPrice };
-    }
-    if (capacity > 0) {
-      where.maxAdults = { gte: capacity };
     }
 
     const includeObj: any = {
@@ -127,7 +125,7 @@ export async function GET(req: NextRequest) {
               const isClosed = invRecord.isClosed;
 
               // Check closure and capacity
-              if (isClosed || (total - booked - reserved) <= 0) {
+              if (!isAdmin && (isClosed || (total - booked - reserved) <= 0)) {
                 return false;
               }
             } else {
