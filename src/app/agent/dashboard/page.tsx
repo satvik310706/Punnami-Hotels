@@ -158,7 +158,7 @@ export default function AgentDashboardPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-stone-900">{booking.guestName}</span>
-                    <span className="text-[10px] bg-stone-100 text-stone-500 font-bold px-2 py-0.5 rounded-full">{booking.publicId}</span>
+                    <span className="text-[10px] bg-stone-100 text-stone-500 font-bold px-2 py-0.5 rounded-full">{booking.sequenceId || booking.publicId}</span>
                   </div>
                   <p className="text-xs text-stone-400 mt-0.5">{booking.roomType.name} · {booking.totalNights} nights · {booking.roomsBooked} rooms</p>
                 </div>

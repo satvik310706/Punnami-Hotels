@@ -6,6 +6,7 @@ import { Clock, AlertCircle, RefreshCw, CreditCard, ArrowRight, ShieldCheck, Che
 
 interface BookingData {
   publicId: string;
+  sequenceId?: string | null;
   totalAmount: number;
   gstAmount: number;
   subtotal: number;
@@ -225,7 +226,7 @@ export default function PaymentPageClient({ bookingId, initialData }: PaymentPag
             <div className="bg-stone-50 rounded-2xl p-5 border border-stone-150 space-y-3">
               <h2 className="font-bold text-xs uppercase tracking-wider text-stone-500 mb-2">Stay Reservation Details</h2>
               <div className="space-y-2.5 text-sm leading-none">
-                <div className="flex justify-between items-center"><span className="text-stone-450">Booking ID</span><span className="font-bold text-stone-800 tracking-tight">{booking.publicId}</span></div>
+                <div className="flex justify-between items-center"><span className="text-stone-450">Booking ID</span><span className="font-bold text-stone-800 tracking-tight">{booking.sequenceId || booking.publicId}</span></div>
                 <div className="flex justify-between items-center"><span className="text-stone-450">Hotel</span><span className="font-semibold text-stone-700">{booking.hotelName}</span></div>
                 <div className="flex justify-between items-center"><span className="text-stone-450">Room Type</span><span className="font-semibold text-stone-700">{booking.roomName}</span></div>
                 <div className="border-t border-stone-200/60 pt-3 mt-1.5 space-y-2">
@@ -236,7 +237,6 @@ export default function PaymentPageClient({ bookingId, initialData }: PaymentPag
                     <span className="font-bold text-stone-700">₹{booking.totalAmount?.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
-
                 {booking.paymentPercentage && booking.paymentPercentage < 100 ? (
                   <div className="border-t border-amber-200 bg-amber-50/40 rounded-xl p-3 space-y-2 mt-2">
                     <div className="flex justify-between items-center text-xs">

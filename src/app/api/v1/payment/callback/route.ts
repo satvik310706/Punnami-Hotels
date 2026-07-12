@@ -5,6 +5,7 @@ import { broadcastRoomInventoryUpdate } from '@/lib/sse';
 import { formatDate } from '@/lib/utils';
 import { sendRoomConfirmationSMS } from '@/lib/sms';
 import { sendBookingConfirmationEmail, sendAdminBookingConfirmationEmail } from '@/lib/zohoMail';
+import { assignSequentialId } from '@/lib/booking-sequence';
 
 // GET handler: Handles user navigation/redirect back from PhonePe
 export async function GET(req: NextRequest) {
@@ -113,8 +114,15 @@ export async function GET(req: NextRequest) {
               providerResponse: JSON.stringify(statusResult)
             }
           });
+          
+          await assignSequentialId(tx, booking.id);
         }
       });
+      
+      const freshBooking = await prisma.booking.findUnique({
+        where: { id: booking.id }
+      });
+      const displayId = freshBooking?.sequenceId || booking.publicId;
 
       // Send confirmation notifications (best-effort, non-blocking)
       const hotel = booking.roomType.hotel as { checkInTime?: string; checkOutTime?: string; name: string };
@@ -122,7 +130,7 @@ export async function GET(req: NextRequest) {
         await sendRoomConfirmationSMS({
           customerName: booking.guestName,
           customerPhone: booking.guestPhone,
-          publicId: booking.publicId,
+          publicId: displayId,
           hotelName: hotel.name,
           roomName: booking.roomType.name,
           checkInDate: formatDate(booking.checkInDate),
@@ -139,7 +147,7 @@ export async function GET(req: NextRequest) {
         await sendBookingConfirmationEmail({
           guestEmail: booking.guestEmail,
           guestName: booking.guestName,
-          publicId: booking.publicId,
+          publicId: displayId,
           roomName: booking.roomType.name,
           checkInDate: formatDate(booking.checkInDate),
           checkInTime: hotel.checkInTime || '12:00 PM',
@@ -158,7 +166,7 @@ export async function GET(req: NextRequest) {
           guestName: booking.guestName,
           guestEmail: booking.guestEmail,
           guestPhone: booking.guestPhone,
-          publicId: booking.publicId,
+          publicId: displayId,
           roomName: booking.roomType.name,
           checkInDate: formatDate(booking.checkInDate),
           checkInTime: hotel.checkInTime || '12:00 PM',

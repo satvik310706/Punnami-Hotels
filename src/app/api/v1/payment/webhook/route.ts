@@ -5,6 +5,7 @@ import { broadcastRoomInventoryUpdate } from '@/lib/sse';
 import { formatDate } from '@/lib/utils';
 import { sendRoomConfirmationSMS } from '@/lib/sms';
 import { sendBookingConfirmationEmail, sendAdminBookingConfirmationEmail } from '@/lib/zohoMail';
+import { assignSequentialId } from '@/lib/booking-sequence';
 
 /**
  * PhonePe S2S (Server-to-Server) Webhook — v2 Business API
@@ -167,7 +168,14 @@ export async function POST(req: NextRequest) {
           providerResponse: JSON.stringify({ merchantOrderId, phonePeTransactionId }),
         },
       });
+
+      await assignSequentialId(tx, bookingId);
     });
+
+    const freshBooking = await prisma.booking.findUnique({
+      where: { id: bookingId }
+    });
+    const displayId = freshBooking?.sequenceId || booking.publicId;
 
     // Send confirmation notifications (best-effort, non-blocking)
     const hotel = booking.roomType.hotel as { checkInTime?: string; checkOutTime?: string; name: string };
@@ -175,7 +183,7 @@ export async function POST(req: NextRequest) {
       await sendRoomConfirmationSMS({
         customerName: booking.guestName,
         customerPhone: booking.guestPhone,
-        publicId: booking.publicId,
+        publicId: displayId,
         hotelName: hotel.name,
         roomName: booking.roomType.name,
         checkInDate: formatDate(booking.checkInDate),
@@ -192,7 +200,7 @@ export async function POST(req: NextRequest) {
       await sendBookingConfirmationEmail({
         guestEmail: booking.guestEmail,
         guestName: booking.guestName,
-        publicId: booking.publicId,
+        publicId: displayId,
         roomName: booking.roomType.name,
         checkInDate: formatDate(booking.checkInDate),
         checkInTime: hotel.checkInTime || '12:00 PM',
@@ -211,7 +219,7 @@ export async function POST(req: NextRequest) {
         guestName: booking.guestName,
         guestEmail: booking.guestEmail,
         guestPhone: booking.guestPhone,
-        publicId: booking.publicId,
+        publicId: displayId,
         roomName: booking.roomType.name,
         checkInDate: formatDate(booking.checkInDate),
         checkInTime: hotel.checkInTime || '12:00 PM',

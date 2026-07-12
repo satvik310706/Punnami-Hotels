@@ -14,6 +14,7 @@ import { format } from 'date-fns';
 
 interface BookingLookup {
   publicId: string;
+  sequenceId: string | null;
   status: string;
   checkInDate: string;
   checkOutDate: string;
@@ -125,7 +126,8 @@ function CancelModal({
       if (!res.ok) throw new Error(data.error || 'Failed to submit');
 
       // Open WhatsApp simultaneously — exact ts-tours pattern
-      const msg = `Hello Punnami Southern Residency, I would like to request a cancellation for:\n\nBooking ID: ${booking.publicId}\nRoom: ${booking.roomType.name}\nCheck-in: ${formatDate(booking.checkInDate)}\nCheck-out: ${formatDate(booking.checkOutDate)}\nTotal: ${formatINR(booking.totalAmount)}\nPayment Type: ${isFullyPaid ? '100% Full Payment' : '50% Advance'}\nRefund Expected: ${isFullyPaid ? formatINR(booking.totalAmount * 0.5) : 'None (non-refundable advance)'}\nReason: ${reason}`;
+      const displayId = booking.sequenceId || booking.publicId;
+      const msg = `Hello Punnami Southern Residency, I would like to request a cancellation for:\n\nBooking ID: ${displayId}\nRoom: ${booking.roomType.name}\nCheck-in: ${formatDate(booking.checkInDate)}\nCheck-out: ${formatDate(booking.checkOutDate)}\nTotal: ${formatINR(booking.totalAmount)}\nPayment Type: ${isFullyPaid ? '100% Full Payment' : '50% Advance'}\nRefund Expected: ${isFullyPaid ? formatINR(booking.totalAmount * 0.5) : 'None (non-refundable advance)'}\nReason: ${reason}`;
       window.open(`https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(msg)}`, '_blank');
 
       onSuccess();
@@ -461,7 +463,7 @@ function BookingTicket({ booking, onRefresh }: { booking: BookingLookup; onRefre
             <div className="mt-4 pt-4 border-t border-stone-800 flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-black text-stone-500 uppercase tracking-widest">Booking ID</p>
-                <p className="text-sm font-black text-amber-400 font-mono tracking-widest">{booking.publicId}</p>
+                <p className="text-sm font-black text-amber-400 font-mono tracking-widest">{booking.sequenceId || booking.publicId}</p>
               </div>
               <div className="text-right">
                 <p className="text-[10px] font-black text-stone-500 uppercase tracking-widest">Booked On</p>

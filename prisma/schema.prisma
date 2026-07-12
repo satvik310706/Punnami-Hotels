@@ -118,6 +118,7 @@ model RoomInventory {
 model Booking {
   id                 BigInt        @id @default(autoincrement())
   publicId           String        @unique    // HTL-20260627-XXXXX
+  sequenceId         String?       @unique    // HTL-20260627-ETR-0001
   roomTypeId         BigInt
   roomType           RoomType      @relation(fields: [roomTypeId], references: [id])
   checkInDate        DateTime      @db.Date

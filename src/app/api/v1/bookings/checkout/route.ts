@@ -6,6 +6,7 @@ import { jwtVerify } from 'jose';
 import { broadcastRoomInventoryUpdate } from '@/lib/sse';
 import { cleanupExpiredBookings } from '@/lib/booking-cleanup';
 import { getTodayISTUTC, isAfter6amIST } from '@/lib/ist';
+import { assignSequentialId } from '@/lib/booking-sequence';
 
 // Verhoeff Checksum Algorithm matrices for Aadhaar validation
 const VERHOEFF_D = [
@@ -381,8 +382,13 @@ export async function POST(req: NextRequest) {
           }
         });
       }
+      
+      if (isAdmin) {
+        await assignSequentialId(tx, newBooking.id);
+      }
 
-      return newBooking;
+      const freshBooking = await tx.booking.findUnique({ where: { id: newBooking.id } });
+      return freshBooking || newBooking;
     }, {
       timeout: 30000,
     });
@@ -394,7 +400,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       bookingId: booking.id.toString(),
-      publicId: booking.publicId,
+      publicId: booking.sequenceId || booking.publicId,
+      originalPublicId: booking.publicId,
       totalAmount: Number(booking.totalAmount),
       paidAmount: Number(booking.paidAmount ?? booking.totalAmount),
       paymentPercentage: Number(booking.paymentPercentage ?? 100),

@@ -207,7 +207,7 @@ export default function AdminDashboard() {
                   >
                     <td className="py-4">
                       <div className="font-bold text-stone-900">{b.guestName}</div>
-                      <div className="text-xs text-stone-400">{b.guestPhone} | ID: {b.publicId}</div>
+                      <div className="text-xs text-stone-400">{b.guestPhone} | ID: {b.sequenceId || b.publicId}</div>
                     </td>
                     <td className="py-4 font-semibold">{b.roomType.name}</td>
                     <td className="py-4 text-xs font-medium">
@@ -293,7 +293,7 @@ export default function AdminDashboard() {
                 }`}>
                   {selectedBooking.status.replace('_', ' ')}
                 </span>
-                <h3 className="text-lg font-black text-stone-900 mt-1">Review Booking #{selectedBooking.publicId}</h3>
+                <h3 className="text-lg font-black text-stone-900 mt-1">Review Booking #{selectedBooking.sequenceId || selectedBooking.publicId}</h3>
               </div>
               <button 
                 onClick={() => setSelectedBooking(null)}

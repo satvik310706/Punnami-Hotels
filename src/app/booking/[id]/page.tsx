@@ -10,10 +10,15 @@ export const metadata: Metadata = {
   robots: 'noindex',
 };
 
-async function getBooking(publicId: string) {
+async function getBooking(idStr: string) {
   try {
-    const booking = await prisma.booking.findUnique({
-      where: { publicId },
+    const booking = await prisma.booking.findFirst({
+      where: { 
+        OR: [
+          { publicId: idStr },
+          { sequenceId: idStr }
+        ]
+      },
       include: { roomType: { include: { hotel: true } } },
     });
     return booking;
@@ -34,6 +39,7 @@ export default async function BookingPaymentPage({ params }: { params: Promise<{
       <BookingVoucher
         booking={{
           publicId: booking.publicId,
+          sequenceId: booking.sequenceId,
           checkInDate: booking.checkInDate.toISOString(),
           checkOutDate: booking.checkOutDate.toISOString(),
           totalNights: booking.totalNights,
@@ -83,9 +89,10 @@ export default async function BookingPaymentPage({ params }: { params: Promise<{
 
   return (
     <PaymentPageClient
-      bookingId={id}
+      bookingId={booking.sequenceId || booking.publicId}
       initialData={{
         publicId: booking.publicId,
+        sequenceId: booking.sequenceId,
         totalAmount: Number(booking.totalAmount),
         gstAmount: Number(booking.gstAmount),
         subtotal: Number(booking.subtotalAmount),

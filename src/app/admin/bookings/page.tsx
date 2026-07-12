@@ -237,7 +237,7 @@ export default function AdminBookingsPage() {
                     onClick={() => setSelectedBooking(b)}
                     className="hover:bg-stone-50/50 cursor-pointer transition-colors"
                   >
-                    <td className="px-6 py-4 font-black text-amber-700">{b.publicId}</td>
+                    <td className="px-6 py-4 font-black text-amber-700">{b.sequenceId || b.publicId}</td>
                     <td className="px-6 py-4">
                       <div>
                         <p className="font-bold text-stone-900">{b.guestName}</p>

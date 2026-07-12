@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 interface BookingVoucherProps {
   booking: {
     publicId: string;
+    sequenceId?: string | null;
     checkInDate: string;
     checkOutDate: string;
     totalNights: number;
@@ -320,7 +321,7 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
         <div className="grid grid-cols-2 md:grid-cols-4 border-b border-stone-150 text-center bg-stone-50/20">
           <div className="p-5 border-r border-stone-150">
             <p className="text-[10px] font-black uppercase tracking-wider text-stone-400 mb-1">Booking Reference</p>
-            <p className="font-extrabold text-stone-850 text-sm tracking-wide">{booking.publicId}</p>
+            <p className="font-extrabold text-stone-850 text-sm tracking-wide">{booking.sequenceId || booking.publicId}</p>
           </div>
           <div className="p-5 border-r border-stone-150">
             <p className="text-[10px] font-black uppercase tracking-wider text-stone-400 mb-1">Booking Date</p>

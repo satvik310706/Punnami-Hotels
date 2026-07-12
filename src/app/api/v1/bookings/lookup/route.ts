@@ -12,8 +12,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Booking ID is required.' }, { status: 400 });
     }
 
-    const bookingRaw = await prisma.booking.findUnique({
-      where: { publicId },
+    const bookingRaw = await prisma.booking.findFirst({
+      where: { 
+        OR: [
+          { publicId },
+          { sequenceId: publicId }
+        ]
+      },
       include: {
         roomType: {
           select: {
@@ -58,6 +63,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       publicId: booking.publicId,
+      sequenceId: booking.sequenceId,
       status: booking.status,
       checkInDate: booking.checkInDate.toISOString(),
       checkOutDate: booking.checkOutDate.toISOString(),
