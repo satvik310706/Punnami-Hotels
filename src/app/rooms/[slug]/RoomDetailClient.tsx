@@ -783,11 +783,13 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
             )}
 
             {galleries.length >= 3 && (
-              <div className="grid grid-cols-2 grid-rows-2 gap-[3px]">
+              <div className={`grid gap-[3px] ${galleries.length === 3 ? 'grid-cols-1 grid-rows-2' : 'grid-cols-2 grid-rows-2'}`}>
                 {galleries.slice(1, 5).map((img, i) => (
                   <div
                     key={i}
-                    className="relative overflow-hidden cursor-pointer group"
+                    className={`relative overflow-hidden cursor-pointer group ${
+                      galleries.length === 4 && i === 0 ? 'row-span-2' : ''
+                    }`}
                     onClick={() => { setActiveImg(i + 1); setShowGallery(true); }}
                   >
                     <Image
