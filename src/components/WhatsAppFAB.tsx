@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 
 export default function WhatsAppFAB({ hiddenOnMobile = false }: { hiddenOnMobile?: boolean }) {
   const pathname = usePathname();
-  const whatsappNumber = '919849848938';
+  const whatsappNumber = '919542069573';
   const message = 'Hello Punnami Hotels, I would like help with booking or enquiring about rooms.';
   
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;

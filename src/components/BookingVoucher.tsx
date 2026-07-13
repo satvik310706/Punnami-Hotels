@@ -173,7 +173,7 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
         const formattedCheckIn = format(new Date(booking.checkInDate), 'd MMM yyyy');
         const formattedCheckOut = format(new Date(booking.checkOutDate), 'd MMM yyyy');
         const msg = `Hello Punnami Southern Residency, I would like to request a cancellation for:\n\nBooking ID: ${booking.publicId}\nRoom: ${booking.roomType.name}\nCheck-in: ${formattedCheckIn}\nCheck-out: ${formattedCheckOut}\nTotal: ₹${booking.totalAmount.toLocaleString('en-IN')}\nPayment Type: ${isFullyPaid ? '100% Full Payment' : '50% Advance'}\nRefund Expected: ${isFullyPaid ? `₹${(booking.totalAmount * 0.5).toLocaleString('en-IN')}` : 'None (non-refundable advance)'}\nReason: ${cancelReason}`;
-        window.open(`https://wa.me/919951369573?text=${encodeURIComponent(msg)}`, '_blank');
+        window.open(`https://wa.me/919542069573?text=${encodeURIComponent(msg)}`, '_blank');
         router.refresh();
       }
     } catch {
@@ -210,7 +210,7 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
         const formattedCurrentDate = format(new Date(booking.checkInDate), 'd MMM yyyy');
         const formattedNewDate = format(new Date(dateStr), 'd MMM yyyy');
         const msg = `Hello Punnami Southern Residency, I would like to request a reschedule for:\n\nBooking ID: ${booking.publicId}\nRoom: ${booking.roomType.name}\nCurrent Check-in: ${formattedCurrentDate}\nCurrent Check-out: ${format(new Date(booking.checkOutDate), 'd MMM yyyy')}\nRequested New Check-in: ${formattedNewDate}\nGuest: ${booking.guestName}\nReason: ${postponeReason}`;
-        window.open(`https://wa.me/919951369573?text=${encodeURIComponent(msg)}`, '_blank');
+        window.open(`https://wa.me/919542069573?text=${encodeURIComponent(msg)}`, '_blank');
         router.refresh();
       }
     } catch {
@@ -880,7 +880,7 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
                   </p>
                 </div>
                 <a
-                  href={`https://wa.me/919951369573?text=Hello%20Punnami%20Hotels%2C%20I%20have%20submitted%20a%20${booking.status === 'CANCEL_REQUESTED' ? 'cancellation' : 'reschedule'}%20request%20for%20my%20booking%20${booking.publicId}.%20Please%20verify%20and%20approve%20it.`}
+                  href={`https://wa.me/919542069573?text=Hello%20Punnami%20Hotels%2C%20I%20have%20submitted%20a%20${booking.status === 'CANCEL_REQUESTED' ? 'cancellation' : 'reschedule'}%20request%20for%20my%20booking%20${booking.publicId}.%20Please%20verify%20and%20approve%20it.`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-5 py-3 rounded-xl flex items-center gap-1.5 transition-all shadow-md shrink-0"

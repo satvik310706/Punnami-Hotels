@@ -9,7 +9,7 @@ export default function ContactForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const whatsappNumber = '919849848938';
+    const whatsappNumber = '919542069573';
     const text = `Hello Punnami Southern Residency,
 Name: ${name}
 Phone: ${phone}

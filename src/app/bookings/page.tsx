@@ -65,7 +65,7 @@ interface BookingLookup {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const ADMIN_WHATSAPP = '919951369573';
+const ADMIN_WHATSAPP = '919542069573';
 
 function formatINR(amount: number) {
   return new Intl.NumberFormat('en-IN', {
