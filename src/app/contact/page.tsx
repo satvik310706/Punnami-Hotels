@@ -58,8 +58,10 @@ export default function ContactPage() {
               <MapPin className="h-5 w-5 text-amber-600 shrink-0" />
               <div>
                 <div className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-1">Address</div>
-                <p className="text-sm font-semibold text-stone-800">
-                  Punnami Southern Residency, Shilpi Nagar, Bhadrachalam, Telangana, 507111
+                <p className="text-sm font-semibold text-stone-800 leading-normal">
+                  Punnami southern residency, <br />
+                  Kodanda ramalayam beside road, <br />
+                  Shilpi nagar, Bhadrachalam.
                 </p>
               </div>
             </div>
@@ -99,9 +101,8 @@ export default function ContactPage() {
                 Find Your Way
               </h3>
               <p className="text-stone-400 text-xs font-semibold leading-relaxed mb-6">
-                Conveniently located in Shilpi Nagar, Bhadrachalam. Easily accessible from the main bus station and major pilgrimage routes.
+                Conveniently located at Kodanda ramalayam beside road, Shilpi nagar, Bhadrachalam. Easily accessible from major temple pilgrimage routes.
               </p>
-
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
                   <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
@@ -152,7 +153,7 @@ export default function ContactPage() {
               aria-label="Open in Google Maps"
             />
             <iframe 
-              src="https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d3801.591537172071!2d80.88113787517149!3d17.669494583266612!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMTfCsDQwJzEwLjIiTiA4MMKwNTMnMDEuNCJF!5e0!3m2!1sen!2sin!4v1783320394235!5m2!1sen!2sin" 
+              src="https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d3801.591537172071!2d80.88113787517149!3d17.669494583266612!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMTfCsDQwJzEwLjIiTiA4MMKwNTMnMDEuNCJF!5e0!3m2!1sen!2sin!4v1783917762828!5m2!1sen!2sin" 
               width="100%" 
               height="100%" 
               style={{ border: 0, minHeight: '300px' }} 

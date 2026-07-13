@@ -79,6 +79,7 @@ export async function GET(req: NextRequest) {
       passengers: booking.passengers,
       subtotalAmount: Number(booking.subtotalAmount),
       gstAmount: Number(booking.gstAmount),
+      gatewayFee: Number(booking.gatewayFee),
       totalAmount,
       paidAmount,
       remainingBalance,
@@ -98,7 +99,7 @@ export async function GET(req: NextRequest) {
       },
       hotel: {
         name: booking.roomType?.hotel?.name || 'Punnami Southern Residency',
-        address: booking.roomType?.hotel?.address || 'Shilpi Nagar, Bhadrachalam',
+        address: booking.roomType?.hotel?.address || 'Punnami southern residency, Kodanda ramalayam beside road, Shilpi nagar, Bhadrachalam.',
         checkInTime: booking.roomType?.hotel?.checkInTime || '12:00',
         checkOutTime: booking.roomType?.hotel?.checkOutTime || '11:00',
         phone: '+91 95420 69573',

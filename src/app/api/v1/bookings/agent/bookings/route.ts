@@ -47,6 +47,7 @@ export async function GET(req: NextRequest) {
           subtotalAmount: Number(b.subtotalAmount),
           discountAmount: Number(b.discountAmount),
           gstAmount: Number(b.gstAmount),
+          gatewayFee: Number(b.gatewayFee),
           totalAmount: Number(b.totalAmount),
           agentCommission: Number(b.agentCommission),
         };

@@ -12,10 +12,10 @@ export default function Footer() {
 
   return (
     <footer className="bg-stone-900 text-stone-300">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-10">
+      <div className="max-w-[90rem] mx-auto px-4 sm:px-8 lg:px-16 py-8 sm:py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 sm:gap-10">
           {/* Brand */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-3">
             <div className="flex items-center gap-2.5 mb-3 sm:mb-4">
               <div className="w-12 h-12 bg-stone-950 rounded-xl flex items-center justify-center overflow-hidden border border-amber-500/20 shadow-md">
                 <img src="/logo.png" alt="PSR Logo" width={48} height={48} className="w-full h-full object-contain" />
@@ -40,8 +40,9 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Quick Links & Policies (Side by Side on Mobile) */}
-          <div className="grid grid-cols-2 gap-4 sm:gap-8 md:col-span-1 lg:col-span-2">
+          {/* Quick Links & Policies (Side by Side on mobile, taking lg:col-span-4 on desktop) */}
+          <div className="grid grid-cols-2 gap-4 lg:col-span-4 md:col-span-2">
+            {/* Quick Links */}
             <div>
               <h3 className="text-white font-bold text-[13px] sm:text-sm uppercase tracking-wider mb-2 sm:mb-4">Quick Links</h3>
               <ul className="space-y-1.5 sm:space-y-2.5">
@@ -50,7 +51,7 @@ export default function Footer() {
                   { href: '/rooms', label: 'Browse Rooms' },
                   { href: '/about', label: 'About Us' },
                   { href: '/contact', label: 'Contact' },
-                  { href: '/my-bookings', label: 'My Bookings' },
+                  { href: '/bookings', label: 'My Bookings' },
                 ].map(({ href, label }) => (
                   <li key={href}>
                     <Link href={href} className="text-[13px] sm:text-sm hover:text-amber-400 transition-colors">
@@ -61,6 +62,7 @@ export default function Footer() {
               </ul>
             </div>
 
+            {/* Policies */}
             <div>
               <h3 className="text-white font-bold text-[13px] sm:text-sm uppercase tracking-wider mb-2 sm:mb-4">Policies</h3>
               <ul className="space-y-1.5 sm:space-y-2.5">
@@ -82,32 +84,64 @@ export default function Footer() {
           </div>
 
           {/* Contact */}
-          <div className="lg:col-span-1">
+          <div className="md:col-span-2 lg:col-span-2">
             <h3 className="text-white font-bold text-[13px] sm:text-sm uppercase tracking-wider mb-2 sm:mb-4">Contact Us</h3>
-            <ul className="space-y-2 sm:space-y-3">
-              <li className="flex items-start gap-2 sm:gap-3 text-[13px] sm:text-sm">
-                <MapPin className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-                <span className="text-stone-400">Punnami Southern Residency, <br />Shilpi Nagar, Bhadrachalam</span>
-              </li>
-              <li className="flex items-center gap-2 sm:gap-3 text-[13px] sm:text-sm">
-                <Phone className="h-4 w-4 text-amber-500 shrink-0" />
-                <a href="tel:+919542069573" className="text-stone-400 hover:text-amber-400 transition-colors">
-                  +91 95420 69573
-                </a>
-              </li>
-              <li className="flex items-center gap-2 sm:gap-3 text-[13px] sm:text-sm">
-                <Mail className="h-4 w-4 text-amber-500 shrink-0" />
-                <a href="mailto:info@punnamihotels.com" className="text-stone-400 hover:text-amber-400 transition-colors">
-                  info@punnamihotels.com
-                </a>
-              </li>
-            </ul>
-            <div className="mt-3 sm:mt-4 p-2.5 sm:p-3 bg-stone-800 rounded-xl">
-              <p className="text-xs text-stone-400">
-                <span className="text-white font-semibold">Check-in:</span> 12:00 PM<br />
-                <span className="text-white font-semibold">Check-out:</span> 11:00 AM
-              </p>
+            <div className="grid grid-cols-2 lg:grid-cols-1 gap-4 items-start">
+              <ul className="space-y-2 sm:space-y-3">
+                <li className="flex items-start gap-2 sm:gap-3 text-[13px] sm:text-sm">
+                  <MapPin className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                  <span className="text-stone-400 leading-normal text-[12px] sm:text-xs">
+                    Punnami southern residency, <br />
+                    Kodanda ramalayam beside road, <br />
+                    Shilpi nagar, Bhadrachalam.
+                  </span>
+                </li>
+                <li className="flex items-center gap-2 sm:gap-3 text-[13px] sm:text-sm">
+                  <Phone className="h-4 w-4 text-amber-500 shrink-0" />
+                  <a href="tel:+919542069573" className="text-stone-400 hover:text-amber-400 transition-colors text-[12px] sm:text-xs">
+                    +91 95420 69573
+                  </a>
+                </li>
+                <li className="flex items-center gap-2 sm:gap-3 text-[13px] sm:text-sm">
+                  <Mail className="h-4 w-4 text-amber-500 shrink-0" />
+                  <a href="mailto:info@punnamihotels.com" className="text-stone-400 hover:text-amber-400 transition-colors text-[12px] sm:text-xs">
+                    info@punnamihotels.com
+                  </a>
+                </li>
+              </ul>
+              <div className="p-3 bg-stone-850 rounded-xl border border-stone-800/80">
+                <p className="text-xs text-stone-400 leading-normal">
+                  <span className="text-white font-bold block mb-1 text-[11px] uppercase tracking-wider">Stay Policy</span>
+                  <span className="font-semibold text-amber-500">Check-in:</span> 12:00 PM<br />
+                  <span className="font-semibold text-amber-500">Check-out:</span> 11:00 AM
+                </p>
+              </div>
             </div>
+          </div>
+
+          {/* Map Embed */}
+          <div className="md:col-span-2 lg:col-span-3">
+            <h3 className="text-white font-bold text-[13px] sm:text-sm uppercase tracking-wider mb-2 sm:mb-4">Locate Us</h3>
+            <a 
+              href="https://maps.google.com/?q=17.6694945,80.8811378" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="block w-full h-48 rounded-2xl overflow-hidden border border-stone-800 hover:border-amber-500/40 shadow-lg shadow-black/25 group relative bg-stone-950 transition-all duration-300 hover:scale-[1.02] cursor-pointer"
+            >
+              <iframe
+                src="https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d3801.591537172071!2d80.88113787517149!3d17.669494583266612!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMTfCsDQwJzEwLjIiTiA4MMKwNTMnMDEuNCJF!5e0!3m2!1sen!2sin!4v1783917762828!5m2!1sen!2sin"
+                width="100%"
+                height="100%"
+                style={{ border: 0, filter: 'grayscale(0.2) contrast(1.1) brightness(0.95)' }}
+                allowFullScreen={false}
+                loading="lazy"
+                referrerPolicy="strict-origin-when-cross-origin"
+                className="transition-all duration-500 group-hover:filter-none absolute inset-0 pointer-events-none"
+              />
+              <div className="absolute bottom-2.5 right-2.5 bg-stone-900/95 text-[9px] text-amber-500 font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-lg opacity-80 group-hover:opacity-100 transition-opacity duration-300 border border-stone-750 flex items-center gap-1.5 shadow-md">
+                <MapPin className="h-3 w-3" /> Navigate
+              </div>
+            </a>
           </div>
         </div>
 

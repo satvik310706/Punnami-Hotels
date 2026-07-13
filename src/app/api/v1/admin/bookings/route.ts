@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
           subtotalAmount: Number(b.subtotalAmount),
           discountAmount: Number(b.discountAmount),
           gstAmount: Number(b.gstAmount),
+          gatewayFee: Number(b.gatewayFee),
           totalAmount: Number(b.totalAmount),
           cancellationFee: b.cancellationFee ? Number(b.cancellationFee) : null,
           refundAmount: b.refundAmount ? Number(b.refundAmount) : null,

@@ -425,6 +425,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
     }
 
     const gst = calculateGST(subtotal);
+    const gatewayFee = Math.round((subtotal + gst) * 0.01);
 
     let agentDiscount = 0;
     if (agentProfile) {
@@ -437,10 +438,10 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
       }
     }
 
-    const total = Math.max(0, subtotal + gst - agentDiscount);
+    const total = Math.max(0, subtotal + gst + gatewayFee - agentDiscount);
     // Compute a representative per-room price for the label (average across nights, per room)
     const avgPricePerRoom = breakdown.length > 0 ? Math.round(pureBaseSubtotal / rooms / breakdown.length) : 0;
-    return { subtotal, pureBaseSubtotal, surgeSubtotal, discountSubtotal, gst, total, nights: breakdown.length, breakdown, agentDiscount, avgPricePerRoom };
+    return { subtotal, pureBaseSubtotal, surgeSubtotal, discountSubtotal, gst, gatewayFee, total, nights: breakdown.length, breakdown, agentDiscount, avgPricePerRoom };
   }, [checkIn, checkOut, rooms, room.weekdayPrice, room.weekendPrice, agentProfile, availability, selectedSlotIndex, slots]);
 
   const executeCheckout = async (
@@ -666,8 +667,12 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
             </div>
           )}
           <div className="flex justify-between text-xs">
-            <span className="text-stone-500">GST (12%)</span>
+            <span className="text-stone-500">GST (5%)</span>
             <span className="font-semibold text-stone-700">{formatCurrency(pricing.gst)}</span>
+          </div>
+          <div className="flex justify-between text-xs">
+            <span className="text-stone-500">Payment Gateway Fee (1%)</span>
+            <span className="font-semibold text-stone-700">{formatCurrency(pricing.gatewayFee)}</span>
           </div>
           {pricing.agentDiscount > 0 && (
             <div className="flex justify-between text-xs text-teal-650 font-bold">

@@ -28,6 +28,7 @@ interface Booking {
   subtotalAmount: number;
   discountAmount: number;
   gstAmount: number;
+  gatewayFee: number;
   totalAmount: number;
   paidAmount: number | null;
   paymentPercentage: number | null;
@@ -334,7 +335,10 @@ export default function AdminDashboard() {
                     <h4 className="text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-2">Transaction Info</h4>
                     <div className="bg-stone-50 rounded-xl p-4 space-y-2 text-xs font-semibold">
                       <div className="flex justify-between text-stone-500"><span>Subtotal:</span><span>₹{selectedBooking.subtotalAmount.toLocaleString('en-IN')}</span></div>
-                      <div className="flex justify-between text-stone-500"><span>GST:</span><span>₹{selectedBooking.gstAmount.toLocaleString('en-IN')}</span></div>
+                      <div className="flex justify-between text-stone-500"><span>GST (5%):</span><span>₹{selectedBooking.gstAmount.toLocaleString('en-IN')}</span></div>
+                      {selectedBooking.gatewayFee > 0 && (
+                        <div className="flex justify-between text-stone-500"><span>Gateway Fee:</span><span>₹{selectedBooking.gatewayFee.toLocaleString('en-IN')}</span></div>
+                      )}
                       <div className="flex justify-between text-stone-900 border-t border-stone-250 pt-2 font-bold text-sm">
                         <span>Total Price:</span><span className="text-amber-700">₹{selectedBooking.totalAmount.toLocaleString('en-IN')}</span>
                       </div>

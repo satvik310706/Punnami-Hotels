@@ -22,6 +22,7 @@ interface BookingVoucherProps {
     subtotalAmount: number;
     discountAmount: number;
     gstAmount: number;
+    gatewayFee: number;
     totalAmount: number;
     status: string;
     createdAt: string;
@@ -483,6 +484,13 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
                 <span className="text-stone-500 font-semibold">GST Taxes & Fees</span>
                 <span className="text-stone-800 font-bold">{formatCurrency(booking.gstAmount)}</span>
               </div>
+
+              {Number(booking.gatewayFee) > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-stone-500 font-semibold">Payment Gateway Charges</span>
+                  <span className="text-stone-800 font-bold">{formatCurrency(booking.gatewayFee)}</span>
+                </div>
+              )}
 
               <div className="border-t border-stone-200 pt-3 flex justify-between items-center">
                 <span className="font-extrabold text-stone-900 text-sm">Paid Total Amount</span>

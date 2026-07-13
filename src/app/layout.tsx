@@ -126,7 +126,7 @@ export default function RootLayout({
     "keywords": "punnami, punnami hotels, best hotel in bhadrachalam, bhadrachalam hotel rooms booking, hotels near bhadrachalam temple, cheap hotels in bhadrachalam, deluxe rooms bhadrachalam",
     "address": {
       "@type": "PostalAddress",
-      "streetAddress": "Shilpi Nagar",
+      "streetAddress": "Kodanda ramalayam beside road, Shilpi nagar",
       "addressLocality": "Bhadrachalam",
       "addressRegion": "Telangana",
       "postalCode": "507111",

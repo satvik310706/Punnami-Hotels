@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { generatePublicId } from '@/lib/utils';
-import { calculateStayTotal, calculateGST } from '@/lib/utils';
+import { calculateStayTotal, calculateGST, calculateGatewayFee } from '@/lib/utils';
 import { jwtVerify } from 'jose';
 import { broadcastRoomInventoryUpdate } from '@/lib/sse';
 import { cleanupExpiredBookings } from '@/lib/booking-cleanup';
@@ -343,7 +343,8 @@ export async function POST(req: NextRequest) {
 
       const taxableAmount = subtotal - discountAmount;
       const gstAmount = calculateGST(taxableAmount);
-      const totalAmount = Math.max(0, taxableAmount + gstAmount - commissionVal);
+      const gatewayFee = calculateGatewayFee(taxableAmount, gstAmount);
+      const totalAmount = Math.max(0, taxableAmount + gstAmount + gatewayFee - commissionVal);
 
       const expiresAt = isAdmin 
         ? new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours for admin
@@ -375,7 +376,7 @@ export async function POST(req: NextRequest) {
           couponCode: couponCode || null,
           discountAmount,
           gstAmount,
-          gatewayFee: 0,
+          gatewayFee,
           totalAmount,
           paidAmount: isAdmin ? totalAmount : (Number(totalAmount) * (paymentPercentage / 100)),
           paymentPercentage: isAdmin ? 100 : paymentPercentage,

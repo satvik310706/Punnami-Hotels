@@ -76,7 +76,7 @@ export default function HeroCarousel() {
               priority={index === 0}
               className="object-cover"
               sizes="100vw"
-              quality={80}
+              quality={75}
             />
           </div>
         </motion.div>

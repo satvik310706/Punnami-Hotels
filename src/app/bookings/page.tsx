@@ -30,6 +30,7 @@ interface BookingLookup {
   passengers: any[];
   subtotalAmount: number;
   gstAmount: number;
+  gatewayFee: number;
   totalAmount: number;
   paidAmount: number;
   remainingBalance: number;
@@ -669,6 +670,12 @@ function BookingTicket({ booking, onRefresh }: { booking: BookingLookup; onRefre
                   <span>GST & Taxes</span>
                   <span className="font-bold text-stone-700">{formatINR(booking.gstAmount)}</span>
                 </div>
+                {booking.gatewayFee > 0 && (
+                  <div className="flex justify-between text-stone-500 font-semibold">
+                    <span>Gateway Charges</span>
+                    <span className="font-bold text-stone-700">{formatINR(booking.gatewayFee)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center pt-2.5 border-t border-stone-100">
                   <span className="font-extrabold text-stone-800 text-sm">Grand Total</span>
                   <span className="text-base font-black text-stone-900">{formatINR(booking.totalAmount)}</span>

@@ -8,13 +8,15 @@ async function main() {
   // 1. Create Hotel
   const hotel = await prisma.hotel.upsert({
     where: { slug: 'punnami-hotels' },
-    update: {},
+    update: {
+      address: 'Punnami southern residency, Kodanda ramalayam beside road, Shilpi nagar, Bhadrachalam.',
+    },
     create: {
       name: 'Punnami South Residency',
       slug: 'punnami-hotels',
       tagline: 'Experience luxury and comfort in Bhadrachalam',
       description: 'Punnami South Residency is a premium lodging destination in Bhadrachalam, offering state-of-the-art room variants, modern amenities, and world-class hospitality.',
-      address: 'Near Temple Road, Bhadrachalam, Telangana, 507111',
+      address: 'Punnami southern residency, Kodanda ramalayam beside road, Shilpi nagar, Bhadrachalam.',
       mapUrl: 'https://maps.google.com',
       checkInTime: '12:00 PM',
       checkOutTime: '11:00 AM',

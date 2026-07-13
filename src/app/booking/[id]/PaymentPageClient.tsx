@@ -9,6 +9,7 @@ interface BookingData {
   sequenceId?: string | null;
   totalAmount: number;
   gstAmount: number;
+  gatewayFee: number;
   subtotal: number;
   expiresAt: string;
   roomName: string;
@@ -232,6 +233,9 @@ export default function PaymentPageClient({ bookingId, initialData }: PaymentPag
                 <div className="border-t border-stone-200/60 pt-3 mt-1.5 space-y-2">
                   <div className="flex justify-between items-center"><span className="text-stone-450">Subtotal</span><span className="font-semibold text-stone-700">₹{booking.subtotal?.toLocaleString('en-IN')}</span></div>
                   <div className="flex justify-between items-center"><span className="text-stone-450">GST</span><span className="font-semibold text-stone-700">₹{booking.gstAmount?.toLocaleString('en-IN')}</span></div>
+                  {booking.gatewayFee > 0 && (
+                    <div className="flex justify-between items-center"><span className="text-stone-450">Gateway Charges</span><span className="font-semibold text-stone-700">₹{booking.gatewayFee?.toLocaleString('en-IN')}</span></div>
+                  )}
                   <div className="flex justify-between items-center pt-2">
                     <span className="text-stone-450 font-bold">Total Stay Cost</span>
                     <span className="font-bold text-stone-700">₹{booking.totalAmount?.toLocaleString('en-IN')}</span>

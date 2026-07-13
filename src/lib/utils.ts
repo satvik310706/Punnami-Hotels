@@ -62,10 +62,11 @@ export function calculateStayTotal(
 }
 
 export function calculateGST(subtotal: number): number {
-  // Hotels with tariff > ₹2,500/night: 18% GST
-  // Hotels with tariff ≤ ₹2,500/night: 12% GST
-  const gstRate = subtotal > 2500 ? 0.18 : 0.12;
-  return Math.round(subtotal * gstRate);
+  return Math.round(subtotal * 0.05);
+}
+
+export function calculateGatewayFee(taxableAmount: number, gstAmount: number): number {
+  return Math.round((taxableAmount + gstAmount) * 0.01);
 }
 
 export function slugify(text: string): string {
