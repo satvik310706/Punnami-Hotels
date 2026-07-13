@@ -1,26 +1,26 @@
 'use client';
-
+ 
 import Link from 'next/link';
-import { Home, Hotel, Ticket, Info, Phone } from 'lucide-react';
+import { Home, Hotel, Ticket, Info, Star } from 'lucide-react';
 import { usePathname } from 'next/navigation';
-
+ 
 const NAV_ITEMS = [
   { name: 'Home',       href: '/',        icon: Home   },
   { name: 'Rooms',      href: '/rooms',   icon: Hotel  },
   { name: 'Booking',    href: '/bookings',icon: Ticket },
   { name: 'About',      href: '/about',   icon: Info   },
-  { name: 'Contact',    href: '/contact', icon: Phone  },
+  { name: 'Review',     href: 'https://g.page/r/CbMysAE0rqDYEAI/review', icon: Star },
 ];
-
+ 
 export default function MobileBottomNav() {
   const pathname = usePathname();
-
+ 
   // Hide on admin/agent routes
   if (pathname?.startsWith('/admin') || pathname?.startsWith('/agent')) return null;
-
+ 
   // Hide on room details pages to prevent overlapping the sticky Book CTA bar
   if (pathname?.startsWith('/rooms/') && pathname.split('/').length > 2) return null;
-
+ 
   return (
     <nav
       aria-label="Mobile navigation"
@@ -36,12 +36,33 @@ export default function MobileBottomNav() {
     >
       <div className="grid grid-cols-5 items-stretch gap-0 px-1 pt-1.5">
         {NAV_ITEMS.map((item) => {
+          const Icon = item.icon;
+
+          if (item.href.startsWith('http')) {
+            return (
+              <a
+                key={item.name}
+                href={item.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="relative flex flex-col items-center justify-center gap-[3px] min-h-[3.25rem] px-1 py-1 rounded-xl transition-colors duration-150 text-stone-400 hover:text-stone-700"
+              >
+                <Icon
+                  className="h-5 w-5 scale-100 transition-transform duration-150 text-amber-500 fill-amber-500/10"
+                  strokeWidth={1.75}
+                />
+                <span className="text-[9.5px] font-semibold leading-none tracking-tight text-stone-400">
+                  {item.name}
+                </span>
+              </a>
+            );
+          }
+
           const isActive =
             item.href === '/'
               ? pathname === '/'
               : pathname?.startsWith(item.href);
-          const Icon = item.icon;
-
+ 
           return (
             <Link
               key={item.name}
@@ -63,7 +84,7 @@ export default function MobileBottomNav() {
                   aria-hidden
                 />
               )}
-
+ 
               <Icon
                 className={`h-5 w-5 transition-transform duration-150 ${isActive ? 'scale-110' : 'scale-100'}`}
                 strokeWidth={isActive ? 2.5 : 1.75}

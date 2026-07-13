@@ -77,7 +77,7 @@ export default function ShippingPolicyPage() {
                   The actual physical stay service is rendered on the dates specified in your booking stay ticket, directly at our lodge property located at:
                   <br />
                   <strong className="text-stone-900 block mt-2 text-base">
-                    Punnami southern residency, Kodanda ramalayam beside road, Shilpi nagar, Bhadrachalam.
+                    Punnami southern residency, Shilpinagar, 10-1-34, Ramalayam Road, beside Kodanda, Bhadrachalam, BHADRACHALAM, Telangana 507111
                   </strong>
                 </p>
               </div>

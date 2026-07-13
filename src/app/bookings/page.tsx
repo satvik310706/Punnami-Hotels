@@ -770,13 +770,15 @@ function BookingTicket({ booking, onRefresh }: { booking: BookingLookup; onRefre
               </a>
             </div>
 
-            {/* Print button */}
-            <button
-              onClick={() => window.print()}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-stone-200 text-stone-700 rounded-2xl text-xs font-bold hover:bg-stone-50 transition-colors"
-            >
-              <Printer className="h-4 w-4" /> Print This Ticket
-            </button>
+            {/* Print buttons */}
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => window.open(`/booking/${booking.publicId}?print=ticket`, '_blank')}
+                className="w-full flex items-center justify-center gap-2 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-2xl text-xs font-bold transition-all shadow-md cursor-pointer hover:scale-[1.01]"
+              >
+                <Printer className="h-4 w-4" /> Print Stay Ticket
+              </button>
+            </div>
           </div>
         </div>
       </div>

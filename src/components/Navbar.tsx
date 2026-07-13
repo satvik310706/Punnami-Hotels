@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, Ticket, Home, Hotel, Info, LayoutDashboard, X, Menu } from 'lucide-react';
+import { Phone, Ticket, Home, Hotel, Info, LayoutDashboard, X, Menu, Star } from 'lucide-react';
 
 // Icon + description lookup for each nav link
 const NAV_META: Record<string, { icon: React.ElementType; desc: string }> = {
@@ -191,6 +191,20 @@ export default function Navbar() {
                 My Booking
               </Link>
 
+              <a
+                href="https://g.page/r/CbMysAE0rqDYEAI/review"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`flex items-center gap-1.5 text-[13px] px-4 py-2 rounded-xl border transition-all duration-200 ${
+                  isTransparent
+                    ? 'text-amber-400 border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/15'
+                    : 'text-amber-800 border-amber-200 bg-amber-50/50 hover:bg-amber-100/50 hover:border-amber-300'
+                }`}
+              >
+                <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
+                <span>Write a Review</span>
+              </a>
+
               <Link
                 href="/rooms"
                 className="btn-shimmer text-[13px] font-semibold bg-amber-500 hover:bg-amber-400 text-stone-950 rounded-xl px-5 py-2.5 transition-all duration-200 shadow-lg shadow-amber-500/20 hover:shadow-amber-400/35 hover:-translate-y-px active:translate-y-0"
@@ -329,8 +343,27 @@ export default function Navbar() {
                   })}
                 </nav>
 
-                {/* Divider */}
+                 {/* Divider */}
                 <div className="h-px bg-gradient-to-r from-transparent via-stone-200 to-transparent" />
+
+                {/* Write a Review Button on Mobile */}
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.28, delay: 0.16 }}
+                  className="mb-1"
+                >
+                  <a
+                    href="https://g.page/r/CbMysAE0rqDYEAI/review"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setOpen(false)}
+                    className="w-full flex items-center justify-center gap-2 bg-amber-50 hover:bg-amber-100/70 text-amber-850 border border-amber-250 font-extrabold py-3.5 rounded-xl text-[13px] transition-colors shadow-sm"
+                  >
+                    <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
+                    <span>Write a Google Review</span>
+                  </a>
+                </motion.div>
 
                 {/* CTA Row */}
                 <motion.div

@@ -122,11 +122,11 @@ export default function RootLayout({
     "description": "Book luxury rooms at Punnami Southern Residency, the premier hotel near Bhadrachalam Temple. Experience premium amenities, family suites, AC deluxe lodging.",
     "url": "https://punnamihotels.com",
     "telephone": "+919542069573",
-    "hasMap": "https://maps.google.com/?q=17.6694945,80.8811378",
+    "hasMap": "https://maps.google.com/?q=17.6694332,80.8837854",
     "keywords": "punnami, punnami hotels, best hotel in bhadrachalam, bhadrachalam hotel rooms booking, hotels near bhadrachalam temple, cheap hotels in bhadrachalam, deluxe rooms bhadrachalam",
     "address": {
       "@type": "PostalAddress",
-      "streetAddress": "Kodanda ramalayam beside road, Shilpi nagar",
+      "streetAddress": "Punnami southern residency, Shilpinagar, 10-1-34, Ramalayam Road, beside Kodanda",
       "addressLocality": "Bhadrachalam",
       "addressRegion": "Telangana",
       "postalCode": "507111",
@@ -134,8 +134,8 @@ export default function RootLayout({
     },
     "geo": {
       "@type": "GeoCoordinates",
-      "latitude": 17.6694945,
-      "longitude": 80.8811378
+      "latitude": 17.6694332,
+      "longitude": 80.8837854
     },
     "priceRange": "₹1500 - ₹5000",
     "checkinTime": "12:00:00",

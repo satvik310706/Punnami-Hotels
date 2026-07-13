@@ -59,6 +59,16 @@ export default function Footer() {
                     </Link>
                   </li>
                 ))}
+                <li>
+                  <a
+                    href="https://g.page/r/CbMysAE0rqDYEAI/review"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[13px] sm:text-sm text-amber-400 hover:text-amber-300 font-bold transition-colors flex items-center gap-1"
+                  >
+                    ★ Write a Google Review
+                  </a>
+                </li>
               </ul>
             </div>
 
@@ -91,9 +101,9 @@ export default function Footer() {
                 <li className="flex items-start gap-2 sm:gap-3 text-[13px] sm:text-sm">
                   <MapPin className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
                   <span className="text-stone-400 leading-normal text-[12px] sm:text-xs">
-                    Punnami southern residency, <br />
-                    Kodanda ramalayam beside road, <br />
-                    Shilpi nagar, Bhadrachalam.
+                    Punnami southern residency, Shilpinagar, 10-1-34, <br />
+                    Ramalayam Road, beside Kodanda, <br />
+                    Bhadrachalam, Telangana 507111
                   </span>
                 </li>
                 <li className="flex items-center gap-2 sm:gap-3 text-[13px] sm:text-sm">
@@ -123,13 +133,13 @@ export default function Footer() {
           <div className="md:col-span-2 lg:col-span-3">
             <h3 className="text-white font-bold text-[13px] sm:text-sm uppercase tracking-wider mb-2 sm:mb-4">Locate Us</h3>
             <a 
-              href="https://maps.google.com/?q=17.6694945,80.8811378" 
+              href="https://maps.google.com/?q=17.6694332,80.8837854" 
               target="_blank" 
               rel="noopener noreferrer"
               className="block w-full h-48 rounded-2xl overflow-hidden border border-stone-800 hover:border-amber-500/40 shadow-lg shadow-black/25 group relative bg-stone-950 transition-all duration-300 hover:scale-[1.02] cursor-pointer"
             >
               <iframe
-                src="https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d3801.591537172071!2d80.88113787517149!3d17.669494583266612!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMTfCsDQwJzEwLjIiTiA4MMKwNTMnMDEuNCJF!5e0!3m2!1sen!2sin!4v1783917762828!5m2!1sen!2sin"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3801.5928345764787!2d80.8837854!3d17.6694332!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a36a9a06e5e9d51%3A0xd8a0ae3401b032b3!2sPUNNAMI%20HOTELS!5e0!3m2!1sen!2sin!4v1783926758713!5m2!1sen!2sin"
                 width="100%"
                 height="100%"
                 style={{ border: 0, filter: 'grayscale(0.2) contrast(1.1) brightness(0.95)' }}

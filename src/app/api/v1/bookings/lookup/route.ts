@@ -99,7 +99,7 @@ export async function GET(req: NextRequest) {
       },
       hotel: {
         name: booking.roomType?.hotel?.name || 'Punnami Southern Residency',
-        address: booking.roomType?.hotel?.address || 'Punnami southern residency, Kodanda ramalayam beside road, Shilpi nagar, Bhadrachalam.',
+        address: booking.roomType?.hotel?.address || 'Punnami southern residency, Shilpinagar, 10-1-34, Ramalayam Road, beside Kodanda, Bhadrachalam, BHADRACHALAM, Telangana 507111',
         checkInTime: booking.roomType?.hotel?.checkInTime || '12:00',
         checkOutTime: booking.roomType?.hotel?.checkOutTime || '11:00',
         phone: '+91 95420 69573',
