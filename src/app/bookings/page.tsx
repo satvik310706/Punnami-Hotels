@@ -9,6 +9,7 @@ import {
   ChevronRight, Hotel, Download
 } from 'lucide-react';
 import { format } from 'date-fns';
+import CustomDatePicker from '@/components/CustomDatePicker';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -261,33 +262,33 @@ function RescheduleModal({
   onClose: () => void;
   onSuccess: () => void;
 }) {
-  const [newDate, setNewDate] = useState('');
+  const [newDate, setNewDate] = useState<Date>(() => {
+    const tom = new Date();
+    tom.setDate(tom.getDate() + 1);
+    tom.setHours(0, 0, 0, 0);
+    return tom;
+  });
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const minDate = (() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    return d.toISOString().split('T')[0];
-  })();
-
   const handleSubmit = async () => {
-    if (!newDate || reason.trim().length < 5) return;
+    const dateStr = format(newDate, 'yyyy-MM-dd');
+    if (reason.trim().length < 5) return;
     setSubmitting(true);
     setError(null);
     try {
       const res = await fetch(`/api/v1/bookings/${booking.publicId}/postpone`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ newDate, reason }),
+        body: JSON.stringify({ newDate: dateStr, reason }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to submit');
 
       // Open WhatsApp simultaneously — exact ts-tours pattern
       const formattedCurrentDate = formatDate(booking.checkInDate);
-      const formattedNewDate = formatDate(newDate);
+      const formattedNewDate = formatDate(dateStr);
       const msg = `Hello Punnami Southern Residency, I would like to request a reschedule for:\n\nBooking ID: ${booking.publicId}\nRoom: ${booking.roomType.name}\nCurrent Check-in: ${formattedCurrentDate}\nCurrent Check-out: ${formatDate(booking.checkOutDate)}\nRequested New Check-in: ${formattedNewDate}\nGuest: ${booking.guestName}\nReason: ${reason}`;
       window.open(`https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(msg)}`, '_blank');
 
@@ -331,18 +332,16 @@ function RescheduleModal({
         )}
 
         <div className="space-y-4 mb-4">
-          <div>
-            <label className="block text-[10px] font-black text-stone-400 uppercase tracking-widest mb-1.5">
-              Proposed New Check-in Date *
-            </label>
-            <input
-              type="date"
-              value={newDate}
-              min={minDate}
-              onChange={e => setNewDate(e.target.value)}
-              className="w-full rounded-2xl border border-stone-200 p-3.5 text-xs text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all bg-white"
+            <CustomDatePicker
+              selected={newDate}
+              onChange={date => setNewDate(date)}
+              minDate={(() => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                return today;
+              })()}
+              label="Proposed New Check-in Date"
             />
-          </div>
           <div>
             <label className="block text-[10px] font-black text-stone-400 uppercase tracking-widest mb-1.5">
               Reason for Reschedule *

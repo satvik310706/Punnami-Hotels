@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Calendar, User, Phone, Mail, Ticket, CreditCard, ShieldCheck, MapPin, Printer, ArrowLeft, Home, Sparkles, Users, AlertTriangle, CalendarClock, MessageSquare, RefreshCw, X, XCircle, Loader2, Star, Download } from 'lucide-react';
+import { Calendar, User, Phone, Mail, Ticket, CreditCard, ShieldCheck, MapPin, Printer, ArrowLeft, Home, Sparkles, Users, AlertTriangle, CalendarClock, MessageSquare, RefreshCw, X, XCircle, Loader2, Star, Download, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatCurrency } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import CustomDatePicker from '@/components/CustomDatePicker';
 
 function formatSlotTime(timeStr?: string | null, fallback: string = '12:00 PM') {
   if (!timeStr) return fallback;
@@ -104,11 +105,24 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
   
   const [cancelReason, setCancelReason] = useState('');
   const [postponeReason, setPostponeReason] = useState('');
-  const [postponeDate, setPostponeDate] = useState('');
+  const [postponeDate, setPostponeDate] = useState<Date>(() => {
+    const tom = new Date();
+    tom.setDate(tom.getDate() + 1);
+    tom.setHours(0, 0, 0, 0);
+    return tom;
+  });
   
   const [submitting, setSubmitting] = useState(false);
   const [payingBalance, setPayingBalance] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  const checkInDateObj = new Date(booking.checkInDate);
+  const todayObj = new Date();
+  todayObj.setHours(0, 0, 0, 0);
+  const daysUntilCheckIn = Math.ceil((checkInDateObj.getTime() - todayObj.getTime()) / (1000 * 60 * 60 * 24));
+  const isActive = ['CONFIRMED', 'PARTIAL_PAID'].includes(booking.status);
+  const hasPendingRequest = ['CANCEL_REQUESTED', 'POSTPONE_REQUESTED'].includes(booking.status);
+  const canRequestChanges = daysUntilCheckIn >= 4 && isActive;
 
   const handlePayBalance = async () => {
     setPayingBalance(true);
@@ -178,17 +192,18 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
     setSubmitting(true);
     setErrorMsg('');
     try {
+      const dateStr = format(postponeDate, 'yyyy-MM-dd');
       const res = await fetch(`/api/v1/bookings/${booking.publicId}/postpone`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ newDate: postponeDate, reason: postponeReason }),
+        body: JSON.stringify({ newDate: dateStr, reason: postponeReason }),
       });
       const data = await res.json();
       if (!res.ok) {
         setErrorMsg(data.error || 'Failed to submit postpone request.');
       } else {
         setShowPostponeModal(false);
-        window.open(`https://wa.me/919951369573?text=Hello%20Punnami%20Hotels%2C%20I%20have%20submitted%20a%20postponement%20request%20for%20my%20booking%20${booking.publicId}%20to%20start%20on%20${postponeDate}.%20Please%20verify%20and%20approve%20it.`, '_blank');
+        window.open(`https://wa.me/919951369573?text=Hello%20Punnami%20Hotels%2C%20I%20have%20submitted%20a%20postponement%20request%20for%20my%20booking%20${booking.publicId}%20to%20start%20on%20${dateStr}.%20Please%20verify%20and%20approve%20it.`, '_blank');
         router.refresh();
       }
     } catch {
@@ -216,31 +231,101 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
         @media print {
           @page {
             size: A4 portrait;
-            margin: 8mm 10mm 8mm 10mm;
+            margin: 3mm 5mm 3mm 5mm !important;
           }
           * {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
             color-adjust: exact !important;
           }
+          body {
+            background: #ffffff !important;
+            padding: 0 !important;
+            zoom: 78% !important;
+          }
+          .ticket-wrap {
+            border: 2px solid #78350f !important;
+            box-shadow: none !important;
+            border-radius: 16px !important;
+            margin: 0 auto !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
           .print\\:hidden {
             display: none !important;
           }
-          .print\\:bg-white {
-            background-color: #ffffff !important;
+          /* Grid detail items printed side by side with compact margins */
+          .ticket-wrap .p-8 {
+            padding: 8px 12px !important;
           }
-          .print\\:border-stone-200 {
-            border-color: #e7e5e4 !important;
+          .ticket-wrap .p-5 {
+            padding: 4px 6px !important;
           }
-          .print\\:shadow-none {
+          .ticket-wrap .grid {
+            gap: 6px !important;
+          }
+          .ticket-grid-summary {
+            display: flex !important;
+            flex-direction: row !important;
+            gap: 16px !important;
+            border-bottom: 1px solid #e7e5e4 !important;
+          }
+          .ticket-grid-summary > * {
+            flex: 1 !important;
+            margin-top: 0 !important;
+          }
+          .ticket-grid-summary h3 {
+            margin-bottom: 4px !important;
+            padding-bottom: 2px !important;
+          }
+          .ticket-grid-summary .space-y-4 > *, .ticket-grid-summary .space-y-3 > * {
+            margin-top: 2px !important;
+            font-size: 10.5px !important;
+          }
+          /* Guidelines bullet points formatting */
+          .guidelines-wrap {
+            padding: 8px 12px !important;
+            background-color: #fafaf9 !important;
+          }
+          .guidelines-wrap h3 {
+            margin-bottom: 4px !important;
+            padding-bottom: 2px !important;
+          }
+          .guidelines-list li {
+            font-size: 8.5px !important;
+            margin-bottom: 2px !important;
+            line-height: 1.2 !important;
+          }
+          /* Clickable map button styled beautifully on print just like ts-tours */
+          .ticket-map-btn {
+            display: inline-flex !important;
+            background: #e0f2fe !important;
+            color: #0369a1 !important;
+            border: 1px solid #bae6fd !important;
+            padding: 4px 8px !important;
+            border-radius: 6px !important;
+            font-size: 9px !important;
+            font-weight: 800 !important;
+            text-decoration: none !important;
             box-shadow: none !important;
-            filter: none !important;
+            align-items: center !important;
+            gap: 4px !important;
           }
-          .print\\:rounded-2xl {
-            border-radius: 1rem !important;
+          .ticket-map-btn svg {
+            color: #0369a1 !important;
+            width: 10px !important;
+            height: 10px !important;
           }
-          .print\\:rounded-3xl {
-            border-radius: 1.5rem !important;
+          .footer-wrap {
+            padding: 6px !important;
+            font-size: 7.5px !important;
+          }
+          .footer-wrap p {
+            margin-top: 1px !important;
+            font-size: 7px !important;
+            line-height: 1.15 !important;
           }
           .print-card {
             page-break-inside: avoid !important;
@@ -287,13 +372,13 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
       </div>
 
       {/* Main Voucher Container */}
-      <div id="stay-ticket-container" className="max-w-4xl mx-auto bg-white border border-stone-200 rounded-3xl shadow-xl overflow-hidden print:border print:border-stone-200 print:shadow-none print:rounded-3xl">
+      <div id="stay-ticket-container" className="max-w-4xl mx-auto bg-white border border-stone-200 rounded-3xl shadow-xl overflow-hidden print:border print:border-stone-200 print:shadow-none print:rounded-3xl ticket-wrap">
         
         {/* Decorative Golden Ribbon */}
         <div className="h-2.5 bg-gradient-to-r from-amber-400 via-amber-600 to-amber-700 w-full" />
 
         {/* Hotel Banner Image — shown as full image, no crop */}
-        <div className="w-full bg-stone-900">
+        <div className="w-full bg-stone-900 print:hidden">
           <img
             src="/hotel-banner.jpg"
             alt="Punnami Southern Residency - Best Stay in Bhadrachalam"
@@ -439,7 +524,7 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
 
             {/* Office Location & Key Pickup Card */}
             <div className="mx-8 mb-4 mt-2 bg-gradient-to-br from-amber-50/70 to-stone-50 border border-amber-200 rounded-2xl p-6 shadow-sm print-card">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 print:hidden">
                 <div className="flex items-start gap-3">
                   <MapPin className="h-5.5 w-5.5 text-amber-700 mt-0.5 shrink-0" />
                   <div>
@@ -470,7 +555,7 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
                   href="https://maps.app.goo.gl/NsFCq6zSKECAR3xj8"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="bg-stone-900 hover:bg-stone-800 text-amber-500 hover:text-amber-400 font-extrabold text-xs px-4 py-2.5 rounded-xl border border-stone-800 transition-all shadow-sm shrink-0 flex items-center justify-center gap-1.5 print:hidden cursor-pointer"
+                  className="bg-stone-900 hover:bg-stone-800 text-amber-500 hover:text-amber-400 font-extrabold text-xs px-4 py-2.5 rounded-xl border border-stone-800 transition-all shadow-sm shrink-0 flex items-center justify-center gap-1.5 cursor-pointer ticket-map-btn"
                 >
                   <MapPin className="h-3.5 w-3.5" />
                   <span>Navigate on Google Maps</span>
@@ -479,7 +564,7 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
             </div>
 
             {/* Guest & Pricing Summary Grid */}
-            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8 border-b border-stone-150 print-card">
+            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8 border-b border-stone-150 print-card ticket-grid-summary">
               {/* Guest and Stay Profile */}
               <div className="space-y-6">
                 <h3 className="text-xs font-black uppercase tracking-widest text-stone-450 border-b border-stone-150 pb-2 flex items-center gap-2">
@@ -723,22 +808,35 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
                   </button>
                 )}
                 
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <button
-                    onClick={() => setShowCancelModal(true)}
-                    className="flex-1 bg-white hover:bg-red-50 text-red-700 hover:text-red-850 border-2 border-red-200 hover:border-red-300 font-extrabold text-sm px-6 py-3.5 rounded-2xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
-                  >
-                    <XCircle className="h-4.5 w-4.5" />
-                    <span>Request Cancellation</span>
-                  </button>
-                  <button
-                    onClick={() => setShowPostponeModal(true)}
-                    className="flex-1 bg-white hover:bg-amber-50 text-amber-700 hover:text-amber-850 border-2 border-amber-200 hover:border-amber-300 font-extrabold text-sm px-6 py-3.5 rounded-2xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
-                  >
-                    <RefreshCw className="h-4.5 w-4.5" />
-                    <span>Reschedule Booking (Postpone)</span>
-                  </button>
-                </div>
+                {canRequestChanges ? (
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <button
+                      onClick={() => setShowCancelModal(true)}
+                      className="flex-1 bg-white hover:bg-red-50 text-red-700 hover:text-red-850 border-2 border-red-200 hover:border-red-300 font-extrabold text-sm px-6 py-3.5 rounded-2xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
+                    >
+                      <XCircle className="h-4.5 w-4.5" />
+                      <span>Request Cancellation</span>
+                    </button>
+                    <button
+                      onClick={() => setShowPostponeModal(true)}
+                      className="flex-1 bg-white hover:bg-amber-50 text-amber-700 hover:text-amber-850 border-2 border-amber-200 hover:border-amber-300 font-extrabold text-sm px-6 py-3.5 rounded-2xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
+                    >
+                      <RefreshCw className="h-4.5 w-4.5" />
+                      <span>Reschedule Booking (Postpone)</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="p-5 rounded-2xl bg-stone-50 border border-stone-200 text-xs shadow-sm">
+                    <p className="font-extrabold text-stone-700 mb-1.5 flex items-center gap-1.5">
+                      <AlertCircle className="h-4 w-4 text-stone-500" /> Rescheduling & Cancellation Unavailable
+                    </p>
+                    <p className="text-stone-500 font-semibold leading-relaxed">
+                      {daysUntilCheckIn < 0
+                        ? 'Your stay has already begun or passed.'
+                        : `Check-in is in ${daysUntilCheckIn} day(s). Changes can only be requested 4 or more days before check-in.`}
+                    </p>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="bg-amber-50/50 border border-amber-200 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -788,7 +886,7 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
         )}
 
         {/* Boarding Pass Tear-off Line */}
-        <div className="relative my-2 print:my-4 print-card">
+        <div className="relative my-2 print:hidden print-card">
           <div className="absolute left-0 right-0 border-t-2 border-dashed border-stone-300 top-1/2 -translate-y-1/2" />
           <div className="relative flex justify-between px-8">
             <div className="w-6 h-6 bg-stone-100 rounded-full border border-stone-200 -ml-11 print:bg-white print:border-none" />
@@ -798,9 +896,9 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
         </div>
 
         {/* Stay Guidelines / Policies */}
-        <div className="p-8 bg-stone-50/50 print-card">
+        <div className="p-8 bg-stone-50/50 print-card guidelines-wrap">
           <h3 className="text-xs font-black uppercase tracking-widest text-stone-450 border-b border-stone-150 pb-2 mb-4">Check-in Guidelines & Policies</h3>
-          <ul className="space-y-3 text-xs text-stone-600 leading-relaxed list-disc pl-4 font-medium">
+          <ul className="space-y-3 text-xs text-stone-600 leading-relaxed list-disc pl-4 font-medium guidelines-list">
             <li><strong>Photo Identification:</strong> A valid physical photo ID (Aadhar Card, Passport, Driving License or Voter ID) must be presented by all adult guests at the time of check-in.</li>
             <li><strong>Occupancy Limits:</strong> Check-in is capped based on the standard capacity of the room (max {booking.roomType.maxAdults} adults and {booking.roomType.maxChildren} children per room category).</li>
             <li><strong>Check-in & Check-out:</strong> Standard Check-In is at 12:00 PM. Check-Out is at 11:00 AM. Early check-in or late check-out is subject to availability and may incur custom hotel charges.</li>
@@ -809,7 +907,7 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
         </div>
 
         {/* Voucher Footer */}
-        <div className="bg-stone-900 text-stone-400 p-6 text-center text-xs border-t border-stone-800 print-card">
+        <div className="bg-stone-900 text-stone-400 p-6 text-center text-xs border-t border-stone-800 print-card footer-wrap">
           <p className="font-bold text-stone-300">Thank you for choosing Punnami Southern Residency Bhadrachalam</p>
           <p className="text-[10px] mt-1 text-stone-500">For support, call us at +91 95051 55166, +91 99513 69573, +91 99122 21274, +91 98498 48938 or email info@punnamihotels.com. This is an officially generated digital hotel booking ticket.</p>
         </div>
@@ -889,14 +987,15 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
               </p>
 
               <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-stone-400 mb-1.5">Proposed New Check-In Date</label>
-                <input
-                  type="date"
-                  value={postponeDate}
-                  onChange={(e) => setPostponeDate(e.target.value)}
-                  min={new Date(Date.now() + 86400000).toISOString().split('T')[0]} // from tomorrow onwards
-                  className="w-full p-3 border-2 border-stone-200 rounded-xl text-sm focus:outline-none focus:border-amber-500 font-bold"
-                  required
+                <CustomDatePicker
+                  selected={postponeDate}
+                  onChange={(date) => setPostponeDate(date)}
+                  minDate={(() => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    return today;
+                  })()}
+                  label="Proposed New Check-In Date"
                 />
               </div>
 
