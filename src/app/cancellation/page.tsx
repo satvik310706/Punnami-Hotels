@@ -21,7 +21,7 @@ export default function CancellationPolicy() {
           </h1>
           <div className="w-24 h-1 bg-amber-600 mx-auto rounded-full mb-6"></div>
           <p className="text-stone-300 max-w-2xl mx-auto text-lg leading-relaxed">
-            Clear and transparent guidelines for modifying or canceling your stay with Punnami Southern Residency (operated by Telangana Boat Tourism).
+            Clear and transparent guidelines for modifying or canceling your stay with Punnami Southern Residency (operated by Telangana Godavari Boat Tourism).
           </p>
         </div>
       </div>
@@ -46,7 +46,7 @@ export default function CancellationPolicy() {
                   <div>
                     <strong className="text-stone-900 block text-base mb-1">Strict Non-Refundable Policy</strong>
                     <span className="text-sm leading-relaxed block text-stone-600">
-                      All room bookings confirmed at Punnami Southern Residency (operated by Telangana Boat Tourism) are <strong>strictly non-refundable</strong>. Once your booking is confirmed, no refunds will be issued under any circumstances, including cancellations or early departures. A 100% cancellation charge applies to all cancelled reservations.
+                      All room bookings confirmed at Punnami Southern Residency (operated by Telangana Godavari Boat Tourism) are <strong>strictly non-refundable</strong>. Once your booking is confirmed, no refunds will be issued under any circumstances, including cancellations or early departures. A 100% cancellation charge applies to all cancelled reservations.
                     </span>
                   </div>
                 </div>

@@ -74,7 +74,7 @@ export default function PrivacyPage() {
               </div>
               <div className="pl-11">
                 <p className="text-base text-stone-600 bg-stone-50 p-6 rounded-2xl border border-stone-100">
-                  <strong>Telangana Boat Tourism</strong> is committed to keeping your information confidential. We do not sell, rent, trade, or distribute your email addresses, phone numbers, or stay histories with third parties for promotional or marketing campaigns. Data is strictly utilized for booking, invoicing, check-in validation, and compliance with local law enforcement guidelines.
+                  <strong>Telangana Godavari Boat Tourism</strong> is committed to keeping your information confidential. We do not sell, rent, trade, or distribute your email addresses, phone numbers, or stay histories with third parties for promotional or marketing campaigns. Data is strictly utilized for booking, invoicing, check-in validation, and compliance with local law enforcement guidelines.
                 </p>
               </div>
             </section>
