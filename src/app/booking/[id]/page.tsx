@@ -19,7 +19,13 @@ async function getBooking(idStr: string) {
           { sequenceId: idStr }
         ]
       },
-      include: { roomType: { include: { hotel: true } } },
+      include: { 
+        roomType: { include: { hotel: true } },
+        payments: {
+          where: { status: 'COMPLETED' },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
     });
     return booking;
   } catch { return null; }
@@ -51,6 +57,8 @@ export default async function BookingPaymentPage({ params }: { params: Promise<{
           childCount: booking.childCount,
           status: booking.status,
           createdAt: booking.createdAt.toISOString(),
+          slotStart: booking.slotStart,
+          slotEnd: booking.slotEnd,
           subtotalAmount: Number(booking.subtotalAmount),
           discountAmount: Number(booking.discountAmount),
           gstAmount: Number(booking.gstAmount),
@@ -78,7 +86,23 @@ export default async function BookingPaymentPage({ params }: { params: Promise<{
               checkInTime: booking.roomType.hotel.checkInTime,
               checkOutTime: booking.roomType.hotel.checkOutTime,
             }
-          }
+          },
+          completedPayments: (booking as any).payments?.map((p: any) => {
+            let pgTxnId = p.merchantTransactionId;
+            try {
+              if (p.providerResponse) {
+                const resp = JSON.parse(p.providerResponse);
+                pgTxnId = resp.data?.transactionId || resp.paymentDetails?.[0]?.transactionId || p.merchantTransactionId;
+              }
+            } catch {}
+            return {
+              id: p.id.toString(),
+              merchantTransactionId: p.merchantTransactionId,
+              gatewayTransactionId: pgTxnId,
+              amount: Number(p.amount),
+              createdAt: p.createdAt.toISOString(),
+            };
+          }) || []
         }}
       />
     );

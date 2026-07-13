@@ -45,6 +45,13 @@ interface BookingLookup {
   refundAmount: number | null;
   createdAt: string;
   roomType: { name: string; coverImageUrl: string | null };
+  completedPayments?: {
+    id: string;
+    merchantTransactionId: string;
+    gatewayTransactionId: string | null;
+    amount: number;
+    createdAt: string;
+  }[];
   hotel: {
     name: string;
     address: string;
@@ -57,7 +64,7 @@ interface BookingLookup {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const ADMIN_WHATSAPP = '919542069573';
+const ADMIN_WHATSAPP = '919951369573';
 
 function formatINR(amount: number) {
   return new Intl.NumberFormat('en-IN', {
@@ -65,6 +72,20 @@ function formatINR(amount: number) {
     currency: 'INR',
     minimumFractionDigits: 2,
   }).format(amount);
+}
+
+function formatSlotTime(timeStr?: string | null, fallback: string = '12:00 PM') {
+  if (!timeStr) return fallback;
+  try {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) return fallback;
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 === 0 ? 12 : hours % 12;
+    const displayMinutes = minutes.toString().padStart(2, '0');
+    return `${displayHours.toString().padStart(2, '0')}:${displayMinutes} ${period}`;
+  } catch {
+    return fallback;
+  }
 }
 
 function formatDate(iso: string) {
@@ -443,7 +464,7 @@ function BookingTicket({ booking, onRefresh }: { booking: BookingLookup; onRefre
               <div>
                 <p className="text-[10px] font-black text-stone-500 uppercase tracking-widest mb-0.5">Check-in</p>
                 <p className="text-base font-black text-white">{formatDate(booking.checkInDate)}</p>
-                <p className="text-xs text-amber-400 font-semibold">{booking.hotel.checkInTime || booking.slotStart}</p>
+                <p className="text-xs text-amber-400 font-semibold">{formatSlotTime(booking.slotStart, '12:00 PM')}</p>
               </div>
               <div className="text-stone-600">
                 <ChevronRight className="h-5 w-5" />
@@ -451,7 +472,7 @@ function BookingTicket({ booking, onRefresh }: { booking: BookingLookup; onRefre
               <div>
                 <p className="text-[10px] font-black text-stone-500 uppercase tracking-widest mb-0.5">Check-out</p>
                 <p className="text-base font-black text-white">{formatDate(booking.checkOutDate)}</p>
-                <p className="text-xs text-amber-400 font-semibold">{booking.hotel.checkOutTime || booking.slotEnd}</p>
+                <p className="text-xs text-amber-400 font-semibold">{formatSlotTime(booking.slotEnd, '11:00 AM')}</p>
               </div>
               <div className="ml-auto text-right">
                 <p className="text-[10px] font-black text-stone-500 uppercase tracking-widest mb-0.5">Duration</p>
@@ -587,7 +608,7 @@ function BookingTicket({ booking, onRefresh }: { booking: BookingLookup; onRefre
                 </div>
                 <div className="flex items-center gap-2 text-stone-600 font-semibold">
                   <Clock className="h-3.5 w-3.5 text-amber-600" />
-                  <span>Check-in from {booking.hotel.checkInTime || booking.slotStart} · Check-out by {booking.hotel.checkOutTime || booking.slotEnd}</span>
+                  <span>Check-in from {formatSlotTime(booking.slotStart, '12:00 PM')} · Check-out by {formatSlotTime(booking.slotEnd, '11:00 AM')}</span>
                 </div>
                 {booking.hotel.phone && (
                   <a href={`tel:${booking.hotel.phone}`} className="flex items-center gap-2 text-amber-700 font-semibold hover:underline">
@@ -743,14 +764,40 @@ function BookingTicket({ booking, onRefresh }: { booking: BookingLookup; onRefre
                 </div>
               )}
 
-              {/* Fully paid badge */}
-              {booking.remainingBalance === 0 && (
-                <div className="mt-4 pt-4 border-t border-stone-100">
+              {/* Transactions log & Status */}
+              <div className="mt-4 pt-4 border-t border-stone-100 space-y-4">
+                {booking.completedPayments && booking.completedPayments.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] text-stone-400 font-black uppercase tracking-wider">Completed Transactions</p>
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                      {booking.completedPayments.map((p, idx) => (
+                        <div key={p.id || idx} className="bg-stone-50 border border-stone-150 rounded-2xl p-3 text-[11px] font-bold text-stone-700 flex flex-col gap-1">
+                          <div className="flex justify-between text-stone-850">
+                            <span>Payment #{idx + 1} ({formatINR(p.amount)})</span>
+                            <span className="text-emerald-700 font-extrabold uppercase text-[9px]">✓ Success</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-y-0.5 text-[10px] text-stone-500 font-medium">
+                            <div>Gateway Ref:</div>
+                            <div className="text-stone-750 text-right font-mono truncate select-all">{p.gatewayTransactionId || '—'}</div>
+                            <div>Date:</div>
+                            <div className="text-stone-700 text-right">{format(new Date(p.createdAt), 'dd MMM, hh:mm a')}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {booking.remainingBalance === 0 ? (
                   <div className="flex items-center justify-center gap-1.5 text-emerald-700 bg-emerald-50 px-3 py-2.5 rounded-2xl text-xs font-bold border border-emerald-200">
                     <ShieldCheck className="h-4 w-4" /> Fully Paid — Verified Ticket
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="flex items-center justify-center gap-1.5 text-amber-700 bg-amber-50 px-3 py-2.5 rounded-2xl text-xs font-bold border border-amber-200">
+                    <Clock className="h-4 w-4 animate-pulse" /> Balance Due at Office: {formatINR(booking.remainingBalance)}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Policy reminder */}

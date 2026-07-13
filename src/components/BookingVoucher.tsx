@@ -6,6 +6,20 @@ import { format } from 'date-fns';
 import { formatCurrency } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 
+function formatSlotTime(timeStr?: string | null, fallback: string = '12:00 PM') {
+  if (!timeStr) return fallback;
+  try {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) return fallback;
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 === 0 ? 12 : hours % 12;
+    const displayMinutes = minutes.toString().padStart(2, '0');
+    return `${displayHours.toString().padStart(2, '0')}:${displayMinutes} ${period}`;
+  } catch {
+    return fallback;
+  }
+}
+
 interface BookingVoucherProps {
   booking: {
     publicId: string;
@@ -26,6 +40,8 @@ interface BookingVoucherProps {
     totalAmount: number;
     status: string;
     createdAt: string;
+    slotStart?: string;
+    slotEnd?: string;
     transactionId?: string | null;
     cancellationReason?: string;
     cancellationFee?: number;
@@ -43,6 +59,13 @@ interface BookingVoucherProps {
       aadhaar?: string;
       phone?: string;
       isPrimary?: boolean;
+    }[];
+    completedPayments?: {
+      id: string;
+      merchantTransactionId: string;
+      gatewayTransactionId: string | null;
+      amount: number;
+      createdAt: string;
     }[];
     roomType: {
       name: string;
@@ -70,6 +93,9 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
     const params = new URLSearchParams(window.location.search);
     const printVal = params.get('print');
     if (printVal === 'ticket' || printVal === 'true') {
+      setTimeout(() => {
+        window.print();
+      }, 500);
       const url = new URL(window.location.href);
       url.searchParams.delete('print');
       window.history.replaceState({}, '', url.toString());
@@ -129,7 +155,7 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
         setErrorMsg(data.error || 'Failed to submit cancellation request.');
       } else {
         setShowCancelModal(false);
-        window.open(`https://wa.me/919542069573?text=Hello%20Punnami%20Hotels%2C%20I%20have%20submitted%20a%20cancellation%20request%20for%20my%20booking%20${booking.publicId}.%20Please%20approve%20it.`, '_blank');
+        window.open(`https://wa.me/919951369573?text=Hello%20Punnami%20Hotels%2C%20I%20have%20submitted%20a%20cancellation%20request%20for%20my%20booking%20${booking.publicId}.%20Please%20approve%20it.`, '_blank');
         router.refresh();
       }
     } catch {
@@ -162,7 +188,7 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
         setErrorMsg(data.error || 'Failed to submit postpone request.');
       } else {
         setShowPostponeModal(false);
-        window.open(`https://wa.me/919542069573?text=Hello%20Punnami%20Hotels%2C%20I%20have%20submitted%20a%20postponement%20request%20for%20my%20booking%20${booking.publicId}%20to%20start%20on%20${postponeDate}.%20Please%20verify%20and%20approve%20it.`, '_blank');
+        window.open(`https://wa.me/919951369573?text=Hello%20Punnami%20Hotels%2C%20I%20have%20submitted%20a%20postponement%20request%20for%20my%20booking%20${booking.publicId}%20to%20start%20on%20${postponeDate}.%20Please%20verify%20and%20approve%20it.`, '_blank');
         router.refresh();
       }
     } catch {
@@ -176,7 +202,7 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
     if (downloading) return;
     setDownloading(true);
     try {
-      // 1. Check and load html2pdf if not present
+      // 1. Load html2pdf if not present
       if (!(window as any).html2pdf) {
         await new Promise<void>((resolve, reject) => {
           const script = document.createElement('script');
@@ -190,42 +216,74 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
       // 2. Select container
       const element = document.getElementById('stay-ticket-container');
       if (element) {
-        // Find elements with print:hidden class
+        // Hide print:hidden elements
         const printHiddenElements = element.querySelectorAll('.print\\:hidden');
-        printHiddenElements.forEach(el => el.classList.add('hidden-for-pdf'));
-        
-        // Add a style block to force display: none during PDF generation
-        const style = document.createElement('style');
-        style.innerHTML = '.hidden-for-pdf { display: none !important; }';
-        document.head.appendChild(style);
+        printHiddenElements.forEach(el => (el as HTMLElement).style.display = 'none');
 
         const opt = {
-          margin:       [10, 10, 10, 10], // top, left, bottom, right in mm
-          filename:     `StayTicket-${booking.publicId}.pdf`,
-          image:        { type: 'jpeg', quality: 0.98 },
-          html2canvas:  { 
-            scale: 2.2, // higher scale for high resolution text rendering
+          margin: [8, 8, 8, 8],
+          filename: `StayTicket-${booking.publicId}.pdf`,
+          image: { type: 'jpeg', quality: 0.95 },
+          html2canvas: {
+            scale: 2,
             useCORS: true,
-            logging: false
+            logging: false,
+            allowTaint: true,
+            // ↓ Fix: use onclone to strip oklch/color-function values that html2pdf can't parse
+            onclone: (_doc: Document) => {
+              // Strip oklch colors from all inline styles and computed stylesheets
+              const allEls = _doc.querySelectorAll('*');
+              allEls.forEach((el) => {
+                const htmlEl = el as HTMLElement;
+                // Reset color and background-color inline style if they contain oklch
+                const inlineStyle = htmlEl.getAttribute('style') || '';
+                if (inlineStyle.includes('oklch') || inlineStyle.includes('color-mix')) {
+                  htmlEl.removeAttribute('style');
+                }
+              });
+              // Also patch all stylesheets in the cloned document
+              try {
+                const styleSheets = Array.from(_doc.styleSheets || []);
+                styleSheets.forEach((sheet) => {
+                  try {
+                    const rules = Array.from((sheet as CSSStyleSheet).cssRules || []);
+                    rules.forEach((rule) => {
+                      if (rule instanceof CSSStyleRule) {
+                        const ruleText = rule.style?.cssText || '';
+                        if (ruleText.includes('oklch') || ruleText.includes('color-mix')) {
+                          // Remove problematic color declarations
+                          ['color', 'background-color', 'border-color', 'fill', 'stroke', 'outline-color', 'box-shadow'].forEach(prop => {
+                            const val = rule.style.getPropertyValue(prop);
+                            if (val.includes('oklch') || val.includes('color-mix')) {
+                              rule.style.removeProperty(prop);
+                            }
+                          });
+                        }
+                      }
+                    });
+                  } catch { /* cross-origin sheet, ignore */ }
+                });
+              } catch { /* ignore */ }
+            },
           },
-          jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
 
         await (window as any).html2pdf().set(opt).from(element).save();
-        
-        // Restore elements
-        printHiddenElements.forEach(el => el.classList.remove('hidden-for-pdf'));
-        document.head.removeChild(style);
+
+        // Restore hidden elements
+        printHiddenElements.forEach(el => (el as HTMLElement).style.display = '');
       }
     } catch (err) {
       console.error('Error generating PDF:', err);
-      // Fallback to browser print if download library fails to load
       window.print();
     } finally {
       setDownloading(false);
     }
   };
 
+  const checkInTime = formatSlotTime(booking.slotStart, '12:00 PM');
+  const checkOutTime = formatSlotTime(booking.slotEnd, '11:00 AM');
   const checkInDateFormatted = format(new Date(booking.checkInDate), 'dd MMMM yyyy');
   const checkOutDateFormatted = format(new Date(booking.checkOutDate), 'dd MMMM yyyy');
   const bookingDateFormatted = format(new Date(booking.createdAt), 'dd MMM yyyy, hh:mm a');
@@ -314,6 +372,16 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
         {/* Decorative Golden Ribbon */}
         <div className="h-2.5 bg-gradient-to-r from-amber-400 via-amber-600 to-amber-700 w-full" />
 
+        {/* Hotel Banner Image — shown as full image, no crop */}
+        <div className="w-full bg-stone-900">
+          <img
+            src="/hotel-banner.jpg"
+            alt="Punnami Southern Residency - Best Stay in Bhadrachalam"
+            className="w-full block"
+            style={{ display: 'block', width: '100%', height: 'auto' }}
+          />
+        </div>
+
         {/* ========================================================================= */}
         {/* STAY TICKET */}
         {/* ========================================================================= */}
@@ -327,7 +395,7 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
                 <div>
                   <div className="flex items-center gap-1.5 text-amber-700 font-black tracking-widest text-[10px] uppercase mb-0.5">
                     <Sparkles className="h-3 w-3 text-amber-600 fill-amber-600" />
-                    <span>Official Hotel Stay Ticket</span>
+                    <span>Booking Voucher & Tax Invoice</span>
                   </div>
                   <h1 className="text-2xl font-black text-stone-900 tracking-tight leading-tight" style={{ fontFamily: 'Georgia, serif' }}>
                     {booking.roomType.hotel.name}
@@ -409,16 +477,16 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
                   {booking.status === 'POSTPONED' && booking.originalCheckInDate ? (
                     <>
                       <p className="text-stone-400 line-through text-xs font-semibold">
-                        {format(new Date(booking.originalCheckInDate), 'dd MMMM yyyy')} @ {booking.roomType.hotel.checkInTime || '12:00 PM'}
+                        {format(new Date(booking.originalCheckInDate), 'dd MMMM yyyy')} @ {checkInTime}
                       </p>
                       <h4 className="font-black text-amber-700 text-base leading-tight">
-                        {checkInDateFormatted} @ {booking.roomType.hotel.checkInTime || '12:00 PM'}
+                        {checkInDateFormatted} @ {checkInTime}
                       </h4>
                       <p className="text-[10px] font-bold text-amber-600 mt-0.5">↑ Rescheduled Date & Time</p>
                     </>
                   ) : (
                     <h4 className="font-black text-stone-800 text-base leading-tight">
-                      {checkInDateFormatted} <span className="text-amber-700 font-extrabold">@ {booking.roomType.hotel.checkInTime || '12:00 PM'}</span>
+                      {checkInDateFormatted} <span className="text-amber-700 font-extrabold">@ {checkInTime}</span>
                     </h4>
                   )}
                 </div>
@@ -433,16 +501,16 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
                   {booking.status === 'POSTPONED' && booking.originalCheckOutDate ? (
                     <>
                       <p className="text-stone-400 line-through text-xs font-semibold">
-                        {format(new Date(booking.originalCheckOutDate), 'dd MMMM yyyy')} @ {booking.roomType.hotel.checkOutTime || '11:00 AM'}
+                        {format(new Date(booking.originalCheckOutDate), 'dd MMMM yyyy')} @ {checkOutTime}
                       </p>
                       <h4 className="font-black text-amber-700 text-base leading-tight">
-                        {checkOutDateFormatted} @ {booking.roomType.hotel.checkOutTime || '11:00 AM'}
+                        {checkOutDateFormatted} @ {checkOutTime}
                       </h4>
                       <p className="text-[10px] font-bold text-amber-600 mt-0.5">↑ Rescheduled Date & Time</p>
                     </>
                   ) : (
                     <h4 className="font-black text-stone-800 text-base leading-tight">
-                      {checkOutDateFormatted} <span className="text-amber-700 font-extrabold">@ {booking.roomType.hotel.checkOutTime || '11:00 AM'}</span>
+                      {checkOutDateFormatted} <span className="text-amber-700 font-extrabold">@ {checkOutTime}</span>
                     </h4>
                   )}
                 </div>
@@ -567,12 +635,34 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
                     <span className="font-black text-amber-700 text-xl">{formatCurrency(booking.totalAmount)}</span>
                   </div>
 
-                  {booking.transactionId && (
+                   {booking.completedPayments && booking.completedPayments.length > 0 ? (
+                    <div className="border-t border-stone-150 pt-3 mt-3 space-y-2">
+                      <p className="text-[10px] text-stone-400 font-black uppercase tracking-wider">Completed Transactions Log</p>
+                      <div className="space-y-2">
+                        {booking.completedPayments.map((p, idx) => (
+                          <div key={p.id || idx} className="bg-stone-50/70 border border-stone-200 rounded-xl p-3 flex flex-col gap-1 text-[11px] font-bold text-stone-750">
+                            <div className="flex justify-between text-stone-850">
+                              <span>Payment #{idx + 1} ({formatCurrency(p.amount)})</span>
+                              <span className="text-emerald-700 font-extrabold uppercase text-[9px]">✓ Success</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-x-2 text-[10px] text-stone-500 font-medium">
+                              <div>Merchant Ref:</div>
+                              <div className="text-stone-750 text-right font-mono truncate select-all">{p.merchantTransactionId}</div>
+                              <div>Gateway Ref:</div>
+                              <div className="text-stone-750 text-right font-mono truncate select-all">{p.gatewayTransactionId || '—'}</div>
+                              <div>Date:</div>
+                              <div className="text-stone-700 text-right">{format(new Date(p.createdAt), 'dd MMM yyyy, hh:mm a')}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : booking.transactionId ? (
                     <div className="flex justify-between text-[11px] pt-1">
                       <span className="text-stone-450 font-bold uppercase tracking-wider">Transaction ID</span>
                       <span className="text-stone-750 font-mono font-bold">{booking.transactionId}</span>
                     </div>
-                  )}
+                  ) : null}
 
                   {booking.status === 'PARTIAL_PAID' && (
                     <div className="bg-amber-50/50 border border-amber-200 rounded-xl p-3.5 text-center mt-4 space-y-1">
@@ -741,7 +831,7 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
                   </p>
                 </div>
                 <a
-                  href={`https://wa.me/919542069573?text=Hello%20Punnami%20Hotels%2C%20I%20have%20submitted%20a%20${booking.status === 'CANCEL_REQUESTED' ? 'cancellation' : 'reschedule'}%20request%20for%20my%20booking%20${booking.publicId}.%20Please%20verify%20and%20approve%20it.`}
+                  href={`https://wa.me/919951369573?text=Hello%20Punnami%20Hotels%2C%20I%20have%20submitted%20a%20${booking.status === 'CANCEL_REQUESTED' ? 'cancellation' : 'reschedule'}%20request%20for%20my%20booking%20${booking.publicId}.%20Please%20verify%20and%20approve%20it.`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-5 py-3 rounded-xl flex items-center gap-1.5 transition-all shadow-md shrink-0"
@@ -801,7 +891,7 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
         {/* Voucher Footer */}
         <div className="bg-stone-900 text-stone-400 p-6 text-center text-xs border-t border-stone-800 print-card">
           <p className="font-bold text-stone-300">Thank you for choosing Punnami Southern Residency Bhadrachalam</p>
-          <p className="text-[10px] mt-1 text-stone-500">For support, call us or email info@punnamihotels.com. This is an officially generated digital hotel booking ticket.</p>
+          <p className="text-[10px] mt-1 text-stone-500">For support, call us at +91 95051 55166, +91 99513 69573, +91 99122 21274, +91 98498 48938 or email info@punnamihotels.com. This is an officially generated digital hotel booking ticket.</p>
         </div>
 
       </div>

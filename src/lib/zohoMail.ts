@@ -12,7 +12,7 @@ const transporter = nodemailer.createTransport({
 
 const FROM = `"Punnami Hotels" <${process.env.ZOHO_EMAIL}>`;
 const BRAND_COLOR = '#C9A84C';
-const HOTEL_PHONE = '9542069573';
+const HOTEL_PHONE = '9505155166';
 
 function baseTemplate(content: string, preview: string): string {
   return `<!DOCTYPE html>
@@ -219,10 +219,16 @@ function baseTemplate(content: string, preview: string): string {
           </div>
           <!-- Footer -->
           <div class="footer">
-            <div class="footer-text">
+            <div class="footer-text" style="line-height: 1.6;">
               Punnami Hotels &nbsp;|&nbsp; 
-              <a href="https://punnamihotels.com" style="color: #C9A84C; text-decoration: none; font-weight: 700;">punnamihotels.com</a> &nbsp;|&nbsp; 
-              <a href="tel:${HOTEL_PHONE}" style="color: #E8DDD0; text-decoration: none; font-weight: 600;">${HOTEL_PHONE}</a>
+              <a href="https://punnamihotels.com" style="color: #C9A84C; text-decoration: none; font-weight: 700;">punnamihotels.com</a>
+            </div>
+            <div class="footer-text" style="font-size: 11px; margin-top: 8px; color: #FAF8F5;">
+              Support: 
+              <a href="tel:+919505155166" style="color: #E8DDD0; text-decoration: none; font-weight: 600;">+91 95051 55166</a> &nbsp;•&nbsp; 
+              <a href="tel:+919951369573" style="color: #E8DDD0; text-decoration: none; font-weight: 600;">+91 99513 69573</a> &nbsp;•&nbsp; 
+              <a href="tel:+919912221274" style="color: #E8DDD0; text-decoration: none; font-weight: 600;">+91 99122 21274</a> &nbsp;•&nbsp; 
+              <a href="tel:+919849848938" style="color: #E8DDD0; text-decoration: none; font-weight: 600;">+91 98498 48938</a>
             </div>
             <div class="footer-sub">
               This is an automated operational transmission. Please do not reply directly.
@@ -318,12 +324,13 @@ export async function sendBookingConfirmationEmail({
   totalAmount: string;
   paidAmount: string;
 }): Promise<boolean> {
-  const ticketUrl = `https://punnamihotels.com/booking/${publicId}`;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://punnamihotels.com';
+  const ticketUrl = `${siteUrl}/booking/${publicId}`;
   const mapUrl = `https://maps.app.goo.gl/NsFCq6zSKECAR3xj8`;
 
   const total = Number(totalAmount);
   const paid = Number(paidAmount);
-  const balance = total - paid;
+  const balance = Math.max(0, total - paid);
   const isPartial = balance > 0;
 
   const paymentDetailsBox = isPartial
@@ -343,10 +350,18 @@ export async function sendBookingConfirmationEmail({
       </div>
     `;
 
+  const subject = isPartial
+    ? `Booking Confirmed (50% Advance Paid) – ${publicId} | Punnami Hotels`
+    : `Booking Fully Paid & Confirmed – ${publicId} | Punnami Hotels`;
+
+  const preview = isPartial
+    ? `Your room reservation at Punnami Hotels is confirmed (50% advance paid). Check-in: ${checkInDate}`
+    : `Your room reservation at Punnami Hotels is fully paid and confirmed! Check-in: ${checkInDate}`;
+
   return sendEmail({
     to: guestEmail,
-    subject: `Booking Confirmed – ${publicId} | Punnami Hotels`,
-    preview: `Your room reservation at Punnami Hotels is confirmed! Check-in: ${checkInDate}`,
+    subject,
+    preview,
     html: `
       <h2 class="heading" style="color: #2E7D32;">Booking Confirmed! 🎉</h2>
       <p class="text">Dear <strong>${guestName}</strong>, your reservation is secured. We look forward to welcoming you to Punnami Hotels.</p>
@@ -405,8 +420,11 @@ export async function sendBookingConfirmationEmail({
       </div>
 
       <p class="text" style="font-size: 13px; color: #8A8278; margin-top: 30px;">
-        Need assistance, directions, or custom travel help? Feel free to contact our reservations office at 
-        <a href="tel:${HOTEL_PHONE}" style="color: #1C1A17; text-decoration: none; font-weight: 700;">${HOTEL_PHONE}</a>.
+        Need assistance, directions, or custom travel help? Feel free to contact our reservations office at:<br/>
+        <a href="tel:+919505155166" style="color: #1C1A17; text-decoration: none; font-weight: 700;">+91 95051 55166</a>, 
+        <a href="tel:+919951369573" style="color: #1C1A17; text-decoration: none; font-weight: 700;">+91 99513 69573</a>, 
+        <a href="tel:+919912221274" style="color: #1C1A17; text-decoration: none; font-weight: 700;">+91 99122 21274</a>, 
+        <a href="tel:+919849848938" style="color: #1C1A17; text-decoration: none; font-weight: 700;">+91 98498 48938</a>.
       </p>
     `,
   });
@@ -445,13 +463,14 @@ export async function sendAdminBookingConfirmationEmail({
   paidAmount: string;
   adminEmail?: string;
 }): Promise<boolean> {
-  const adminPanelUrl = `https://punnamihotels.com/admin/bookings`;
-  const ticketUrl = `https://punnamihotels.com/booking/${publicId}`;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://punnamihotels.com';
+  const adminPanelUrl = `${siteUrl}/admin/bookings?search=${publicId}`;
+  const ticketUrl = `${siteUrl}/booking/${publicId}`;
   const mapUrl = `https://maps.app.goo.gl/NsFCq6zSKECAR3xj8`;
 
   const total = Number(totalAmount);
   const paid = Number(paidAmount);
-  const balance = total - paid;
+  const balance = Math.max(0, total - paid);
   const isPartial = balance > 0;
 
   const adminPaymentStatusBox = isPartial
@@ -471,13 +490,21 @@ export async function sendAdminBookingConfirmationEmail({
       </div>
     `;
 
+  const subject = isPartial
+    ? `🔔 New Booking (50% Advance Paid) – ${publicId} | Punnami Hotels`
+    : `💰 Booking Fully Paid (100%) – ${publicId} | Punnami Hotels`;
+
+  const preview = isPartial
+    ? `New booking from ${guestName} (${roomName}) has been registered with 50% advance payment.`
+    : `Booking from ${guestName} (${roomName}) has been fully paid (100%) and confirmed.`;
+
   return sendEmail({
     to: adminEmail || 'punnamirooms@gmail.com',
-    subject: `🔔 New Booking Confirmed – ${publicId} | Punnami Hotels`,
-    preview: `New paid booking from ${guestName} (${roomName}) has been confirmed.`,
+    subject,
+    preview,
     html: `
-      <h2 class="heading" style="color: #1E3A8A;">New Confirmed Booking</h2>
-      <p class="text">A new customer booking has been registered in the room inventory database.</p>
+      <h2 class="heading" style="color: ${isPartial ? '#B78103' : '#1E3A8A'};">${isPartial ? 'New Confirmed Booking (Partial)' : 'New Confirmed Booking (Fully Paid)'}</h2>
+      <p class="text">A customer booking status has been successfully updated in the room inventory database.</p>
       
       <div class="badge-container">
         <div class="badge-label">Booking ID</div>
@@ -502,7 +529,7 @@ export async function sendAdminBookingConfirmationEmail({
         </tr>
         <tr>
           <td class="details-label">Dates</td>
-          <td class="details-val">${checkInDate} &nbsp;to&nbsp; ${checkOutDate}</td>
+          <td class="details-val">${checkInDate} (${checkInTime}) &nbsp;to&nbsp; ${checkOutDate} (${checkOutTime})</td>
         </tr>
         <tr>
           <td class="details-label">Nights / Rooms</td>

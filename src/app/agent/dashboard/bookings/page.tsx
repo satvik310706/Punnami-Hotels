@@ -9,6 +9,20 @@ import {
 import { format } from 'date-fns';
 import InlineLoader from '@/components/InlineLoader';
 
+function formatSlotTime(timeStr?: string | null, fallback: string = '12:00 PM') {
+  if (!timeStr) return fallback;
+  try {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) return fallback;
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 === 0 ? 12 : hours % 12;
+    const displayMinutes = minutes.toString().padStart(2, '0');
+    return `${displayHours.toString().padStart(2, '0')}:${displayMinutes} ${period}`;
+  } catch {
+    return fallback;
+  }
+}
+
 interface Booking {
   publicId: string;
   checkInDate: string;
@@ -20,6 +34,8 @@ interface Booking {
   totalAmount: number;
   agentCommission: number;
   status: string;
+  slotStart?: string;
+  slotEnd?: string;
   roomType: { name: string; coverImageUrl: string | null };
 }
 
@@ -144,7 +160,7 @@ export default function AgentBookingsPage() {
                       <div>
                         <p className="font-semibold text-stone-850">{b.roomType.name}</p>
                         <p className="text-xs text-stone-400 mt-0.5">
-                          {format(new Date(b.checkInDate), 'dd MMM')} - {format(new Date(b.checkOutDate), 'dd MMM yyyy')} ({b.totalNights} nights)
+                          {format(new Date(b.checkInDate), 'dd MMM')} - {format(new Date(b.checkOutDate), 'dd MMM yyyy')} ({b.totalNights} nights | {formatSlotTime(b.slotStart)} - {formatSlotTime(b.slotEnd)})
                         </p>
                       </div>
                     </td>

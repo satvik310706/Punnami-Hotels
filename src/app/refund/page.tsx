@@ -115,7 +115,7 @@ export default function RefundPage() {
 
             <section className="border-t border-stone-200 pt-6">
               <p className="text-xs text-stone-500 italic">
-                For any help regarding cancellations, duplicate payments, or refund status, please email us at <strong>info@punnamihotels.com</strong> or call <strong>+91 95420 69573</strong>.
+                For any help regarding cancellations, duplicate payments, or refund status, please email us at <strong>info@punnamihotels.com</strong> or call <strong>+91 95051 55166, +91 99513 69573, +91 99122 21274, +91 98498 48938</strong>.
               </p>
             </section>
 

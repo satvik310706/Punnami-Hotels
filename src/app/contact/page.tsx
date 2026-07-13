@@ -35,12 +35,15 @@ export default function ContactPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-sm flex gap-3">
-              <Phone className="h-5 w-5 text-amber-600 shrink-0" />
+              <Phone className="h-5 w-5 text-amber-600 shrink-0 mt-1" />
               <div>
-                <div className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-1">Call Us</div>
-                <a href="tel:+919542069573" className="font-semibold text-stone-800 text-sm hover:text-amber-700 transition-colors">
-                  +91 95420 69573
-                </a>
+                <div className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">Call Us (24/7 Help Desk)</div>
+                <div className="flex flex-col gap-2 font-semibold text-stone-800 text-sm">
+                  <a href="tel:+919505155166" className="hover:text-amber-700 transition-colors">+91 95051 55166</a>
+                  <a href="tel:+919951369573" className="hover:text-amber-700 transition-colors">+91 99513 69573</a>
+                  <a href="tel:+919912221274" className="hover:text-amber-700 transition-colors">+91 99122 21274</a>
+                  <a href="tel:+919849848938" className="hover:text-amber-700 transition-colors">+91 98498 48938</a>
+                </div>
               </div>
             </div>
 

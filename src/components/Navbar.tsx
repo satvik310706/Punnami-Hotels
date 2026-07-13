@@ -4,15 +4,16 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, Ticket, Home, Hotel, Info, LayoutDashboard, X, Menu, Star } from 'lucide-react';
+import { Phone, Ticket, Home, Hotel, Info, LayoutDashboard, X, Menu, Star, Ship } from 'lucide-react';
 
 // Icon + description lookup for each nav link
 const NAV_META: Record<string, { icon: React.ElementType; desc: string }> = {
-  home:      { icon: Home,            desc: 'Return to start page'    },
-  rooms:     { icon: Hotel,           desc: 'Browse our luxury stays'  },
-  dashboard: { icon: LayoutDashboard, desc: 'Admin control panel'      },
-  about:     { icon: Info,            desc: 'Our legacy & values'      },
-  contact:   { icon: Phone,           desc: 'Locate us & get in touch' },
+  home:         { icon: Home,            desc: 'Return to start page'    },
+  rooms:        { icon: Hotel,           desc: 'Browse our luxury stays'  },
+  papikondalu:  { icon: Ship,            desc: 'Boat tours & stays'       },
+  dashboard:    { icon: LayoutDashboard, desc: 'Admin control panel'      },
+  about:        { icon: Info,            desc: 'Our legacy & values'      },
+  contact:      { icon: Phone,           desc: 'Locate us & get in touch' },
 };
 
 export default function Navbar() {
@@ -89,6 +90,7 @@ export default function Navbar() {
     : [
         { href: '/', label: 'Home' },
         { href: '/rooms', label: 'Rooms' },
+        { href: 'https://www.tsboattourism.org/stays', label: 'Papikondalu' },
         { href: '/about', label: 'About' },
         { href: '/contact', label: 'Contact' },
       ];
@@ -138,14 +140,14 @@ export default function Navbar() {
             </Link>
 
             {/* ── Desktop Nav Links ── */}
-            <div className="hidden md:flex items-center">
+            <div className="hidden lg:flex items-center lg:gap-0.5 xl:gap-1">
               {links.map(({ href, label }) => {
                 const isActive = pathname === href;
                 return (
                   <Link
                     key={href}
                     href={href}
-                    className={`relative px-4 py-2.5 text-sm font-normal tracking-wide transition-colors duration-200 group ${
+                    className={`whitespace-nowrap relative px-2.5 xl:px-4 py-2.5 text-xs xl:text-sm font-normal tracking-wide transition-colors duration-200 group ${
                       isActive
                         ? isTransparent ? 'text-amber-300' : 'text-amber-600'
                         : isTransparent
@@ -166,20 +168,54 @@ export default function Navbar() {
             </div>
 
             {/* ── Desktop Right Actions ── */}
-            <div className="hidden md:flex items-center gap-4">
-              <a
-                href="tel:+919542069573"
-                className={`flex items-center gap-1.5 text-[13px] transition-colors duration-200 ${
-                  isTransparent ? 'text-white/50 hover:text-white/90' : 'text-stone-500 hover:text-stone-800'
-                }`}
-              >
-                <Phone className="h-3.5 w-3.5" />
-                +91 95420 69573
-              </a>
+            <div className="hidden lg:flex items-center lg:gap-2.5 xl:gap-4 shrink-0">
+              <div className="relative group/phone">
+                <button
+                  className={`whitespace-nowrap flex items-center gap-1.5 text-xs xl:text-[13px] transition-colors duration-200 font-medium cursor-pointer ${
+                    isTransparent ? 'text-white/50 hover:text-white/90' : 'text-stone-500 hover:text-stone-800'
+                  }`}
+                >
+                  <Phone className="h-3.5 w-3.5" />
+                  <span>+91 95051 55166</span>
+                </button>
+                <div className={`absolute top-full left-0 mt-2 w-48 rounded-2xl shadow-xl py-3.5 px-4 flex flex-col gap-2.5 opacity-0 invisible group-hover/phone:opacity-100 group-hover/phone:visible transition-all duration-300 z-50 transform translate-y-1 group-hover/phone:translate-y-0 border ${
+                  isTransparent 
+                    ? 'bg-stone-950/90 backdrop-blur-xl border-stone-800/80 shadow-black/40 text-stone-300' 
+                    : 'bg-white/95 backdrop-blur-xl border-stone-200/80 shadow-stone-200/50 text-stone-700'
+                }`}>
+                  <p className={`text-[9px] font-black uppercase tracking-wider mb-0.5 border-b pb-1 ${
+                    isTransparent ? 'text-stone-500 border-stone-800' : 'text-stone-400 border-stone-100'
+                  }`}>Stay Help Desk</p>
+                  <a href="tel:+919505155166" className={`font-bold text-xs transition-colors flex items-center gap-2 ${
+                    isTransparent ? 'text-stone-200 hover:text-amber-450' : 'text-stone-750 hover:text-amber-600'
+                  }`}>
+                    <Phone className="h-3.5 w-3.5 opacity-70 shrink-0" />
+                    <span>+91 95051 55166</span>
+                  </a>
+                  <a href="tel:+919951369573" className={`font-bold text-xs transition-colors flex items-center gap-2 ${
+                    isTransparent ? 'text-stone-200 hover:text-amber-450' : 'text-stone-750 hover:text-amber-600'
+                  }`}>
+                    <Phone className="h-3.5 w-3.5 opacity-70 shrink-0" />
+                    <span>+91 99513 69573</span>
+                  </a>
+                  <a href="tel:+919912221274" className={`font-bold text-xs transition-colors flex items-center gap-2 ${
+                    isTransparent ? 'text-stone-200 hover:text-amber-450' : 'text-stone-750 hover:text-amber-600'
+                  }`}>
+                    <Phone className="h-3.5 w-3.5 opacity-70 shrink-0" />
+                    <span>+91 99122 21274</span>
+                  </a>
+                  <a href="tel:+919849848938" className={`font-bold text-xs transition-colors flex items-center gap-2 ${
+                    isTransparent ? 'text-stone-200 hover:text-amber-450' : 'text-stone-750 hover:text-amber-600'
+                  }`}>
+                    <Phone className="h-3.5 w-3.5 opacity-70 shrink-0" />
+                    <span>+91 98498 48938</span>
+                  </a>
+                </div>
+              </div>
 
               <Link
                 href="/bookings"
-                className={`flex items-center gap-1.5 text-[13px] px-4 py-2 rounded-xl border transition-all duration-200 ${
+                className={`whitespace-nowrap flex items-center gap-1.5 text-xs xl:text-[13px] px-2.5 py-1.5 xl:px-4 xl:py-2 rounded-xl border transition-all duration-200 ${
                   pathname === '/bookings'
                     ? 'text-amber-700 border-amber-400/40 bg-amber-50'
                     : isTransparent
@@ -195,7 +231,7 @@ export default function Navbar() {
                 href="https://g.page/r/CbMysAE0rqDYEAI/review"
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`flex items-center gap-1.5 text-[13px] px-4 py-2 rounded-xl border transition-all duration-200 ${
+                className={`whitespace-nowrap flex items-center gap-1.5 text-xs xl:text-[13px] px-2.5 py-1.5 xl:px-4 xl:py-2 rounded-xl border transition-all duration-200 ${
                   isTransparent
                     ? 'text-amber-400 border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/15'
                     : 'text-amber-800 border-amber-200 bg-amber-50/50 hover:bg-amber-100/50 hover:border-amber-300'
@@ -207,7 +243,7 @@ export default function Navbar() {
 
               <Link
                 href="/rooms"
-                className="btn-shimmer text-[13px] font-semibold bg-amber-500 hover:bg-amber-400 text-stone-950 rounded-xl px-5 py-2.5 transition-all duration-200 shadow-lg shadow-amber-500/20 hover:shadow-amber-400/35 hover:-translate-y-px active:translate-y-0"
+                className="whitespace-nowrap btn-shimmer text-xs xl:text-[13px] font-semibold bg-amber-500 hover:bg-amber-400 text-stone-950 rounded-xl px-4 py-2 xl:px-5 xl:py-2.5 transition-all duration-200 shadow-lg shadow-amber-500/20 hover:shadow-amber-400/35 hover:-translate-y-px active:translate-y-0"
                 style={{ letterSpacing: '0.03em' }}
               >
                 Book Now
@@ -217,7 +253,7 @@ export default function Navbar() {
             {/* ── Mobile Hamburger / Close Button ── */}
             <button
               onClick={() => setOpen(!open)}
-              className={`md:hidden flex flex-col items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 focus:outline-none ${
+              className={`lg:hidden flex flex-col items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 focus:outline-none ${
                 open
                   ? 'bg-stone-100 text-stone-700'
                   : isTransparent
@@ -272,7 +308,7 @@ export default function Navbar() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               onClick={() => setOpen(false)}
-              className="md:hidden fixed inset-x-0 top-16 bottom-0 z-30 bg-stone-900/50 backdrop-blur-[3px]"
+              className="lg:hidden fixed inset-x-0 top-16 bottom-0 z-30 bg-stone-900/50 backdrop-blur-[3px]"
             />
 
             {/* Slide-down card */}
@@ -282,7 +318,7 @@ export default function Navbar() {
               animate={{ y: 0, opacity: 1, scale: 1 }}
               exit={{ y: -24, opacity: 0, scale: 0.98 }}
               transition={{ type: 'spring', stiffness: 260, damping: 22 }}
-              className="md:hidden fixed top-16 left-3 right-3 z-40 bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] overflow-hidden border border-stone-100/80"
+              className="lg:hidden fixed top-16 left-3 right-3 z-40 bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] overflow-hidden border border-stone-100/80"
             >
               {/* Gold top accent bar */}
               <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-amber-400/60 to-transparent" />
@@ -373,11 +409,11 @@ export default function Navbar() {
                   className="flex items-center gap-3"
                 >
                   <a
-                    href="tel:+919542069573"
+                    href="tel:+919505155166"
                     className="flex items-center gap-2 text-stone-500 hover:text-stone-800 text-[13px] font-medium transition-colors px-3 py-2.5 rounded-xl hover:bg-stone-50 flex-1 justify-center border border-stone-100"
                   >
                     <Phone className="h-3.5 w-3.5 text-amber-600/70 shrink-0" />
-                    <span>95420 69573</span>
+                    <span>95051 55166</span>
                   </a>
                   <Link
                     href="/rooms"

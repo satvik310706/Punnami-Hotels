@@ -15,8 +15,8 @@ export async function GET(req: NextRequest) {
           },
         },
         payments: {
-          orderBy: { createdAt: 'desc' },
-          take: 1,
+          where: { status: 'COMPLETED' },
+          orderBy: { createdAt: 'asc' },
         },
       },
     });
@@ -24,8 +24,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       bookings.map((b) => {
         const latestPayment = b.payments?.[0] ?? null;
+        const { payments, ...bookingData } = b;
         return {
-          ...b,
+          ...bookingData,
           id: b.id.toString(),
           roomTypeId: b.roomTypeId.toString(),
           subtotalAmount: Number(b.subtotalAmount),
@@ -41,7 +42,22 @@ export async function GET(req: NextRequest) {
           // fallback to the Payment record's merchantTransactionId if booking.transactionId is null
           gatewayTransactionId: b.transactionId || null,
           merchantTransactionId: latestPayment?.merchantTransactionId || null,
-          payments: undefined, // don't expose raw payment objects to frontend
+          completedPayments: b.payments.map((p) => {
+            let pgTxnId = p.merchantTransactionId;
+            try {
+              if (p.providerResponse) {
+                const resp = JSON.parse(p.providerResponse);
+                pgTxnId = resp.data?.transactionId || resp.paymentDetails?.[0]?.transactionId || p.merchantTransactionId;
+              }
+            } catch {}
+            return {
+              id: p.id.toString(),
+              merchantTransactionId: p.merchantTransactionId,
+              gatewayTransactionId: pgTxnId,
+              amount: Number(p.amount),
+              createdAt: p.createdAt.toISOString(),
+            };
+          }),
         };
       })
     );

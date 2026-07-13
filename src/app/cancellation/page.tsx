@@ -91,11 +91,16 @@ export default function CancellationPolicy() {
                     To modify dates or cancel a stay, guests can contact our support desk directly:
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-                    <div className="border border-stone-200 rounded-xl p-4 flex items-center gap-3 bg-stone-50/50">
-                      <Phone className="h-5 w-5 text-amber-600" />
+                    <div className="border border-stone-200 rounded-xl p-4 flex items-start gap-3 bg-stone-50/50">
+                      <Phone className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
                       <div>
-                        <div className="text-xs text-stone-400 font-bold uppercase">Call Support</div>
-                        <a href="tel:+919542069573" className="font-bold text-stone-800 text-sm hover:underline">+91 95420 69573</a>
+                        <div className="text-xs text-stone-400 font-bold uppercase mb-1">Call Support</div>
+                        <div className="flex flex-col gap-1 text-stone-850 font-bold text-xs">
+                          <a href="tel:+919505155166" className="hover:underline">+91 95051 55166</a>
+                          <a href="tel:+919951369573" className="hover:underline">+91 99513 69573</a>
+                          <a href="tel:+919912221274" className="hover:underline">+91 99122 21274</a>
+                          <a href="tel:+919849848938" className="hover:underline">+91 98498 48938</a>
+                        </div>
                       </div>
                     </div>
                     <div className="border border-stone-200 rounded-xl p-4 flex items-center gap-3 bg-stone-50/50">

@@ -7,6 +7,20 @@ import { sendRoomConfirmationSMS } from '@/lib/sms';
 import { sendBookingConfirmationEmail, sendAdminBookingConfirmationEmail } from '@/lib/zohoMail';
 import { assignSequentialId } from '@/lib/booking-sequence';
 
+function formatSlotTime(timeStr?: string | null, fallback: string = '12:00 PM') {
+  if (!timeStr) return fallback;
+  try {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) return fallback;
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 === 0 ? 12 : hours % 12;
+    const displayMinutes = minutes.toString().padStart(2, '0');
+    return `${displayHours.toString().padStart(2, '0')}:${displayMinutes} ${period}`;
+  } catch {
+    return fallback;
+  }
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const bookingId = searchParams.get('bookingId');
@@ -113,63 +127,67 @@ export async function GET(req: NextRequest) {
       });
       
       const freshBooking = await prisma.booking.findUnique({
-        where: { id: booking.id }
+        where: { id: booking.id },
+        include: { roomType: { include: { hotel: true } } }
       });
-      const displayId = freshBooking?.sequenceId || booking.publicId;
+      const activeBooking = freshBooking || booking;
+      const displayId = activeBooking.sequenceId || activeBooking.publicId;
 
       // Send confirmation notifications (best-effort, non-blocking)
-      const hotel = booking.roomType.hotel as { checkInTime?: string; checkOutTime?: string; name: string };
+      const hotel = activeBooking.roomType.hotel as { name: string };
+      const slotCheckInTime = formatSlotTime(activeBooking.slotStart, '12:00 PM');
+      const slotCheckOutTime = formatSlotTime(activeBooking.slotEnd, '11:00 AM');
       try {
         await sendRoomConfirmationSMS({
-          customerName: booking.guestName,
-          customerPhone: booking.guestPhone,
+          customerName: activeBooking.guestName,
+          customerPhone: activeBooking.guestPhone,
           publicId: displayId,
           hotelName: hotel.name,
-          roomName: booking.roomType.name,
-          checkInDate: formatDate(booking.checkInDate),
-          checkInTime: hotel.checkInTime || '12:00 PM',
-          checkOutDate: formatDate(booking.checkOutDate),
-          checkOutTime: hotel.checkOutTime || '11:00 AM',
-          paidAmount: `₹${Number(booking.paidAmount || booking.totalAmount).toLocaleString('en-IN')}`,
-          totalAmount: `₹${Number(booking.totalAmount).toLocaleString('en-IN')}`,
+          roomName: activeBooking.roomType.name,
+          checkInDate: formatDate(activeBooking.checkInDate),
+          checkInTime: slotCheckInTime,
+          checkOutDate: formatDate(activeBooking.checkOutDate),
+          checkOutTime: slotCheckOutTime,
+          paidAmount: `₹${Number(activeBooking.paidAmount || activeBooking.totalAmount).toLocaleString('en-IN')}`,
+          totalAmount: `₹${Number(activeBooking.totalAmount).toLocaleString('en-IN')}`,
         });
       } catch (smsErr) {
         console.error('[Verify Approve] SMS send failed:', smsErr);
       }
       try {
         await sendBookingConfirmationEmail({
-          guestEmail: booking.guestEmail,
-          guestName: booking.guestName,
+          guestEmail: activeBooking.guestEmail,
+          guestName: activeBooking.guestName,
           publicId: displayId,
-          roomName: booking.roomType.name,
-          checkInDate: formatDate(booking.checkInDate),
-          checkInTime: hotel.checkInTime || '12:00 PM',
-          checkOutDate: formatDate(booking.checkOutDate),
-          checkOutTime: hotel.checkOutTime || '11:00 AM',
-          nights: booking.totalNights,
-          rooms: booking.roomsBooked,
-          paidAmount: (booking.paidAmount || booking.totalAmount).toString(),
-          totalAmount: booking.totalAmount.toString(),
+          roomName: activeBooking.roomType.name,
+          checkInDate: formatDate(activeBooking.checkInDate),
+          checkInTime: slotCheckInTime,
+          checkOutDate: formatDate(activeBooking.checkOutDate),
+          checkOutTime: slotCheckOutTime,
+          nights: activeBooking.totalNights,
+          rooms: activeBooking.roomsBooked,
+          paidAmount: (activeBooking.paidAmount || activeBooking.totalAmount).toString(),
+          totalAmount: activeBooking.totalAmount.toString(),
         });
       } catch (mailErr) {
         console.error('[Verify Approve] Email send failed:', mailErr);
       }
       try {
         await sendAdminBookingConfirmationEmail({
-          adminEmail: process.env.ADMIN_EMAIL || 'satvik@punnamitours.com',
-          guestName: booking.guestName,
-          guestEmail: booking.guestEmail,
-          guestPhone: booking.guestPhone,
+          adminEmail: process.env.ADMIN_EMAIL || 'punnamirooms@gmail.com',
+          guestName: activeBooking.guestName,
+          guestEmail: activeBooking.guestEmail,
+          guestPhone: activeBooking.guestPhone,
           publicId: displayId,
-          roomName: booking.roomType.name,
-          checkInDate: formatDate(booking.checkInDate),
-          checkInTime: hotel.checkInTime || '12:00 PM',
-          checkOutDate: formatDate(booking.checkOutDate),
-          checkOutTime: hotel.checkOutTime || '11:00 AM',
-          nights: booking.totalNights,
-          rooms: booking.roomsBooked,
-          paidAmount: (booking.paidAmount || booking.totalAmount).toString(),
-          totalAmount: booking.totalAmount.toString(),
+          roomName: activeBooking.roomType.name,
+          checkInDate: formatDate(activeBooking.checkInDate),
+          checkInTime: slotCheckInTime,
+          checkOutDate: formatDate(activeBooking.checkOutDate),
+          checkOutTime: slotCheckOutTime,
+          nights: activeBooking.totalNights,
+          rooms: activeBooking.roomsBooked,
+          paidAmount: (activeBooking.paidAmount || activeBooking.totalAmount).toString(),
+          totalAmount: activeBooking.totalAmount.toString(),
         });
       } catch (adminMailErr) {
         console.error('[Verify Approve] Admin Email send failed:', adminMailErr);

@@ -121,7 +121,7 @@ export default function RootLayout({
     "image": "https://punnamihotels.com/logo.png",
     "description": "Book luxury rooms at Punnami Southern Residency, the premier hotel near Bhadrachalam Temple. Experience premium amenities, family suites, AC deluxe lodging.",
     "url": "https://punnamihotels.com",
-    "telephone": "+919542069573",
+    "telephone": "+919505155166",
     "hasMap": "https://maps.app.goo.gl/NsFCq6zSKECAR3xj8",
     "keywords": "punnami, punnami hotels, best hotel in bhadrachalam, bhadrachalam hotel rooms booking, hotels near bhadrachalam temple, cheap hotels in bhadrachalam, deluxe rooms bhadrachalam",
     "address": {

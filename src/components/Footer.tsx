@@ -96,37 +96,31 @@ export default function Footer() {
           {/* Contact */}
           <div className="md:col-span-2 lg:col-span-2">
             <h3 className="text-white font-bold text-[13px] sm:text-sm uppercase tracking-wider mb-2 sm:mb-4">Contact Us</h3>
-            <div className="grid grid-cols-2 lg:grid-cols-1 gap-4 items-start">
-              <ul className="space-y-2 sm:space-y-3">
-                <li className="flex items-start gap-2 sm:gap-3 text-[13px] sm:text-sm">
-                  <MapPin className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-                  <span className="text-stone-400 leading-normal text-[12px] sm:text-xs">
-                    Punnami southern residency, Shilpinagar, 10-1-34, <br />
-                    Ramalayam Road, beside Kodanda, <br />
-                    Bhadrachalam, Telangana 507111
-                  </span>
-                </li>
-                <li className="flex items-center gap-2 sm:gap-3 text-[13px] sm:text-sm">
-                  <Phone className="h-4 w-4 text-amber-500 shrink-0" />
-                  <a href="tel:+919542069573" className="text-stone-400 hover:text-amber-400 transition-colors text-[12px] sm:text-xs">
-                    +91 95420 69573
-                  </a>
-                </li>
-                <li className="flex items-center gap-2 sm:gap-3 text-[13px] sm:text-sm">
-                  <Mail className="h-4 w-4 text-amber-500 shrink-0" />
-                  <a href="mailto:info@punnamihotels.com" className="text-stone-400 hover:text-amber-400 transition-colors text-[12px] sm:text-xs">
-                    info@punnamihotels.com
-                  </a>
-                </li>
-              </ul>
-              <div className="p-3 bg-stone-850 rounded-xl border border-stone-800/80">
-                <p className="text-xs text-stone-400 leading-normal">
-                  <span className="text-white font-bold block mb-1 text-[11px] uppercase tracking-wider">Stay Policy</span>
-                  <span className="font-semibold text-amber-500">Check-in:</span> 12:00 PM<br />
-                  <span className="font-semibold text-amber-500">Check-out:</span> 11:00 AM
-                </p>
-              </div>
-            </div>
+            <ul className="space-y-3 sm:space-y-4">
+              <li className="flex items-start gap-2 sm:gap-3 text-[13px] sm:text-sm">
+                <MapPin className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                <span className="text-stone-400 leading-normal text-[12px] sm:text-xs">
+                  Punnami southern residency, Shilpinagar, 10-1-34, <br />
+                  Ramalayam Road, beside Kodanda, <br />
+                  Bhadrachalam, Telangana 507111
+                </span>
+              </li>
+              <li className="flex items-start gap-2 sm:gap-3 text-[13px] sm:text-sm">
+                <Phone className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                <div className="flex flex-col gap-1.5 text-stone-400 font-medium text-[12px] sm:text-xs">
+                  <a href="tel:+919505155166" className="hover:text-amber-400 transition-colors">+91 95051 55166</a>
+                  <a href="tel:+919951369573" className="hover:text-amber-400 transition-colors">+91 99513 69573</a>
+                  <a href="tel:+919912221274" className="hover:text-amber-400 transition-colors">+91 99122 21274</a>
+                  <a href="tel:+919849848938" className="hover:text-amber-400 transition-colors">+91 98498 48938</a>
+                </div>
+              </li>
+              <li className="flex items-center gap-2 sm:gap-3 text-[13px] sm:text-sm">
+                <Mail className="h-4 w-4 text-amber-500 shrink-0" />
+                <a href="mailto:info@punnamihotels.com" className="text-stone-400 hover:text-amber-400 transition-colors text-[12px] sm:text-xs">
+                  info@punnamihotels.com
+                </a>
+              </li>
+            </ul>
           </div>
 
           {/* Map Embed */}

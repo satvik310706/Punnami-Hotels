@@ -34,6 +34,10 @@ export async function GET(req: NextRequest) {
             },
           },
         },
+        payments: {
+          where: { status: 'COMPLETED' },
+          orderBy: { createdAt: 'asc' },
+        },
       },
     });
 
@@ -102,9 +106,25 @@ export async function GET(req: NextRequest) {
         address: booking.roomType?.hotel?.address || 'Punnami southern residency, Shilpinagar, 10-1-34, Ramalayam Road, beside Kodanda, Bhadrachalam, BHADRACHALAM, Telangana 507111',
         checkInTime: booking.roomType?.hotel?.checkInTime || '12:00',
         checkOutTime: booking.roomType?.hotel?.checkOutTime || '11:00',
-        phone: '+91 95420 69573',
-        email: 'telanganaboattourism@gmail.com',
+        phone: '+91 95051 55166, +91 99513 69573, +91 99122 21274, +91 98498 48938',
+        email: 'punnamirooms@gmail.com',
       },
+      completedPayments: booking.payments?.map((p: any) => {
+        let pgTxnId = p.merchantTransactionId;
+        try {
+          if (p.providerResponse) {
+            const resp = JSON.parse(p.providerResponse);
+            pgTxnId = resp.data?.transactionId || resp.paymentDetails?.[0]?.transactionId || p.merchantTransactionId;
+          }
+        } catch {}
+        return {
+          id: p.id,
+          merchantTransactionId: p.merchantTransactionId,
+          gatewayTransactionId: pgTxnId,
+          amount: Number(p.amount),
+          createdAt: p.createdAt.toISOString(),
+        };
+      }) || [],
     });
   } catch (err) {
     console.error('[Booking Lookup API] Error:', err);

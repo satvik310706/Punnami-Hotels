@@ -3,13 +3,28 @@
 import { useState, useEffect } from 'react';
 import { 
   Search, ShieldAlert, CheckCircle, Clock, XCircle, Eye, 
-  Calendar, Phone, Mail, User, Info, FileText, ArrowLeft,
+  Calendar, Phone, Mail, User, Info,
   AlertCircle, RefreshCw
 } from 'lucide-react';
 import { format } from 'date-fns';
 import InlineLoader from '@/components/InlineLoader';
 import { useModalStore } from '@/hooks/useModalStore';
 import AdminDatePicker from '@/components/AdminDatePicker';
+import InvoiceDownload from '@/components/InvoiceDownload';
+
+function formatSlotTime(timeStr?: string | null, fallback: string = '12:00 PM') {
+  if (!timeStr) return fallback;
+  try {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) return fallback;
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 === 0 ? 12 : hours % 12;
+    const displayMinutes = minutes.toString().padStart(2, '0');
+    return `${displayHours.toString().padStart(2, '0')}:${displayMinutes} ${period}`;
+  } catch {
+    return fallback;
+  }
+}
 
 interface Booking {
   id: string;
@@ -36,6 +51,15 @@ interface Booking {
   transactionId: string | null;
   gatewayTransactionId?: string | null;
   merchantTransactionId?: string | null;
+  slotStart?: string;
+  slotEnd?: string;
+  completedPayments?: {
+    id: string;
+    merchantTransactionId: string;
+    gatewayTransactionId: string | null;
+    amount: number;
+    createdAt: string;
+  }[];
   status: string;
   createdAt: string;
   passengers?: any;
@@ -76,6 +100,33 @@ export default function AdminBookingsPage() {
   useEffect(() => {
     fetchBookings();
   }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const search = params.get('search')?.trim();
+      if (search) {
+        setSearchQuery(search);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (bookings.length > 0 && typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const search = params.get('search')?.trim().toLowerCase();
+      if (search) {
+        const matched = bookings.find(
+          (b) =>
+            b.publicId.toLowerCase() === search ||
+            b.sequenceId?.toLowerCase() === search
+        );
+        if (matched) {
+          setSelectedBooking(matched);
+        }
+      }
+    }
+  }, [bookings]);
 
   const handleAction = async (
     publicId: string, 
@@ -250,7 +301,7 @@ export default function AdminBookingsPage() {
                       <div>
                         <p className="font-semibold text-stone-850">{b.roomType.name}</p>
                         <p className="text-xs text-stone-400 mt-0.5">
-                          {format(new Date(b.checkInDate), 'dd MMM')} - {format(new Date(b.checkOutDate), 'dd MMM yyyy')} ({b.totalNights} nights)
+                          {format(new Date(b.checkInDate), 'dd MMM')} - {format(new Date(b.checkOutDate), 'dd MMM yyyy')} ({b.totalNights} nights | {formatSlotTime(b.slotStart)} - {formatSlotTime(b.slotEnd)})
                         </p>
                       </div>
                     </td>
@@ -361,8 +412,8 @@ export default function AdminBookingsPage() {
                     <h4 className="text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-2">Stay Parameters</h4>
                     <div className="space-y-2 text-sm font-semibold text-stone-600">
                       <div className="flex items-center gap-2 text-stone-850 font-bold"><Calendar className="h-4 w-4 text-amber-600" /> {selectedBooking.roomType.name}</div>
-                      <div>Check-in: {format(new Date(selectedBooking.checkInDate), 'dd MMMM yyyy')}</div>
-                      <div>Check-out: {format(new Date(selectedBooking.checkOutDate), 'dd MMMM yyyy')}</div>
+                      <div>Check-in: {format(new Date(selectedBooking.checkInDate), 'dd MMMM yyyy')} @ {formatSlotTime(selectedBooking.slotStart, '12:00 PM')}</div>
+                      <div>Check-out: {format(new Date(selectedBooking.checkOutDate), 'dd MMMM yyyy')} @ {formatSlotTime(selectedBooking.slotEnd, '11:00 AM')}</div>
                       <div>Duration: {selectedBooking.totalNights} nights ({selectedBooking.roomsBooked} room{selectedBooking.roomsBooked > 1 ? 's' : ''})</div>
                       <div>Occupants: {selectedBooking.adultCount} adults, {selectedBooking.childCount} children</div>
                     </div>
@@ -391,7 +442,29 @@ export default function AdminBookingsPage() {
                           </div>
                         </>
                       )}
-                      {(selectedBooking.gatewayTransactionId || selectedBooking.transactionId) && (
+                      {selectedBooking.completedPayments && selectedBooking.completedPayments.length > 0 ? (
+                        <div className="mt-4 pt-3 border-t border-stone-250 space-y-2">
+                          <span className="text-[10px] uppercase tracking-wider font-bold text-stone-400">Completed Transactions History</span>
+                          <div className="space-y-2">
+                            {selectedBooking.completedPayments.map((p, idx) => (
+                              <div key={p.id || idx} className="bg-white border border-stone-200 rounded-xl p-3 flex flex-col gap-1 text-[11px] font-bold text-stone-700">
+                                <div className="flex justify-between text-stone-900">
+                                  <span>Payment #{idx + 1} (₹{p.amount.toLocaleString('en-IN')})</span>
+                                  <span className="text-emerald-700 font-extrabold uppercase text-[9px]">✓ Success</span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-y-0.5 text-[10px] text-stone-500 font-medium">
+                                  <div>Merchant Ref:</div>
+                                  <div className="text-stone-750 text-right font-mono truncate select-all">{p.merchantTransactionId}</div>
+                                  <div>Gateway Ref:</div>
+                                  <div className="text-stone-750 text-right font-mono truncate select-all">{p.gatewayTransactionId || '—'}</div>
+                                  <div>Date:</div>
+                                  <div className="text-stone-700 text-right">{format(new Date(p.createdAt), 'dd MMM yyyy, hh:mm a')}</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (selectedBooking.gatewayTransactionId || selectedBooking.transactionId) ? (
                         <div className="mt-2 text-stone-600 border-t border-stone-200 pt-2 space-y-1">
                           <div className="flex flex-col gap-0.5">
                             <span className="text-[10px] uppercase tracking-wider font-bold text-stone-400">PhonePe Gateway Transaction ID</span>
@@ -406,7 +479,7 @@ export default function AdminBookingsPage() {
                             </div>
                           )}
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -550,10 +623,29 @@ export default function AdminBookingsPage() {
                 </button>
                 <button
                   onClick={() => window.open(`/booking/${selectedBooking.publicId}`, '_blank')}
-                  className="px-4 py-2.5 text-xs font-bold text-stone-700 bg-white border border-stone-200 hover:bg-stone-50 shadow-sm rounded-xl cursor-pointer"
+                  className="px-4 py-2.5 text-xs font-bold text-stone-700 bg-white border border-stone-200 hover:bg-stone-50 shadow-sm rounded-xl cursor-pointer flex items-center gap-1.5"
                 >
-                  View Ticket
+                  <Eye className="h-3.5 w-3.5 text-stone-500" />
+                  <span>View Ticket</span>
                 </button>
+                <InvoiceDownload
+                  booking={{
+                    ...selectedBooking,
+                    paidAmount: selectedBooking.paidAmount ?? undefined,
+                    paymentPercentage: selectedBooking.paymentPercentage ?? undefined,
+                    slotStart: selectedBooking.slotStart,
+                    slotEnd: selectedBooking.slotEnd,
+                    completedPayments: selectedBooking.completedPayments,
+                    roomType: {
+                      name: selectedBooking.roomType.name,
+                      hotel: {
+                        name: 'Punnami Southern Residency',
+                        address: 'Bhadrachalam, Telangana',
+                      },
+                    },
+                  }}
+                  label="Download Invoice"
+                />
 
                 {/* Direct Actions for Confirmed / Partially Paid Stay Bookings */}
                 {['CONFIRMED', 'PARTIAL_PAID'].includes(selectedBooking.status) && (
