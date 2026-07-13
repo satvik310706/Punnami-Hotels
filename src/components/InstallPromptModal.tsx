@@ -111,7 +111,7 @@ export default function InstallPromptModal() {
   if (!showPrompt || isStandalone) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 p-4 animate-in slide-in-from-bottom-10 fade-in duration-500 sm:bottom-4 sm:left-auto sm:right-4 sm:w-[380px]">
+    <div className="fixed bottom-0 left-0 right-0 z-50 p-4 animate-in slide-in-from-bottom-10 fade-in duration-500 sm:bottom-4 sm:left-auto sm:right-4 sm:w-[380px] print:hidden">
       <div className="relative overflow-hidden rounded-2xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-stone-200 p-5">
         <button
           onClick={handleDismiss}

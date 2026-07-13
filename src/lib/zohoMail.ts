@@ -319,7 +319,7 @@ export async function sendBookingConfirmationEmail({
   paidAmount: string;
 }): Promise<boolean> {
   const ticketUrl = `https://punnamihotels.com/booking/${publicId}`;
-  const mapUrl = `https://www.google.com/maps/search/?api=1&query=17.669494,80.881138`;
+  const mapUrl = `https://maps.app.goo.gl/NsFCq6zSKECAR3xj8`;
 
   const total = Number(totalAmount);
   const paid = Number(paidAmount);
@@ -447,7 +447,7 @@ export async function sendAdminBookingConfirmationEmail({
 }): Promise<boolean> {
   const adminPanelUrl = `https://punnamihotels.com/admin/bookings`;
   const ticketUrl = `https://punnamihotels.com/booking/${publicId}`;
-  const mapUrl = `https://www.google.com/maps/search/?api=1&query=17.669494,80.881138`;
+  const mapUrl = `https://maps.app.goo.gl/NsFCq6zSKECAR3xj8`;
 
   const total = Number(totalAmount);
   const paid = Number(paidAmount);

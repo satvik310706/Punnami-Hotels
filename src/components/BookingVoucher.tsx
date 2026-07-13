@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Calendar, User, Phone, Mail, Ticket, CreditCard, ShieldCheck, MapPin, Printer, ArrowLeft, Home, Sparkles, Users, AlertTriangle, CalendarClock, MessageSquare, RefreshCw, X, XCircle, Loader2, Star } from 'lucide-react';
+import { Calendar, User, Phone, Mail, Ticket, CreditCard, ShieldCheck, MapPin, Printer, ArrowLeft, Home, Sparkles, Users, AlertTriangle, CalendarClock, MessageSquare, RefreshCw, X, XCircle, Loader2, Star, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatCurrency } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
@@ -64,18 +64,15 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
 
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showPostponeModal, setShowPostponeModal] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const printVal = params.get('print');
     if (printVal === 'ticket' || printVal === 'true') {
-      const timer = setTimeout(() => {
-        window.print();
-        const url = new URL(window.location.href);
-        url.searchParams.delete('print');
-        window.history.replaceState({}, '', url.toString());
-      }, 1200);
-      return () => clearTimeout(timer);
+      const url = new URL(window.location.href);
+      url.searchParams.delete('print');
+      window.history.replaceState({}, '', url.toString());
     }
   }, []);
   
@@ -175,8 +172,58 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownload = async () => {
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      // 1. Check and load html2pdf if not present
+      if (!(window as any).html2pdf) {
+        await new Promise<void>((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error('Failed to load PDF generator'));
+          document.head.appendChild(script);
+        });
+      }
+
+      // 2. Select container
+      const element = document.getElementById('stay-ticket-container');
+      if (element) {
+        // Find elements with print:hidden class
+        const printHiddenElements = element.querySelectorAll('.print\\:hidden');
+        printHiddenElements.forEach(el => el.classList.add('hidden-for-pdf'));
+        
+        // Add a style block to force display: none during PDF generation
+        const style = document.createElement('style');
+        style.innerHTML = '.hidden-for-pdf { display: none !important; }';
+        document.head.appendChild(style);
+
+        const opt = {
+          margin:       [10, 10, 10, 10], // top, left, bottom, right in mm
+          filename:     `StayTicket-${booking.publicId}.pdf`,
+          image:        { type: 'jpeg', quality: 0.98 },
+          html2canvas:  { 
+            scale: 2.2, // higher scale for high resolution text rendering
+            useCORS: true,
+            logging: false
+          },
+          jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        await (window as any).html2pdf().set(opt).from(element).save();
+        
+        // Restore elements
+        printHiddenElements.forEach(el => el.classList.remove('hidden-for-pdf'));
+        document.head.removeChild(style);
+      }
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      // Fallback to browser print if download library fails to load
+      window.print();
+    } finally {
+      setDownloading(false);
+    }
   };
 
   const checkInDateFormatted = format(new Date(booking.checkInDate), 'dd MMMM yyyy');
@@ -242,17 +289,27 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
             <span>Home</span>
           </button>
           <button
-            onClick={handlePrint}
-            className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm px-5 py-2.5 rounded-xl shadow-md transition-all cursor-pointer"
+            onClick={handleDownload}
+            disabled={downloading}
+            className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 disabled:bg-stone-300 disabled:cursor-not-allowed text-white font-bold text-sm px-5 py-2.5 rounded-xl shadow-md transition-all cursor-pointer"
           >
-            <Printer className="h-4 w-4" />
-            <span>Print / Save PDF</span>
+            {downloading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin text-white" />
+                <span>Downloading...</span>
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4" />
+                <span>Download Ticket</span>
+              </>
+            )}
           </button>
         </div>
       </div>
 
       {/* Main Voucher Container */}
-      <div className="max-w-4xl mx-auto bg-white border border-stone-200 rounded-3xl shadow-xl overflow-hidden print:border print:border-stone-200 print:shadow-none print:rounded-3xl">
+      <div id="stay-ticket-container" className="max-w-4xl mx-auto bg-white border border-stone-200 rounded-3xl shadow-xl overflow-hidden print:border print:border-stone-200 print:shadow-none print:rounded-3xl">
         
         {/* Decorative Golden Ribbon */}
         <div className="h-2.5 bg-gradient-to-r from-amber-400 via-amber-600 to-amber-700 w-full" />
@@ -406,28 +463,30 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
                     </p>
                   </div>
                 </div>
+              </div>
+              
+              <div className="w-full bg-stone-50 border border-stone-150 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center shrink-0 border border-amber-100">
+                    <MapPin className="h-5 w-5 text-amber-700" />
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-stone-900 text-xs uppercase tracking-wider mb-1">Registration & Key Pickup Office Address</h4>
+                    <p className="text-xs text-stone-600 font-bold leading-normal">
+                      Punnami Southern Residency, Shilpinagar, 10-1-34, Ramalayam Road,<br />
+                      beside Sri Kodanda Ramalayam Swamy Temple, Bhadrachalam, Telangana - 507111.
+                    </p>
+                  </div>
+                </div>
                 <a
-                  href="https://www.google.com/maps/search/?api=1&query=17.6694332,80.8837854"
+                  href="https://maps.app.goo.gl/NsFCq6zSKECAR3xj8"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="bg-stone-900 hover:bg-stone-800 text-amber-500 hover:text-amber-400 font-extrabold text-xs px-4 py-2.5 rounded-xl border border-stone-800 transition-all shadow-sm shrink-0 flex items-center gap-1.5 print:hidden cursor-pointer"
+                  className="bg-stone-900 hover:bg-stone-800 text-amber-500 hover:text-amber-400 font-extrabold text-xs px-4 py-2.5 rounded-xl border border-stone-800 transition-all shadow-sm shrink-0 flex items-center justify-center gap-1.5 print:hidden cursor-pointer"
                 >
                   <MapPin className="h-3.5 w-3.5" />
                   <span>Navigate on Google Maps</span>
                 </a>
-              </div>
-              
-              <div className="w-full overflow-hidden rounded-xl border border-stone-200 shadow-inner h-[220px]">
-                <iframe
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3801.5928345764787!2d80.8837854!3d17.6694332!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a36a9a06e5e9d51%3A0xd8a0ae3401b032b3!2sPUNNAMI%20HOTELS!5e0!3m2!1sen!2sin!4v1783926758713!5m2!1sen!2sin"
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  allowFullScreen={true}
-                  loading="lazy"
-                  referrerPolicy="strict-origin-when-cross-origin"
-                  title="Office Location Map"
-                />
               </div>
             </div>
 
@@ -693,7 +752,7 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
               </div>
             )}
             {/* Google Review Call to Action Card - Hidden during print */}
-            <div className="mx-8 mb-6 p-6 bg-gradient-to-br from-amber-50 to-stone-50 border border-amber-250/70 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-6 print:hidden shadow-sm">
+            <div className="mt-6 p-6 bg-gradient-to-br from-amber-50 to-stone-50 border border-amber-250/70 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-6 print:hidden shadow-sm">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-amber-100/50 rounded-2xl flex items-center justify-center shrink-0 border border-amber-200">
                   <Star className="h-6 w-6 fill-amber-500 text-amber-500" />

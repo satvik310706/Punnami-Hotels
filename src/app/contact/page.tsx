@@ -132,7 +132,7 @@ export default function ContactPage() {
 
             <div className="pt-2 sm:pt-4">
               <a
-                href="https://maps.google.com/?q=17.6694332,80.8837854"
+                href="https://maps.app.goo.gl/NsFCq6zSKECAR3xj8"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-black uppercase tracking-wider rounded-xl py-3.5 transition shadow-lg shadow-amber-900/20"
@@ -146,14 +146,14 @@ export default function ContactPage() {
           <div className="lg:col-span-2 relative min-h-[300px] lg:min-h-[450px]">
             {/* Mobile-only overlay to prevent gesture interception and allow page scroll */}
             <a 
-              href="https://maps.google.com/?q=17.6694332,80.8837854" 
+              href="https://maps.app.goo.gl/NsFCq6zSKECAR3xj8" 
               target="_blank" 
               rel="noopener noreferrer"
               className="absolute inset-0 z-10 lg:hidden block cursor-pointer"
               aria-label="Open in Google Maps"
             />
             <iframe 
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3801.5928345764787!2d80.8837854!3d17.6694332!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a36a9a06e5e9d51%3A0xd8a0ae3401b032b3!2sPUNNAMI%20HOTELS!5e0!3m2!1sen!2sin!4v1783926758713!5m2!1sen!2sin" 
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d7603.2090375755115!2d80.8792299919917!3d17.668880383068224!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a36a9a06e5e9d51%3A0xd8a0ae3401b032b3!2sPUNNAMI%20HOTELS!5e0!3m2!1sen!2sin!4v1783932497024!5m2!1sen!2sin" 
               width="100%" 
               height="100%" 
               style={{ border: 0, minHeight: '300px' }} 

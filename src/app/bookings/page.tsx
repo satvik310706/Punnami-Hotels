@@ -6,7 +6,7 @@ import {
   CheckCircle2, AlertCircle, XCircle, Loader2,
   CreditCard, Printer, Phone, Mail, MessageCircle,
   RefreshCw, IndianRupee, ShieldCheck, ArrowRight,
-  ChevronRight, Hotel
+  ChevronRight, Hotel, Download
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -770,13 +770,13 @@ function BookingTicket({ booking, onRefresh }: { booking: BookingLookup; onRefre
               </a>
             </div>
 
-            {/* Print buttons */}
+            {/* Download buttons */}
             <div className="flex flex-col gap-2">
               <button
-                onClick={() => window.open(`/booking/${booking.publicId}?print=ticket`, '_blank')}
+                onClick={() => window.open(`/booking/${booking.publicId}`, '_blank')}
                 className="w-full flex items-center justify-center gap-2 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-2xl text-xs font-bold transition-all shadow-md cursor-pointer hover:scale-[1.01]"
               >
-                <Printer className="h-4 w-4" /> Print Stay Ticket
+                <Download className="h-4 w-4" /> Download Stay Ticket
               </button>
             </div>
           </div>
