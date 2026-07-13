@@ -213,7 +213,7 @@ export default async function HomePage() {
                   {value}
                 </div>
                 <div
-                  className="text-[9px] sm:text-[10px] text-stone-400/85 uppercase mt-1"
+                  className="text-[9px] sm:text-[10px] text-stone-300 font-bold uppercase mt-1"
                   style={{ letterSpacing: '0.18em' }}
                 >
                   {label}
@@ -249,10 +249,10 @@ export default async function HomePage() {
               {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, i) => {
                 const Icon = item.icon;
                 return (
-                  <div key={i} className="flex items-center gap-2.5 text-stone-300/85">
-                    <Icon className="h-3.5 w-3.5 text-amber-600/70 shrink-0" />
-                    <span>{item.name}</span>
-                  </div>
+                   <div key={i} className="flex items-center gap-2.5 text-stone-200">
+                     <Icon className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                     <span>{item.name}</span>
+                   </div>
                 );
               })}
             </div>

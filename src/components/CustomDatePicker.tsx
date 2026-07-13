@@ -112,9 +112,7 @@ export default function CustomDatePicker({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
             transition={{ duration: 0.15 }}
-            className={`absolute top-full mt-2 bg-white rounded-2xl border border-stone-200 shadow-xl p-4 z-[999] w-[min(288px,calc(100vw-2rem))] ${
-              align === 'right' ? 'right-0' : 'left-0'
-            }`}
+            className="absolute top-full mt-2 bg-white rounded-2xl border border-stone-200 shadow-2xl p-4 z-[999] w-[288px] left-1/2 -translate-x-1/2"
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
@@ -139,19 +137,19 @@ export default function CustomDatePicker({
             </div>
 
             {/* Weekdays */}
-            <div className="grid grid-cols-7 gap-1 text-center mb-1">
+            <div className="grid grid-cols-7 gap-1.5 text-center mb-2">
               {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day, idx) => (
-                <span key={day} className={`text-[10px] font-bold uppercase tracking-wider ${idx === 0 || idx === 6 ? 'text-amber-600' : 'text-stone-400'}`}>
+                <span key={day} className={`text-[10px] font-extrabold uppercase tracking-wider ${idx === 0 || idx === 6 ? 'text-amber-600' : 'text-stone-400'}`}>
                   {day}
                 </span>
               ))}
             </div>
 
             {/* Grid */}
-            <div className="grid grid-cols-7 gap-1 text-center">
+            <div className="grid grid-cols-7 gap-1.5 text-center">
               {/* Empty offsets */}
               {blankDays.map((i) => (
-                <div key={`blank-${i}`} className="h-8" />
+                <div key={`blank-${i}`} className="w-full aspect-square" />
               ))}
 
               {/* Day cells */}
@@ -186,7 +184,7 @@ export default function CustomDatePicker({
                       type="button"
                       disabled={isDisabled}
                       onClick={() => handleDateSelect(day)}
-                      className={`h-8 w-8 rounded-lg flex items-center justify-center text-xs font-semibold transition-all ${
+                      className={`w-full aspect-square rounded-xl flex items-center justify-center text-xs font-bold transition-all ${
                         isSelected
                           ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
                           : isClosed || isTodayBlocked

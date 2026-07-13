@@ -5,6 +5,8 @@ import {
   Search, RefreshCw, AlertTriangle, Clock, CheckCircle2, XCircle, 
   Eye, Loader2, Calendar, Phone, Mail, User, Info, RefreshCw as PostponeIcon
 } from 'lucide-react';
+import AdminDatePicker from '@/components/AdminDatePicker';
+import { format } from 'date-fns';
 
 interface Booking {
   publicId: string;
@@ -37,6 +39,15 @@ export default function AdminPostponesPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [postponeNewDateInput, setPostponeNewDateInput] = useState<string>('');
+
+  useEffect(() => {
+    if (selectedBooking && selectedBooking.postponeNewDate) {
+      setPostponeNewDateInput(selectedBooking.postponeNewDate.split('T')[0]);
+    } else {
+      setPostponeNewDateInput('');
+    }
+  }, [selectedBooking]);
 
   const fetchBookings = async () => {
     setLoading(true);
@@ -61,10 +72,10 @@ export default function AdminPostponesPage() {
     fetchBookings();
   }, []);
 
-  const handleAction = async (publicId: string, action: 'APPROVE_POSTPONE' | 'REJECT_POSTPONE') => {
+  const handleAction = async (publicId: string, action: 'APPROVE_POSTPONE' | 'REJECT_POSTPONE', customPostponeDate?: string) => {
     let confirmText = 'Are you sure you want to perform this action?';
     if (action === 'APPROVE_POSTPONE') {
-      confirmText = 'Are you sure you want to APPROVE this reschedule and update the travel dates in the inventory?';
+      confirmText = `Are you sure you want to APPROVE this reschedule for date: ${customPostponeDate ? new Date(customPostponeDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : ''}?`;
     } else if (action === 'REJECT_POSTPONE') {
       confirmText = 'Are you sure you want to REJECT this reschedule request and restore the booking?';
     }
@@ -76,7 +87,7 @@ export default function AdminPostponesPage() {
       const res = await fetch(`/api/v1/admin/bookings/${publicId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action, postponeNewDate: customPostponeDate }),
       });
 
       if (res.ok) {
@@ -282,13 +293,21 @@ export default function AdminPostponesPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-amber-800 uppercase tracking-widest">Requested Reschedule Date</p>
-                  <p className="text-sm font-black text-amber-700 mt-1 flex items-center gap-1.5">
-                    <PostponeIcon className="h-4 w-4 shrink-0 text-amber-600 animate-spin" style={{ animationDuration: '6s' }} />
-                    <span>
-                      {selectedBooking.postponeNewDate ? new Date(selectedBooking.postponeNewDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '—'}
-                    </span>
-                  </p>
+                  <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-1.5">Reschedule Date</p>
+                  {selectedBooking.status === 'POSTPONE_REQUESTED' ? (
+                    <AdminDatePicker
+                      value={postponeNewDateInput}
+                      onChange={setPostponeNewDateInput}
+                      placeholder="Select reschedule date..."
+                    />
+                  ) : (
+                    <p className="text-sm font-black text-indigo-700 mt-1 flex items-center gap-1.5">
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-indigo-600" />
+                      <span>
+                        {selectedBooking.postponeNewDate ? new Date(selectedBooking.postponeNewDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '—'}
+                      </span>
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -332,9 +351,9 @@ export default function AdminPostponesPage() {
                     Reject Reschedule
                   </button>
                   <button
-                    onClick={() => handleAction(selectedBooking.publicId, 'APPROVE_POSTPONE')}
-                    disabled={actionLoading}
-                    className="bg-amber-600 hover:bg-amber-700 text-white font-black px-4 py-2.5 rounded-xl text-xs transition-all shadow-md cursor-pointer"
+                    onClick={() => handleAction(selectedBooking.publicId, 'APPROVE_POSTPONE', postponeNewDateInput)}
+                    disabled={actionLoading || !postponeNewDateInput}
+                    className="bg-amber-600 hover:bg-amber-700 text-white font-black px-4 py-2.5 rounded-xl text-xs transition-all shadow-md cursor-pointer disabled:opacity-50"
                   >
                     Approve & Reschedule Stays
                   </button>

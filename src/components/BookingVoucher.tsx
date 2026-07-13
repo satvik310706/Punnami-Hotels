@@ -169,7 +169,11 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
         setErrorMsg(data.error || 'Failed to submit cancellation request.');
       } else {
         setShowCancelModal(false);
-        window.open(`https://wa.me/919951369573?text=Hello%20Punnami%20Hotels%2C%20I%20have%20submitted%20a%20cancellation%20request%20for%20my%20booking%20${booking.publicId}.%20Please%20approve%20it.`, '_blank');
+        const isFullyPaid = booking.status !== 'PARTIAL_PAID';
+        const formattedCheckIn = format(new Date(booking.checkInDate), 'd MMM yyyy');
+        const formattedCheckOut = format(new Date(booking.checkOutDate), 'd MMM yyyy');
+        const msg = `Hello Punnami Southern Residency, I would like to request a cancellation for:\n\nBooking ID: ${booking.publicId}\nRoom: ${booking.roomType.name}\nCheck-in: ${formattedCheckIn}\nCheck-out: ${formattedCheckOut}\nTotal: ₹${booking.totalAmount.toLocaleString('en-IN')}\nPayment Type: ${isFullyPaid ? '100% Full Payment' : '50% Advance'}\nRefund Expected: ${isFullyPaid ? `₹${(booking.totalAmount * 0.5).toLocaleString('en-IN')}` : 'None (non-refundable advance)'}\nReason: ${cancelReason}`;
+        window.open(`https://wa.me/919951369573?text=${encodeURIComponent(msg)}`, '_blank');
         router.refresh();
       }
     } catch {
@@ -203,7 +207,10 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
         setErrorMsg(data.error || 'Failed to submit postpone request.');
       } else {
         setShowPostponeModal(false);
-        window.open(`https://wa.me/919951369573?text=Hello%20Punnami%20Hotels%2C%20I%20have%20submitted%20a%20postponement%20request%20for%20my%20booking%20${booking.publicId}%20to%20start%20on%20${dateStr}.%20Please%20verify%20and%20approve%20it.`, '_blank');
+        const formattedCurrentDate = format(new Date(booking.checkInDate), 'd MMM yyyy');
+        const formattedNewDate = format(new Date(dateStr), 'd MMM yyyy');
+        const msg = `Hello Punnami Southern Residency, I would like to request a reschedule for:\n\nBooking ID: ${booking.publicId}\nRoom: ${booking.roomType.name}\nCurrent Check-in: ${formattedCurrentDate}\nCurrent Check-out: ${format(new Date(booking.checkOutDate), 'd MMM yyyy')}\nRequested New Check-in: ${formattedNewDate}\nGuest: ${booking.guestName}\nReason: ${postponeReason}`;
+        window.open(`https://wa.me/919951369573?text=${encodeURIComponent(msg)}`, '_blank');
         router.refresh();
       }
     } catch {
@@ -252,6 +259,19 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
             max-width: 100% !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
+          }
+          .print-banner-container {
+            background-color: transparent !important;
+            background: none !important;
+          }
+          .print-banner-container img {
+            max-width: 100% !important;
+            width: 100% !important;
+            height: auto !important;
+            border-radius: 0 !important;
+            margin: 0 !important;
+            display: block !important;
+            box-shadow: none !important;
           }
           .print\\:hidden {
             display: none !important;
@@ -322,6 +342,11 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
             padding: 6px !important;
             font-size: 7.5px !important;
           }
+          .footer-wrap img {
+            height: 12px !important;
+            margin-bottom: 2px !important;
+            display: block !important;
+          }
           .footer-wrap p {
             margin-top: 1px !important;
             font-size: 7px !important;
@@ -378,7 +403,7 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
         <div className="h-2.5 bg-gradient-to-r from-amber-400 via-amber-600 to-amber-700 w-full" />
 
         {/* Hotel Banner Image — shown as full image, no crop */}
-        <div className="w-full bg-stone-900 print:hidden">
+        <div className="w-full bg-stone-900 print-banner-container">
           <img
             src="/hotel-banner.jpg"
             alt="Punnami Southern Residency - Best Stay in Bhadrachalam"
@@ -549,6 +574,12 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
                       Punnami Southern Residency, Shilpinagar, 10-1-34, Ramalayam Road,<br />
                       beside Sri Kodanda Ramalayam Swamy Temple, Bhadrachalam, Telangana - 507111.
                     </p>
+                    <p className="text-xs text-amber-900 font-extrabold mt-1.5 flex flex-wrap items-center gap-1">
+                      <span>Contact:</span>
+                      <a href="tel:+919505155166" className="text-amber-805 hover:underline">+91 95051 55166</a>
+                      <span>,</span>
+                      <a href="tel:+919542069573" className="text-amber-805 hover:underline">+91 95420 69573</a>
+                    </p>
                   </div>
                 </div>
                 <a
@@ -567,8 +598,8 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
             <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8 border-b border-stone-150 print-card ticket-grid-summary">
               {/* Guest and Stay Profile */}
               <div className="space-y-6">
-                <h3 className="text-xs font-black uppercase tracking-widest text-stone-450 border-b border-stone-150 pb-2 flex items-center gap-2">
-                  <User className="h-4.5 w-4.5 text-stone-450" />
+                <h3 className="text-xs font-black uppercase tracking-widest text-stone-500 border-b border-stone-150 pb-2 flex items-center gap-2">
+                  <User className="h-4.5 w-4.5 text-stone-500" />
                   <span>Guest & Stay Information</span>
                 </h3>
                 <div className="space-y-4">
@@ -607,7 +638,7 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
 
               {/* Pricing & Ledger */}
               <div className="space-y-6">
-                <h3 className="text-xs font-black uppercase tracking-widest text-stone-450 border-b border-stone-150 pb-2">
+                <h3 className="text-xs font-black uppercase tracking-widest text-stone-500 border-b border-stone-150 pb-2">
                   Booking Payment Summary
                 </h3>
                 <div className="space-y-3">
@@ -664,7 +695,7 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
                     </div>
                   ) : booking.transactionId ? (
                     <div className="flex justify-between text-[11px] pt-1">
-                      <span className="text-stone-450 font-bold uppercase tracking-wider">Transaction ID</span>
+                      <span className="text-stone-500 font-bold uppercase tracking-wider">Transaction ID</span>
                       <span className="text-stone-750 font-mono font-bold">{booking.transactionId}</span>
                     </div>
                   ) : null}
@@ -694,8 +725,8 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
             {/* Guest details if passengers array exists */}
             {booking.passengers && booking.passengers.length > 0 && (
               <div className="p-8 border-b border-stone-150 print-card">
-                <h3 className="text-xs font-black uppercase tracking-widest text-stone-450 border-b border-stone-150 pb-2 mb-4 flex items-center gap-2">
-                  <Users className="h-4.5 w-4.5 text-stone-450" />
+                <h3 className="text-xs font-black uppercase tracking-widest text-stone-500 border-b border-stone-150 pb-2 mb-4 flex items-center gap-2">
+                  <Users className="h-4.5 w-4.5 text-stone-500" />
                   <span>Verified Guest Manifest</span>
                 </h3>
                 <div className="overflow-x-auto rounded-xl border border-stone-200 bg-stone-50/30">
@@ -777,8 +808,8 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
         {/* Stays Cancellation / Modification Actions Section - Hidden during print */}
         {['CONFIRMED', 'PARTIAL_PAID', 'CANCEL_REQUESTED', 'POSTPONE_REQUESTED'].includes(booking.status) && (
           <div className="p-8 border-b border-stone-150 bg-stone-50/30 print:hidden">
-            <h3 className="text-xs font-black uppercase tracking-widest text-stone-450 border-b border-stone-150 pb-2 mb-4 flex items-center gap-2">
-              <CalendarClock className="h-4.5 w-4.5 text-stone-450" />
+            <h3 className="text-xs font-black uppercase tracking-widest text-stone-500 border-b border-stone-150 pb-2 mb-4 flex items-center gap-2">
+              <CalendarClock className="h-4.5 w-4.5 text-stone-500" />
               <span>Modify Stay or Request Cancellation</span>
             </h3>
             
@@ -897,7 +928,7 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
 
         {/* Stay Guidelines / Policies */}
         <div className="p-8 bg-stone-50/50 print-card guidelines-wrap">
-          <h3 className="text-xs font-black uppercase tracking-widest text-stone-450 border-b border-stone-150 pb-2 mb-4">Check-in Guidelines & Policies</h3>
+          <h3 className="text-xs font-black uppercase tracking-widest text-stone-500 border-b border-stone-150 pb-2 mb-4">Check-in Guidelines & Policies</h3>
           <ul className="space-y-3 text-xs text-stone-600 leading-relaxed list-disc pl-4 font-medium guidelines-list">
             <li><strong>Photo Identification:</strong> A valid physical photo ID (Aadhar Card, Passport, Driving License or Voter ID) must be presented by all adult guests at the time of check-in.</li>
             <li><strong>Occupancy Limits:</strong> Check-in is capped based on the standard capacity of the room (max {booking.roomType.maxAdults} adults and {booking.roomType.maxChildren} children per room category).</li>
@@ -907,9 +938,10 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
         </div>
 
         {/* Voucher Footer */}
-        <div className="bg-stone-900 text-stone-400 p-6 text-center text-xs border-t border-stone-800 print-card footer-wrap">
+        <div className="bg-stone-900 text-stone-400 p-5 text-center text-xs border-t border-stone-800 print-card footer-wrap flex flex-col items-center gap-1.5">
+          <img src="/logo.png" alt="PSR Logo" className="h-6 w-auto object-contain block mx-auto mb-0.5" />
           <p className="font-bold text-stone-300">Thank you for choosing Punnami Southern Residency Bhadrachalam</p>
-          <p className="text-[10px] mt-1 text-stone-500">For support, call us at +91 95051 55166, +91 99513 69573, +91 99122 21274, +91 98498 48938 or email info@punnamihotels.com. This is an officially generated digital hotel booking ticket.</p>
+          <p className="text-[10px] mt-0.5 text-stone-500">For support, call us at +91 95051 55166, +91 95420 69573 or email info@punnamihotels.com. This is an officially generated digital hotel booking ticket.</p>
         </div>
 
       </div>
@@ -971,8 +1003,8 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
       {/* Postpone Modal */}
       {showPostponeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl overflow-hidden max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-150">
-            <div className="bg-stone-900 px-6 py-4 text-white flex items-center justify-between">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-150 relative overflow-visible">
+            <div className="bg-stone-900 px-6 py-4 text-white flex items-center justify-between rounded-t-[24px]">
               <h3 className="text-base font-bold flex items-center gap-2">
                 <CalendarClock className="h-5 w-5 text-amber-500" />
                 <span>Reschedule Booking</span>

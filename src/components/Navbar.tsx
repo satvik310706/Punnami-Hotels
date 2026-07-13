@@ -147,12 +147,12 @@ export default function Navbar() {
                   <Link
                     key={href}
                     href={href}
-                    className={`whitespace-nowrap relative px-2.5 xl:px-4 py-2.5 text-xs xl:text-sm font-normal tracking-wide transition-colors duration-200 group ${
+                    className={`whitespace-nowrap relative px-2.5 xl:px-4 py-2.5 text-xs xl:text-sm font-medium tracking-wide transition-colors duration-200 group ${
                       isActive
                         ? isTransparent ? 'text-amber-300' : 'text-amber-600'
                         : isTransparent
-                        ? 'text-white/65 hover:text-white'
-                        : 'text-stone-500 hover:text-stone-900'
+                        ? 'text-white/80 hover:text-white'
+                        : 'text-stone-700 hover:text-stone-950'
                     }`}
                     style={{ letterSpacing: '0.04em' }}
                   >

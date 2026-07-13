@@ -82,6 +82,14 @@ export default function AdminBookingsPage() {
   const [showRescheduleInput, setShowRescheduleInput] = useState(false);
   const [directPostponeDate, setDirectPostponeDate] = useState('');
 
+  useEffect(() => {
+    if (selectedBooking && selectedBooking.postponeNewDate) {
+      setDirectPostponeDate(selectedBooking.postponeNewDate.split('T')[0]);
+    } else {
+      setDirectPostponeDate('');
+    }
+  }, [selectedBooking]);
+
   const fetchBookings = async () => {
     setLoading(true);
     try {
@@ -503,16 +511,20 @@ export default function AdminBookingsPage() {
 
               {/* Postpone Request Box */}
               {selectedBooking.status === 'POSTPONE_REQUESTED' && (
-                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 space-y-2">
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 space-y-3">
                   <h5 className="font-extrabold text-amber-800 text-sm flex items-center gap-1.5">
                     <Calendar className="h-4 w-4" /> Reschedule Request Details
                   </h5>
                   <p className="text-stone-700 text-sm font-medium">
                     <strong>Reason:</strong> "{selectedBooking.postponeReason || 'No reason provided.'}"
                   </p>
-                  <p className="text-xs font-bold text-amber-950">
-                    <strong>Requested New Date:</strong> {selectedBooking.postponeNewDate ? format(new Date(selectedBooking.postponeNewDate), 'dd MMMM yyyy') : 'N/A'}
-                  </p>
+                  <div>
+                    <AdminDatePicker
+                      value={directPostponeDate}
+                      onChange={setDirectPostponeDate}
+                      label="Confirm / Adjust Reschedule Date"
+                    />
+                  </div>
                 </div>
               )}
 
