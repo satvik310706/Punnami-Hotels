@@ -41,11 +41,14 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
   // If it's already past 6 AM IST, the earliest valid check-in is tomorrow
   const earliestCheckIn = isAfter6amIST() ? tomorrow : today;
 
-  const [checkIn, setCheckIn] = useState<Date>(
-    initialCheckIn ? new Date(initialCheckIn + 'T00:00:00') : earliestCheckIn
-  );
+  const parsedInitialCheckIn = initialCheckIn ? new Date(initialCheckIn + 'T00:00:00') : null;
+  const initialDate = parsedInitialCheckIn && parsedInitialCheckIn >= earliestCheckIn ? parsedInitialCheckIn : earliestCheckIn;
+
+  const [checkIn, setCheckIn] = useState<Date>(initialDate);
   const [checkOut, setCheckOut] = useState<Date>(
-    initialCheckOut ? new Date(initialCheckOut + 'T00:00:00') : addDays(earliestCheckIn, 1)
+    initialCheckOut && new Date(initialCheckOut + 'T00:00:00') > initialDate 
+      ? new Date(initialCheckOut + 'T00:00:00') 
+      : addDays(initialDate, 1)
   );
   
   const [adults, setAdults] = useState(1);

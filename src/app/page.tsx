@@ -5,7 +5,7 @@ import {
   MapPin, ArrowRight, BedDouble,
   Coffee, Bath, Waves, Dumbbell, Shirt,
   HeartPulse, Zap, CheckSquare, Bell,
-  Shield, Clock,
+  Shield, Clock, Phone,
 } from 'lucide-react';
 import SearchWidget from '@/components/SearchWidget';
 import RoomCard from '@/components/RoomCard';
@@ -103,6 +103,31 @@ export default async function HomePage() {
 
         {/* Hero content — flex-1 so it grows to fill, pushes marquee to bottom */}
         <div className="relative z-30 flex-1 flex flex-col items-center justify-center text-center px-4 sm:px-6 lg:px-8 pt-20 sm:pt-24 pb-8 sm:pb-12">
+
+          {/* Mobile Call-To-Action (Only visible on Mobile) */}
+          {(() => {
+            const firstRoomSlug = featuredRooms[0]?.slug || '2-beds-ac-deluxe-room';
+            const firstRoomLink = `/rooms/${firstRoomSlug}`;
+            
+            return (
+              <div className="flex sm:hidden flex-col items-center gap-2 mb-6 w-full max-w-[290px] animate-hero-fade-up" style={{ animationDelay: '0.05s' }}>
+                <a 
+                  href="tel:+919505155166" 
+                  className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-black text-sm shadow-xl shadow-amber-500/20 active:scale-95 transition-all"
+                >
+                  <Phone className="h-4 w-4 fill-stone-950 stroke-none animate-pulse" />
+                  <span>Call &amp; Book: 95051 55166</span>
+                </a>
+                <Link 
+                  href={firstRoomLink}
+                  className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white text-stone-900 font-extrabold text-sm border border-stone-200 backdrop-blur-md active:scale-95 transition-all shadow-md"
+                >
+                  <span>Book Online Now</span>
+                  <ArrowRight className="h-4 w-4 text-amber-600" />
+                </Link>
+              </div>
+            );
+          })()}
 
           {/* Badge */}
           <div

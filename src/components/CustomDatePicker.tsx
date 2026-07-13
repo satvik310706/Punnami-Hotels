@@ -189,9 +189,9 @@ export default function CustomDatePicker({
                       className={`h-8 w-8 rounded-lg flex items-center justify-center text-xs font-semibold transition-all ${
                         isSelected
                           ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
-                          : isClosed
+                          : isClosed || isTodayBlocked
                           ? 'bg-red-100 text-red-500 border border-red-200 cursor-not-allowed hover:bg-red-100'
-                          : isDisabled
+                          : isPast
                           ? 'text-stone-300 cursor-not-allowed line-through'
                           : isCurrentToday
                           ? 'border border-amber-500 text-amber-700 hover:bg-amber-50'

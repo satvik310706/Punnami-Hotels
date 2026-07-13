@@ -90,7 +90,7 @@ export default function Navbar() {
     : [
         { href: '/', label: 'Home' },
         { href: '/rooms', label: 'Rooms' },
-        { href: 'https://www.tsboattourism.org/stays', label: 'Papikondalu' },
+        { href: 'https://www.tsboattourism.org/boat-rides', label: 'Papikondalu' },
         { href: '/about', label: 'About' },
         { href: '/contact', label: 'Contact' },
       ];
@@ -171,12 +171,12 @@ export default function Navbar() {
             <div className="hidden lg:flex items-center lg:gap-2.5 xl:gap-4 shrink-0">
               <div className="relative group/phone">
                 <button
-                  className={`whitespace-nowrap flex items-center gap-1.5 text-xs xl:text-[13px] transition-colors duration-200 font-medium cursor-pointer ${
-                    isTransparent ? 'text-white/50 hover:text-white/90' : 'text-stone-500 hover:text-stone-800'
+                  className={`whitespace-nowrap flex items-center gap-1.5 text-xs xl:text-[13px] transition-colors duration-200 font-bold cursor-pointer ${
+                    isTransparent ? 'text-white/80 hover:text-white' : 'text-stone-700 hover:text-stone-900'
                   }`}
                 >
-                  <Phone className="h-3.5 w-3.5" />
-                  <span>+91 95051 55166</span>
+                  <Phone className={`h-3.5 w-3.5 ${isTransparent ? 'text-white/70' : 'text-amber-500'}`} />
+                  <span>95051 55166</span>
                 </button>
                 <div className={`absolute top-full left-0 mt-2 w-48 rounded-2xl shadow-xl py-3.5 px-4 flex flex-col gap-2.5 opacity-0 invisible group-hover/phone:opacity-100 group-hover/phone:visible transition-all duration-300 z-50 transform translate-y-1 group-hover/phone:translate-y-0 border ${
                   isTransparent 
