@@ -1,3 +1,4 @@
+
 -- Enable Row-Level Security (RLS) on all tables in the punnami-hotels database
 ALTER TABLE "Booking" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Hotel" ENABLE ROW LEVEL SECURITY;
