@@ -301,51 +301,54 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
   ];
   const highlights = Array.isArray(room.highlights) ? room.highlights : [];
 
-  const maxAvailableForSelectedSlot = useMemo(() => {
-    const slot = slots[selectedSlotIndex] || slots[0];
-    const sStart = slot ? normalizeTime(slot.slotStart) : '12:00:00';
-    const sEnd = slot ? normalizeTime(slot.slotEnd) : '11:00:00';
-    
-    // Find slot config to get default capacity
-    const slotConfig = (room.bookingSlots || room.booking_slots || []).find(
-      (s: any) => normalizeTime(s.slotStart || s.slot_start) === sStart && normalizeTime(s.slotEnd || s.slot_end) === sEnd
-    );
-    const defaultCapacity = slotConfig?.totalRooms ?? slotConfig?.total_rooms ?? room.totalInventory ?? 5;
+  const slotsAvailability = useMemo(() => {
+    return slots.map((slot) => {
+      const sStart = normalizeTime(slot.slotStart);
+      const sEnd = normalizeTime(slot.slotEnd);
+      
+      const slotConfig = (room.bookingSlots || room.booking_slots || []).find(
+        (s: any) => normalizeTime(s.slotStart || s.slot_start) === sStart && normalizeTime(s.slotEnd || s.slot_end) === sEnd
+      );
+      const defaultCapacity = slotConfig?.totalRooms ?? slotConfig?.total_rooms ?? room.totalInventory ?? 5;
 
-    if (isAdmin) {
-      return 999;
-    }
+      if (isAdmin) {
+        return 999;
+      }
 
-    // Check if we have overrides for the date range
-    const current = new Date(checkIn);
-    let limit = new Date(checkOut);
-    if (checkIn.getTime() === checkOut.getTime()) {
-      limit = addDays(checkIn, 1);
-    }
-    
-    let minCapacity = defaultCapacity;
-    while (current < limit) {
-      const dateStr = format(current, 'yyyy-MM-dd');
-      const invKey = `${dateStr}_${sStart}_${sEnd}`;
-      const inv = availability[invKey];
-      if (inv) {
-        if (inv.isClosed) {
+      const current = new Date(checkIn.getTime());
+      let limit = new Date(checkOut.getTime());
+      if (checkIn.getTime() === checkOut.getTime()) {
+        limit = addDays(current, 1);
+      }
+
+      let minCapacity = defaultCapacity;
+      while (current < limit) {
+        const dateStr = format(current, 'yyyy-MM-dd');
+        const invKey = `${dateStr}_${sStart}_${sEnd}`;
+        const inv = availability[invKey];
+        if (inv) {
+          if (inv.isClosed) {
+            minCapacity = 0;
+            break;
+          }
+          const avail = inv.totalRooms - inv.bookedRooms - inv.reservedRooms;
+          if (avail < minCapacity) {
+            minCapacity = avail;
+          }
+        } else {
+          // Block by default if there's no pre-registered inventory in DB
           minCapacity = 0;
           break;
         }
-        const avail = inv.totalRooms - inv.bookedRooms - inv.reservedRooms;
-        if (avail < minCapacity) {
-          minCapacity = avail;
-        }
-      } else {
-        // Block by default if there's no pre-registered inventory in DB
-        minCapacity = 0;
-        break;
+        current.setDate(current.getDate() + 1);
       }
-      current.setDate(current.getDate() + 1);
-    }
-    return Math.max(0, minCapacity);
-  }, [checkIn, checkOut, selectedSlotIndex, slots, availability, room, isAdmin]);
+      return Math.max(0, minCapacity);
+    });
+  }, [checkIn, checkOut, slots, availability, room, isAdmin]);
+
+  const maxAvailableForSelectedSlot = useMemo(() => {
+    return slotsAvailability[selectedSlotIndex] ?? 0;
+  }, [slotsAvailability, selectedSlotIndex]);
 
   useEffect(() => {
     const maxAdultsAllowed = maxAvailableForSelectedSlot * (room.maxAdults || room.capacityPerRoom || 3);
@@ -570,10 +573,14 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
                 if (checkOut < checkIn) setCheckOut(checkIn);
               }
             }}
-            options={slots.map((s, idx) => ({
-              value: idx,
-              label: `${s.title} (${s.slotStart.slice(0, 5)} - ${s.slotEnd.slice(0, 5)}) - Max: ${s.totalRooms ?? room.totalInventory} Rooms`,
-            }))}
+            options={slots.map((s, idx) => {
+              const avail = slotsAvailability[idx] ?? 0;
+              const availText = avail === 0 ? 'Sold Out' : avail === 1 ? 'Only 1 Room Left!' : `${avail} Rooms Left`;
+              return {
+                value: idx,
+                label: `${s.title} (${s.slotStart.slice(0, 5)} - ${s.slotEnd.slice(0, 5)}) - ${availText}`,
+              };
+            })}
             label="Timing Slot"
           />
         )}
@@ -697,9 +704,16 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
       )}
 
       {/* Book Button */}
+      {roomsCount > maxAvailableForSelectedSlot && maxAvailableForSelectedSlot > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-750 font-bold mb-3">
+          ⚠️ Capacity exceeds available rooms. Only {maxAvailableForSelectedSlot} room{maxAvailableForSelectedSlot > 1 ? 's' : ''} left.
+        </div>
+      )}
+
+      {/* Book Button */}
       <button
         onClick={handleBookingClick}
-        disabled={bookingLoading || nights <= 0 || room.isActive === false || slots.length === 0 || maxAvailableForSelectedSlot === 0}
+        disabled={bookingLoading || nights <= 0 || room.isActive === false || slots.length === 0 || maxAvailableForSelectedSlot === 0 || roomsCount > maxAvailableForSelectedSlot}
         className="w-full bg-amber-600 hover:bg-amber-700 disabled:bg-stone-300 disabled:text-stone-500 disabled:cursor-not-allowed text-white font-black rounded-xl py-3.5 text-sm transition-colors shadow-lg hover:shadow-amber-600/30 cursor-pointer"
       >
         {room.isActive === false
@@ -708,6 +722,8 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
           ? 'No Slots Configured'
           : maxAvailableForSelectedSlot === 0
           ? 'Sold Out'
+          : roomsCount > maxAvailableForSelectedSlot
+          ? 'Exceeds Available Rooms'
           : bookingLoading
           ? 'Processing...'
           : `Book Now – ${formatCurrency(pricing.total)}`}
@@ -1018,9 +1034,15 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
                   <Users className="h-4 w-4 text-amber-600" />
                   Up to {room.maxAdults} adults
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 font-bold">
                   <BedDouble className="h-4 w-4 text-amber-600" />
-                  {room.totalInventory} room{room.totalInventory > 1 ? 's' : ''} available
+                  {maxAvailableForSelectedSlot === 0 ? (
+                    <span className="text-red-600 font-extrabold uppercase">Sold Out</span>
+                  ) : maxAvailableForSelectedSlot === 1 ? (
+                    <span className="text-rose-600 font-black uppercase animate-pulse">🔥 Only 1 Room Left!</span>
+                  ) : (
+                    <span className="text-emerald-700 font-extrabold">{maxAvailableForSelectedSlot} Rooms Available</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -1077,9 +1099,26 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
                           </div>
                         </div>
                         
-                        <div className="flex items-center gap-1.5 text-xs text-stone-500 mb-2">
+                        <div className="flex items-center gap-1.5 text-xs text-stone-500 mb-1">
                           <Clock className="h-3.5 w-3.5 text-amber-600" />
                           <span>{checkInDisp} - {checkOutDisp}</span>
+                        </div>
+
+                        {/* Availability Pill */}
+                        <div className="mb-2">
+                          {slotsAvailability[idx] === 0 ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-red-50 text-red-700 border border-red-200">
+                              Sold Out
+                            </span>
+                          ) : slotsAvailability[idx] === 1 ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-rose-100 text-rose-700 border border-rose-200 animate-pulse">
+                              🔥 Only 1 Room Left!
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-100">
+                              {slotsAvailability[idx]} Rooms Available
+                            </span>
+                          )}
                         </div>
 
                         <div className="flex items-baseline gap-1 mt-auto">

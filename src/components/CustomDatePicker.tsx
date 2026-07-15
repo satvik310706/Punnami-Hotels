@@ -16,6 +16,7 @@ interface CustomDatePickerProps {
   closedDates?: Set<string>;
   onMonthChange?: (monthStr: string) => void;
   align?: 'left' | 'right';
+  allowToday?: boolean;
 }
 
 export default function CustomDatePicker({
@@ -28,9 +29,10 @@ export default function CustomDatePicker({
   closedDates,
   onMonthChange,
   align = 'left',
+  allowToday = false,
 }: CustomDatePickerProps) {
   // If it's after 6 AM IST, today is blocked — minimum selectable date is tomorrow
-  const effectiveMinDate = minDate ?? (isAfter6amIST() ? addDaysIST(getTodayIST(), 1) : getTodayIST());
+  const effectiveMinDate = minDate ?? ((isAfter6amIST() && !allowToday) ? addDaysIST(getTodayIST(), 1) : getTodayIST());
   const [isOpen, setIsOpen] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(selected);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -107,13 +109,19 @@ export default function CustomDatePicker({
       {/* Calendar Dropdown */}
       <AnimatePresence>
         {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            transition={{ duration: 0.15 }}
-            className="absolute top-full mt-2 bg-white rounded-2xl border border-stone-200 shadow-2xl p-4 z-[999] w-[288px] left-1/2 -translate-x-1/2"
-          >
+          <>
+            {/* Backdrop overlay for mobile viewport */}
+            <div
+              className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-[998] sm:hidden"
+              onClick={() => setIsOpen(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-x-4 top-1/2 -translate-y-1/2 sm:absolute sm:top-full sm:left-1/2 sm:-translate-x-1/2 sm:translate-y-0 sm:mt-2 sm:inset-x-auto sm:w-[288px] bg-white rounded-2xl border border-stone-200 shadow-2xl p-4 z-[999]"
+            >
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
               <button
@@ -168,7 +176,7 @@ export default function CustomDatePicker({
                     day.getDate() === todayIST.getDate();
 
                   // Today is blocked if we're past 6 AM IST
-                  const isTodayBlocked = isTodayAfter6 && isCurrentToday;
+                  const isTodayBlocked = !allowToday && isTodayAfter6 && isCurrentToday;
                   
                   // Closed if in closedDates OR if availableDates is set and doesn't contain this date
                   const isClosed = closedDates?.has(dateStr) || (availableDates !== undefined && !availableDates.has(dateStr));
@@ -205,6 +213,7 @@ export default function CustomDatePicker({
               })()}
             </div>
           </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>

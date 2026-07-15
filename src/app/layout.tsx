@@ -64,12 +64,12 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/icon.png", sizes: "192x192", type: "image/png" },
-      { url: "/logo.png", sizes: "512x512", type: "image/png" },
+      { url: "/icon.png?v=4", sizes: "192x192", type: "image/png" },
+      { url: "/logo.png?v=4", sizes: "512x512", type: "image/png" },
     ],
-    shortcut: "/icon.png",
+    shortcut: "/icon.png?v=4",
     apple: [
-      { url: "/apple-touch-icon.png", sizes: "512x512", type: "image/png" },
+      { url: "/apple-touch-icon.png?v=4", sizes: "512x512", type: "image/png" },
     ],
   },
   openGraph: {
@@ -152,6 +152,9 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://res.cloudinary.com" />
         <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+        <link rel="icon" href="/icon.png?v=4" sizes="192x192" type="image/png" />
+        <link rel="shortcut icon" href="/icon.png?v=4" type="image/png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=4" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

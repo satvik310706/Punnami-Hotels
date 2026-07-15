@@ -162,15 +162,21 @@ export default function AdminDatePicker({
 
       {/* Dropdown calendar */}
       {open && (
-        <div
-          className={[
-            'absolute z-[9999] w-72 bg-white rounded-2xl overflow-hidden',
-            'border border-stone-200',
-            openUpward ? 'bottom-full mb-2' : 'top-full mt-2',
-            'left-0',
-          ].join(' ')}
-          style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)' }}
-        >
+        <>
+          {/* Backdrop overlay for mobile viewport */}
+          <div
+            className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-[9980] sm:hidden"
+            onClick={() => setOpen(false)}
+          />
+          <div
+            className={[
+              'fixed inset-x-4 top-1/2 -translate-y-1/2 sm:absolute sm:inset-x-auto sm:translate-y-0 sm:w-72 bg-white rounded-2xl overflow-hidden',
+              'border border-stone-200 z-[9999]',
+              openUpward ? 'sm:bottom-full sm:mb-2' : 'sm:top-full sm:mt-2',
+              'sm:left-0',
+            ].join(' ')}
+            style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)' }}
+          >
           {/* Month navigation */}
           <div className="flex items-center justify-between px-4 py-3 bg-stone-900 text-white select-none">
             <button
@@ -239,7 +245,8 @@ export default function AdminDatePicker({
             </p>
           </div>
         </div>
-      )}
-    </div>
-  );
+      </>
+    )}
+  </div>
+);
 }

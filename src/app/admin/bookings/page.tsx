@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react';
 import { 
   Search, ShieldAlert, CheckCircle, Clock, XCircle, Eye, 
   Calendar, Phone, Mail, User, Info,
-  AlertCircle, RefreshCw
+  AlertCircle, RefreshCw, Plus, Banknote, Check, Loader2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import InlineLoader from '@/components/InlineLoader';
 import { useModalStore } from '@/hooks/useModalStore';
 import AdminDatePicker from '@/components/AdminDatePicker';
 import InvoiceDownload from '@/components/InvoiceDownload';
+import AdminCreateBookingModal from '@/components/AdminCreateBookingModal';
 
 function formatSlotTime(timeStr?: string | null, fallback: string = '12:00 PM') {
   if (!timeStr) return fallback;
@@ -61,6 +62,7 @@ interface Booking {
     createdAt: string;
   }[];
   status: string;
+  source: string;
   createdAt: string;
   passengers?: any;
   roomType: { name: string; coverImageUrl: string | null };
@@ -81,6 +83,43 @@ export default function AdminBookingsPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [showRescheduleInput, setShowRescheduleInput] = useState(false);
   const [directPostponeDate, setDirectPostponeDate] = useState('');
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+  const handleRecordPayment = async (amount: number | null, paymentMethod: string, collectedBy: string) => {
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/v1/admin/bookings/${selectedBooking?.publicId}/record-payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount, paymentMethod, collectedBy }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showAlert('Success', 'Payment recorded successfully.', 'success');
+        
+        // Fetch fresh bookings data
+        const bookingsRes = await fetch('/api/v1/admin/bookings');
+        if (bookingsRes.ok) {
+          const freshData = await bookingsRes.json();
+          setBookings(freshData);
+          const updated = freshData.find((b: any) => b.publicId === selectedBooking?.publicId);
+          if (updated) {
+            setSelectedBooking(updated);
+          } else {
+            setSelectedBooking(null);
+          }
+        } else {
+          setSelectedBooking(null);
+        }
+      } else {
+        showAlert('Error', data.error || 'Failed to record payment', 'error');
+      }
+    } catch {
+      showAlert('Error', 'Network request failed.', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (selectedBooking && selectedBooking.postponeNewDate) {
@@ -223,15 +262,35 @@ export default function AdminBookingsPage() {
           </h1>
           <p className="text-stone-500 mt-1">Monitor stays, audit transaction proof uploads, and verify manual booking payments.</p>
         </div>
-        <button 
-          onClick={fetchBookings}
-          disabled={loading}
-          className="flex items-center justify-center gap-2 rounded-xl bg-white border border-stone-200 px-4 py-2.5 text-xs font-bold text-stone-700 hover:bg-stone-50 shadow-sm cursor-pointer disabled:opacity-50 self-start sm:self-center"
-        >
-          <RefreshCw className={`h-4 w-4 text-stone-500 ${loading ? 'animate-spin' : ''}`} />
-          <span>Refresh List</span>
-        </button>
+        <div className="flex items-center gap-3 self-start sm:self-center">
+          <button
+            type="button"
+            onClick={() => setIsCreateOpen(true)}
+            className="flex items-center gap-2 rounded-xl bg-stone-900 hover:bg-amber-700 text-white font-extrabold px-4 py-2.5 text-xs transition cursor-pointer shadow-md active:scale-95"
+          >
+            <Plus className="h-4.5 w-4.5" />
+            <span>Create Booking</span>
+          </button>
+          <button 
+            type="button"
+            onClick={fetchBookings}
+            disabled={loading}
+            className="flex items-center justify-center gap-2 rounded-xl bg-white border border-stone-200 px-4 py-2.5 text-xs font-bold text-stone-700 hover:bg-stone-50 shadow-sm cursor-pointer disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 text-stone-500 ${loading ? 'animate-spin' : ''}`} />
+            <span>Refresh List</span>
+          </button>
+        </div>
       </div>
+
+      <AdminCreateBookingModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onSuccess={() => {
+          showAlert('Success', 'Admin direct booking created successfully.', 'success');
+          fetchBookings();
+        }}
+      />
 
       {/* Filters Bar */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center">
@@ -272,6 +331,7 @@ export default function AdminBookingsPage() {
                 <th className="px-6 py-4">Guest Info</th>
                 <th className="px-6 py-4">Stay / Variant</th>
                 <th className="px-6 py-4">Amount</th>
+                <th className="px-6 py-4">Source</th>
                 <th className="px-6 py-4">Payment Status</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
@@ -315,6 +375,15 @@ export default function AdminBookingsPage() {
                     </td>
                     <td className="px-6 py-4 font-bold text-stone-900">
                       ₹{b.totalAmount.toLocaleString('en-IN')}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide border ${
+                        b.source === 'ADMIN'
+                          ? 'bg-violet-50 text-violet-700 border-violet-250'
+                          : 'bg-stone-50 text-stone-500 border-stone-200'
+                      }`}>
+                        {b.source === 'ADMIN' ? 'Admin' : 'Website'}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
@@ -438,7 +507,7 @@ export default function AdminBookingsPage() {
                       <div className="flex justify-between text-stone-900 border-t border-stone-250 pt-2 font-bold text-sm">
                         <span>Total Price:</span><span className="text-amber-700">₹{selectedBooking.totalAmount.toLocaleString('en-IN')}</span>
                       </div>
-                      {selectedBooking.paymentPercentage && selectedBooking.paymentPercentage < 100 && (
+                      {selectedBooking.paymentPercentage !== null && selectedBooking.paymentPercentage !== undefined && selectedBooking.paymentPercentage < 100 && (
                         <>
                           <div className="flex justify-between text-stone-500 border-t border-stone-200/60 pt-1.5">
                             <span>Paid Advance ({selectedBooking.paymentPercentage}%):</span>
@@ -490,6 +559,13 @@ export default function AdminBookingsPage() {
                       ) : null}
                     </div>
                   </div>
+
+                  {/* Record Payment Section */}
+                  <RecordPaymentPanel
+                    booking={selectedBooking}
+                    onRecord={handleRecordPayment}
+                    actionLoading={actionLoading}
+                  />
                 </div>
               </div>
 
@@ -763,6 +839,120 @@ export default function AdminBookingsPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function RecordPaymentPanel({
+  booking,
+  onRecord,
+  actionLoading,
+}: {
+  booking: Booking;
+  onRecord: (amount: number | null, paymentMethod: string, collectedBy: string) => void;
+  actionLoading: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BANK_TRANSFER' | 'UPI'>('CASH');
+  const [collectedBy, setCollectedBy] = useState('');
+  const [customAmount, setCustomAmount] = useState('');
+  const remaining = booking.totalAmount - (booking.paidAmount ?? 0);
+
+  if (remaining <= 0.01 || ['CANCELLED', 'REFUNDED', 'REJECTED'].includes(booking.status)) {
+    return null;
+  }
+
+  if (!isOpen) {
+    return (
+      <div className="pt-2">
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-4 py-3 rounded-xl text-xs transition shadow-md active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+        >
+          <Banknote className="h-4 w-4" />
+          <span>Record Admin Payment (₹{remaining.toLocaleString('en-IN')})</span>
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-emerald-50 border border-emerald-250 rounded-2xl p-4.5 space-y-4 text-xs mt-4">
+      <h5 className="font-extrabold text-emerald-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
+        <Banknote className="h-4.5 w-4.5 text-emerald-700" />
+        Record Cash / Bank Transfer / UPI
+      </h5>
+
+      <div className="flex gap-2">
+        {(['CASH', 'BANK_TRANSFER', 'UPI'] as const).map(m => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => setPaymentMethod(m)}
+            className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-wide transition-all cursor-pointer border ${
+              paymentMethod === m
+                ? 'bg-emerald-700 text-white border-emerald-700 shadow-sm'
+                : 'bg-white border-stone-200 text-stone-600 hover:border-emerald-350'
+            }`}
+          >
+            {m === 'CASH' ? 'Cash' : m === 'BANK_TRANSFER' ? 'Bank' : 'UPI/GPay'}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-[9px] font-bold text-stone-400 uppercase mb-1">
+            Amount (Optional — defaults to full balance)
+          </label>
+          <input
+            type="number"
+            value={customAmount}
+            onChange={e => setCustomAmount(e.target.value)}
+            placeholder={`Full Balance: ₹${remaining}`}
+            className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all font-semibold"
+          />
+        </div>
+        <div>
+          <label className="block text-[9px] font-bold text-stone-400 uppercase mb-1">
+            Collected By (e.g. Admin Ravi)
+          </label>
+          <input
+            type="text"
+            value={collectedBy}
+            onChange={e => setCollectedBy(e.target.value)}
+            placeholder="e.g. Admin Manager"
+            className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all font-semibold"
+          />
+        </div>
+      </div>
+
+      <div className="flex gap-2.5 pt-1">
+        <button
+          type="button"
+          onClick={() => {
+            setIsOpen(false);
+            setCustomAmount('');
+            setCollectedBy('');
+          }}
+          className="flex-1 py-2.5 rounded-xl text-xs font-bold text-stone-600 bg-white border border-stone-250 hover:bg-stone-50 transition cursor-pointer"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            const amt = customAmount ? parseFloat(customAmount) : null;
+            onRecord(amt, paymentMethod, collectedBy);
+          }}
+          disabled={actionLoading}
+          className="flex-1 py-2.5 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+        >
+          {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+          <span>Confirm Payment</span>
+        </button>
+      </div>
     </div>
   );
 }
