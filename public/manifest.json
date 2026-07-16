@@ -3,6 +3,7 @@
   "short_name": "Punnami Hotels",
   "description": "Premium hotel lodging and room booking services near Bhadrachalam Temple.",
   "start_url": "/",
+  "id": "/?source=pwa",
   "display": "standalone",
   "background_color": "#1c1917",
   "theme_color": "#b45309",
@@ -10,12 +11,14 @@
     {
       "src": "/icon.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/logo.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }

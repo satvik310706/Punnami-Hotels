@@ -159,6 +159,17 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                window.deferredPrompt = e;
+                window.dispatchEvent(new Event('deferredpromptavailable'));
+              });
+            `
+          }}
+        />
       </head>
       <body
         className={`${inter.variable} ${cormorant.variable} antialiased min-h-screen flex flex-col bg-stone-50 text-stone-900`}
