@@ -45,13 +45,13 @@ export default function MobileBottomNav() {
                 href={item.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="relative flex flex-col items-center justify-center gap-[3px] min-h-[3.25rem] px-1 py-1 rounded-xl transition-colors duration-150 text-stone-400 hover:text-stone-700"
+                className="relative flex flex-col items-center justify-center gap-[3px] min-h-[3.25rem] px-1 py-1 rounded-xl transition-colors duration-150 text-stone-600 hover:text-stone-850"
               >
                 <Icon
                   className="h-5 w-5 scale-100 transition-transform duration-150 text-amber-500 fill-amber-500/10"
                   strokeWidth={1.75}
                 />
-                <span className="text-[9.5px] font-semibold leading-none tracking-tight text-stone-400">
+                <span className="text-[9.5px] font-bold leading-none tracking-tight text-stone-600">
                   {item.name}
                 </span>
               </a>
@@ -72,8 +72,8 @@ export default function MobileBottomNav() {
                 min-h-[3.25rem] px-1 py-1 rounded-xl
                 transition-colors duration-150
                 ${isActive
-                  ? 'text-amber-600'
-                  : 'text-stone-400 hover:text-stone-700'
+                  ? 'text-amber-700'
+                  : 'text-stone-600 hover:text-stone-850'
                 }
               `}
             >
@@ -90,8 +90,8 @@ export default function MobileBottomNav() {
                 strokeWidth={isActive ? 2.5 : 1.75}
               />
               <span
-                className={`text-[9.5px] font-semibold leading-none tracking-tight ${
-                  isActive ? 'text-amber-600' : 'text-stone-400'
+                className={`text-[9.5px] font-bold leading-none tracking-tight ${
+                  isActive ? 'text-amber-700' : 'text-stone-600'
                 }`}
               >
                 {item.name}

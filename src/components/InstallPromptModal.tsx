@@ -115,6 +115,7 @@ export default function InstallPromptModal() {
       <div className="relative overflow-hidden rounded-2xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-stone-200 p-5">
         <button
           onClick={handleDismiss}
+          aria-label="Close Install Prompt"
           className="absolute right-3 top-3 rounded-full bg-stone-100 p-1.5 text-stone-500 transition-colors hover:bg-stone-200"
         >
           <X className="h-4 w-4" />

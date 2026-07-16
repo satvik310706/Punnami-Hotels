@@ -94,7 +94,7 @@ export default function ReviewsCarousel() {
               </div>
               <div>
                 <div className="text-stone-900 font-medium text-sm tracking-wide">{review.name}</div>
-                <div className="text-stone-500 text-xs mt-0.5" style={{ letterSpacing: '0.1em' }}>{review.location}</div>
+                <div className="text-stone-650 text-xs mt-0.5" style={{ letterSpacing: '0.1em' }}>{review.location}</div>
               </div>
             </div>
           </motion.div>
@@ -105,14 +105,14 @@ export default function ReviewsCarousel() {
       <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 flex justify-between pointer-events-none">
         <button
           onClick={prev}
-          className="p-2.5 rounded-full border border-stone-200 bg-white text-stone-500 hover:border-amber-300 hover:text-amber-700 transition-all duration-200 pointer-events-auto shadow-sm"
+          className="p-2.5 rounded-full border border-stone-200 bg-white text-stone-600 hover:border-amber-300 hover:text-amber-700 transition-all duration-200 pointer-events-auto shadow-sm"
           aria-label="Previous review"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
         <button
           onClick={next}
-          className="p-2.5 rounded-full border border-stone-200 bg-white text-stone-500 hover:border-amber-300 hover:text-amber-700 transition-all duration-200 pointer-events-auto shadow-sm"
+          className="p-2.5 rounded-full border border-stone-200 bg-white text-stone-600 hover:border-amber-300 hover:text-amber-700 transition-all duration-200 pointer-events-auto shadow-sm"
           aria-label="Next review"
         >
           <ChevronRight className="h-4 w-4" />

@@ -159,6 +159,7 @@ export default function ContactPage() {
               src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d7603.2090375755115!2d80.8792299919917!3d17.668880383068224!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a36a9a06e5e9d51%3A0xd8a0ae3401b032b3!2sPUNNAMI%20HOTELS!5e0!3m2!1sen!2sin!4v1783932497024!5m2!1sen!2sin" 
               width="100%" 
               height="100%" 
+              title="Google Maps Location Embed"
               style={{ border: 0, minHeight: '300px' }} 
               allowFullScreen={true} 
               loading="lazy" 

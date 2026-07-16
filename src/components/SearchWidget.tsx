@@ -72,10 +72,10 @@ export default function SearchWidget({ compact = false }: SearchWidgetProps) {
 
         {/* Guests */}
         <div className="col-span-1 relative">
-          <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-stone-500 mb-1.5">
+          <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-stone-600 mb-1.5">
             <Users className="h-3.5 w-3.5 text-amber-600" />
             Guests
-          </label>
+          </span>
           <button
             onClick={() => setShowGuests(!showGuests)}
             className="w-full border-2 border-stone-200 bg-white rounded-xl px-3.5 py-3 text-stone-800 font-semibold text-sm focus:outline-none focus:border-amber-500 transition-colors text-left flex items-center justify-between shadow-sm"

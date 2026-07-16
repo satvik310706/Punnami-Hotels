@@ -31,10 +31,10 @@ export default function Footer() {
               Experience unmatched hospitality at Punnami Southern Residency. Your comfort is our commitment.
             </p>
             <div className="flex gap-3">
-              <a href="#" className="w-9 h-9 bg-stone-800 hover:bg-amber-600 rounded-lg flex items-center justify-center transition-colors">
+              <a href="#" aria-label="Facebook" className="w-9 h-9 bg-stone-800 hover:bg-amber-600 rounded-lg flex items-center justify-center transition-colors">
                 <Facebook className="h-4 w-4" />
               </a>
-              <a href="#" className="w-9 h-9 bg-stone-800 hover:bg-amber-600 rounded-lg flex items-center justify-center transition-colors">
+              <a href="#" aria-label="Instagram" className="w-9 h-9 bg-stone-800 hover:bg-amber-600 rounded-lg flex items-center justify-center transition-colors">
                 <Instagram className="h-4 w-4" />
               </a>
             </div>
@@ -48,27 +48,16 @@ export default function Footer() {
               <ul className="space-y-1.5 sm:space-y-2.5">
                 {[
                   { href: '/', label: 'Home' },
-                  { href: '/rooms', label: 'Browse Rooms' },
-                  { href: '/about', label: 'About Us' },
-                  { href: '/contact', label: 'Contact' },
+                  { href: '/rooms', label: 'Rooms' },
+                  { href: '/contact', label: 'Contact Us' },
                   { href: '/bookings', label: 'My Bookings' },
-                ].map(({ href, label }) => (
-                  <li key={href}>
-                    <Link href={href} className="text-[13px] sm:text-sm hover:text-amber-400 transition-colors">
-                      {label}
+                ].map((link) => (
+                  <li key={link.href}>
+                    <Link href={link.href} className="text-stone-400 hover:text-amber-400 transition-colors text-[12px] sm:text-xs font-medium">
+                      {link.label}
                     </Link>
                   </li>
                 ))}
-                <li>
-                  <a
-                    href="https://g.page/r/CbMysAE0rqDYEAI/review"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[13px] sm:text-sm text-amber-400 hover:text-amber-300 font-bold transition-colors flex items-center gap-1"
-                  >
-                    ★ Write a Google Review
-                  </a>
-                </li>
               </ul>
             </div>
 
@@ -77,15 +66,14 @@ export default function Footer() {
               <h3 className="text-white font-bold text-[13px] sm:text-sm uppercase tracking-wider mb-2 sm:mb-4">Policies</h3>
               <ul className="space-y-1.5 sm:space-y-2.5">
                 {[
-                  { href: '/cancellation', label: 'Cancellation Policy' },
-                  { href: '/privacy', label: 'Privacy Policy' },
                   { href: '/terms', label: 'Terms & Conditions' },
-                  { href: '/refund', label: 'Refund Policy' },
+                  { href: '/privacy', label: 'Privacy Policy' },
+                  { href: '/refund', label: 'Refund & Cancellation' },
                   { href: '/shipping-policy', label: 'Shipping & Delivery' },
-                ].map(({ href, label }) => (
-                  <li key={href}>
-                    <Link href={href} className="text-[13px] sm:text-sm hover:text-amber-400 transition-colors">
-                      {label}
+                ].map((link) => (
+                  <li key={link.href}>
+                    <Link href={link.href} className="text-stone-400 hover:text-amber-400 transition-colors text-[12px] sm:text-xs font-medium">
+                      {link.label}
                     </Link>
                   </li>
                 ))}
@@ -108,8 +96,8 @@ export default function Footer() {
               <li className="flex items-start gap-2 sm:gap-3 text-[13px] sm:text-sm">
                 <Phone className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
                 <div className="flex flex-col gap-1.5 text-stone-400 font-medium text-[12px] sm:text-xs">
-                  <a href="tel:+919505155166" className="hover:text-amber-400 transition-colors">+91 95051 55166</a>
-                  <a href="tel:+919542069573" className="hover:text-amber-400 transition-colors">+91 95420 69573</a>
+                  <a href="tel:+919505155166" className="py-1 hover:text-amber-400 transition-colors block">+91 95051 55166</a>
+                  <a href="tel:+919542069573" className="py-1 hover:text-amber-400 transition-colors block">+91 95420 69573</a>
                 </div>
               </li>
               <li className="flex items-center gap-2 sm:gap-3 text-[13px] sm:text-sm">
@@ -134,6 +122,7 @@ export default function Footer() {
                 src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d7603.2090375755115!2d80.8792299919917!3d17.668880383068224!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a36a9a06e5e9d51%3A0xd8a0ae3401b032b3!2sPUNNAMI%20HOTELS!5e0!3m2!1sen!2sin!4v1783932497024!5m2!1sen!2sin"
                 width="100%"
                 height="100%"
+                title="Google Maps Location Embed"
                 style={{ border: 0, filter: 'grayscale(0.2) contrast(1.1) brightness(0.95)' }}
                 allowFullScreen={false}
                 loading="lazy"
@@ -148,10 +137,10 @@ export default function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-6 pt-5 sm:mt-12 sm:pt-8 border-t border-stone-800 flex flex-col md:flex-row items-center justify-between gap-3 sm:gap-4 text-xs text-stone-500">
+        <div className="mt-6 pt-5 sm:mt-12 sm:pt-8 border-t border-stone-800 flex flex-col md:flex-row items-center justify-between gap-3 sm:gap-4 text-xs text-stone-400">
           <div>
             <p>© 2026 Punnami Southern Residency. All rights reserved.</p>
-            <p className="text-[10px] text-stone-600 mt-1 max-w-md">
+            <p className="text-[10px] text-stone-300 mt-1 max-w-md">
               Punnami Southern Residency is operated under lease by <strong>Telangana Godavari Boat Tourism</strong> (Proprietor: Nalla Saibabu | GSTIN: 36AWFPN4986M2ZO).
             </p>
           </div>

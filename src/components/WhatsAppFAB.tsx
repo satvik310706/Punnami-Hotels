@@ -20,6 +20,7 @@ export default function WhatsAppFAB({ hiddenOnMobile = false }: { hiddenOnMobile
       href={whatsappUrl}
       target="_blank"
       rel="noopener noreferrer"
+      aria-label="Chat on WhatsApp"
       className={`fixed bottom-[5.7rem] left-3 z-[60] h-11 w-11 place-items-center rounded-full bg-[#25D366] text-white shadow-[0_14px_34px_rgba(37,211,102,0.34)] ring-[3px] ring-white/95 transition-all duration-300 hover:-translate-y-1 hover:scale-105 md:bottom-8 md:left-8 md:h-16 md:w-16 md:ring-4 group ${hiddenOnMobile ? 'hidden sm:grid' : 'grid'}`}
     >
       <div className="absolute left-full ml-3 bg-white text-stone-800 text-sm font-bold px-4 py-2 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">

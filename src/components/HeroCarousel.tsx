@@ -6,19 +6,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const IMAGES = [
   {
-    url: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=1920&q=80',
+    url: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=1200&q=75',
     alt: 'Punnami Southern Residency Grand Entrance',
   },
   {
-    url: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1920&q=80',
+    url: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200&q=75',
     alt: 'Luxury Lobby and Lounge',
   },
   {
-    url: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?w=1920&q=80',
+    url: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?w=1200&q=75',
     alt: 'Deluxe Suite Interior',
   },
   {
-    url: 'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=1920&q=80',
+    url: 'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=1200&q=75',
     alt: 'Scenic Bedroom with View',
   },
 ];
@@ -63,9 +63,8 @@ export default function HeroCarousel() {
         >
           {/* Ken Burns zoom — single CSS animation for performance */}
           <div
-            className="absolute inset-0"
+            className="absolute inset-0 ken-burns-container"
             style={{
-              animation: 'kb-zoom 7s ease-in-out forwards',
               transformOrigin: index % 2 === 0 ? 'center center' : '60% 40%',
             }}
           >

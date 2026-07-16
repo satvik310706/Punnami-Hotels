@@ -76,7 +76,7 @@ export default function AboutPage() {
                   <Icon className="h-6 w-6" />
                 </div>
                 <h3 className="font-bold text-stone-850 mb-2">{title}</h3>
-                <p className="text-xs text-stone-500 leading-relaxed">{desc}</p>
+                <p className="text-xs text-stone-650 leading-relaxed">{desc}</p>
               </div>
             ))}
           </div>

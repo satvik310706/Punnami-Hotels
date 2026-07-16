@@ -152,6 +152,8 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://res.cloudinary.com" />
         <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+        <link rel="preconnect" href="https://images.unsplash.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://images.unsplash.com" />
         <link rel="icon" href="/icon.png?v=4" sizes="192x192" type="image/png" />
         <link rel="shortcut icon" href="/icon.png?v=4" type="image/png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=4" />

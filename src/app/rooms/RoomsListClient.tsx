@@ -179,7 +179,7 @@ export default function RoomsListClient({ initialData, initialParams, allRooms }
             </button>
 
             {hasFilters && (
-              <button onClick={clearFilters} className="text-sm text-stone-500 hover:text-amber-700 font-medium flex items-center gap-1">
+              <button onClick={clearFilters} className="text-sm text-stone-650 hover:text-amber-700 font-medium flex items-center gap-1">
                 <X className="h-3.5 w-3.5" /> Clear
               </button>
             )}
@@ -192,21 +192,21 @@ export default function RoomsListClient({ initialData, initialParams, allRooms }
                 Checking availability…
               </span>
             ) : (
-              <span className="text-sm text-stone-500">
+              <span className="text-sm text-stone-600">
                 {filteredRooms.length} room{filteredRooms.length !== 1 ? 's' : ''} found
               </span>
             )}
             <div className="flex items-center border border-stone-200 rounded-xl overflow-hidden bg-white">
               <button
                 onClick={() => setView('grid')}
-                className={`p-2.5 transition-colors ${view === 'grid' ? 'bg-amber-600 text-white' : 'text-stone-500 hover:text-stone-700'}`}
+                className={`p-2.5 transition-colors ${view === 'grid' ? 'bg-amber-600 text-white' : 'text-stone-600 hover:text-stone-800'}`}
                 aria-label="Grid view"
               >
                 <Grid3X3 className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setView('list')}
-                className={`p-2.5 transition-colors ${view === 'list' ? 'bg-amber-600 text-white' : 'text-stone-500 hover:text-stone-700'}`}
+                className={`p-2.5 transition-colors ${view === 'list' ? 'bg-amber-600 text-white' : 'text-stone-600 hover:text-stone-800'}`}
                 aria-label="List view"
               >
                 <List className="h-4 w-4" />
@@ -218,7 +218,7 @@ export default function RoomsListClient({ initialData, initialParams, allRooms }
         {showFilters && (
           <div className="bg-white rounded-2xl border border-stone-200 p-6 mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-2">Min Price (₹/night)</label>
+              <span className="block text-xs font-bold uppercase tracking-wider text-stone-605 mb-2">Min Price (₹/night)</span>
               <input
                 type="number"
                 value={minPrice}
@@ -228,7 +228,7 @@ export default function RoomsListClient({ initialData, initialParams, allRooms }
               />
             </div>
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-2">Max Price (₹/night)</label>
+              <span className="block text-xs font-bold uppercase tracking-wider text-stone-605 mb-2">Max Price (₹/night)</span>
               <input
                 type="number"
                 value={maxPrice}
@@ -238,7 +238,7 @@ export default function RoomsListClient({ initialData, initialParams, allRooms }
               />
             </div>
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-2">Min Guests</label>
+              <span className="block text-xs font-bold uppercase tracking-wider text-stone-605 mb-2">Min Guests</span>
               <CustomSelect
                 label=""
                 value={capacity}
@@ -258,7 +258,7 @@ export default function RoomsListClient({ initialData, initialParams, allRooms }
               <img src="/logo.png" alt="PSR Logo" className="w-full h-full object-contain" />
             </div>
             <h3 className="text-2xl font-bold text-stone-700 mb-2">No Rooms Found</h3>
-            <p className="text-stone-500 mb-6">Try adjusting your filters or search query.</p>
+            <p className="text-stone-600 mb-6">Try adjusting your filters or search query.</p>
             <button onClick={clearFilters} className="bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl px-6 py-3 transition-colors">
               Clear Filters
             </button>

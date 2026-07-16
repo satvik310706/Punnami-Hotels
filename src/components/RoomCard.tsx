@@ -157,9 +157,9 @@ export default function RoomCard({ room, priority = false, checkIn, checkOut, vi
                   <span className="text-sm font-bold text-stone-700">{reviewScore}</span>
                 </>
               )}
-              <span className="text-xs text-stone-400">(verified)</span>
+              <span className="text-xs text-stone-600">(verified)</span>
             </div>
-            <div className="flex items-center gap-3 text-xs text-stone-500">
+            <div className="flex items-center gap-3 text-xs text-stone-600">
               <span className="flex items-center gap-1">
                 <Users className="h-3.5 w-3.5" />
                 Up to {room.maxAdults} guests
@@ -198,17 +198,17 @@ export default function RoomCard({ room, priority = false, checkIn, checkOut, vi
         {/* CTA / Price row */}
         <div className="flex items-center justify-between pt-4 border-t border-stone-100 mt-auto">
           <div>
-            <div className="text-[10px] uppercase font-bold text-stone-400 tracking-wider mb-0.5">Price starting from</div>
+            <div className="text-[10px] uppercase font-bold text-stone-600 tracking-wider mb-0.5">Price starting from</div>
             <div className="flex items-baseline gap-2 flex-wrap">
               <span className="text-2xl font-black text-stone-900">₹{displayPrice.toLocaleString('en-IN')}</span>
-              <span className="text-xs font-bold text-stone-400 line-through">₹{originalPrice.toLocaleString('en-IN')}</span>
+              <span className="text-xs font-bold text-stone-500 line-through">₹{originalPrice.toLocaleString('en-IN')}</span>
               {isActiveRoom && (
                 <span className="text-[9px] font-black uppercase tracking-wider bg-red-50 text-red-650 px-2 py-0.5 rounded border border-red-150">
                   Save {discountPercent}%
                 </span>
               )}
             </div>
-            <span className="text-[10px] text-stone-400 block mt-0.5">/ night (excluding taxes)</span>
+            <span className="text-[10px] text-stone-600 block mt-0.5">/ night (excluding taxes)</span>
           </div>
           {isActiveRoom ? (
             <span className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-black uppercase tracking-wider rounded-xl px-5 py-3 transition duration-200">

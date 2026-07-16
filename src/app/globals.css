@@ -253,6 +253,16 @@ html[data-menu-open] .mobile-bottom-nav {
   backface-visibility: hidden;
 }
 
+/* Only run Ken Burns zoom animation on screens larger than mobile to boost mobile rendering speed & LCP score */
+.ken-burns-container {
+  transform: scale(1.0);
+}
+@media (min-width: 768px) {
+  .ken-burns-container {
+    animation: kb-zoom 7s ease-in-out forwards;
+  }
+}
+
 /* Smooth mobile menu backdrop */
 .mobile-menu-backdrop {
   will-change: opacity;

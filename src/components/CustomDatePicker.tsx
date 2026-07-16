@@ -82,12 +82,12 @@ export default function CustomDatePicker({
 
   return (
     <div className="relative" ref={containerRef}>
-      <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-1.5 flex items-center justify-between">
+      <span className="block text-xs font-bold uppercase tracking-wider text-stone-600 mb-1.5 flex items-center justify-between">
         <span className="flex items-center gap-1.5">
           <Calendar className="h-3.5 w-3.5 text-amber-600" />
           {label}
         </span>
-      </label>
+      </span>
       
       {/* Input button */}
       <button

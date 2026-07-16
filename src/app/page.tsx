@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { Suspense } from 'react';
 import Link from 'next/link';
 import {
   Wifi, Wind, Car, Flame, Tv, UtensilsCrossed,
@@ -192,7 +193,13 @@ export default async function HomePage() {
             className="w-full max-w-4xl mx-auto animate-hero-fade-up relative z-30"
             style={{ animationDelay: '0.5s' }}
           >
-            <SearchWidget />
+            <Suspense fallback={
+              <div className="w-full h-24 bg-stone-900/60 backdrop-blur-md rounded-2xl animate-pulse border border-white/15 flex items-center justify-center">
+                <span className="text-[10px] text-amber-500 font-extrabold uppercase tracking-widest">Loading Search Panel...</span>
+              </div>
+            }>
+              <SearchWidget />
+            </Suspense>
           </div>
 
           {/* Stats — visible on all screens but compact on mobile */}
@@ -314,7 +321,7 @@ export default async function HomePage() {
                         >
                           {title}
                         </h3>
-                        <p className="text-stone-500 text-sm leading-relaxed font-light">{desc}</p>
+                        <p className="text-stone-600 text-sm leading-relaxed font-light">{desc}</p>
                       </div>
                     </div>
                   </div>
@@ -344,7 +351,7 @@ export default async function HomePage() {
                   </h2>
                   <div className="w-10 h-px bg-amber-500/60" />
                 </div>
-                <p className="text-stone-500 text-sm leading-relaxed max-w-sm">
+                <p className="text-stone-600 text-sm leading-relaxed max-w-sm">
                   Our most loved rooms, each designed with care for your comfort and relaxation.
                 </p>
               </div>
@@ -355,7 +362,7 @@ export default async function HomePage() {
                 {featuredRooms.map((room, idx) => (
                   <ScrollReveal key={room.id.toString()} delay={idx * 120}>
                     <RoomCard
-                      priority={idx === 0}
+                      priority={false}
                       room={{
                         id: room.id.toString(),
                         slug: room.slug,
@@ -413,7 +420,7 @@ export default async function HomePage() {
                 World-Class Amenities
               </h2>
               <div className="w-10 h-px bg-amber-500/60 mx-auto mb-5" />
-              <p className="text-stone-500 max-w-lg mx-auto text-sm leading-relaxed">
+              <p className="text-stone-600 max-w-lg mx-auto text-sm leading-relaxed">
                 Every detail has been thoughtfully curated to make your stay exceptional.
               </p>
             </ScrollReveal>
@@ -496,7 +503,7 @@ export default async function HomePage() {
                       >
                         {title}
                       </h3>
-                      <p className="text-stone-500 text-sm leading-relaxed">{desc}</p>
+                      <p className="text-stone-600 text-sm leading-relaxed">{desc}</p>
                     </div>
                   </div>
                 </ScrollReveal>
@@ -548,7 +555,7 @@ export default async function HomePage() {
               Ready for Your
               <em style={{ fontStyle: 'italic', color: 'var(--color-brand-gold)' }}> Perfect Stay?</em>
             </h2>
-            <p className="text-stone-500 mb-10 leading-relaxed text-sm sm:text-base max-w-xl mx-auto">
+            <p className="text-stone-600 mb-10 leading-relaxed text-sm sm:text-base max-w-xl mx-auto">
               Book your room today and experience the finest hospitality at Punnami Southern Residency.
             </p>
             <Link
