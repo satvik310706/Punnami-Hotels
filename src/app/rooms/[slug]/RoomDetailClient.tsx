@@ -54,12 +54,20 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
   const [adults, setAdults] = useState(1);
   const [childrenCount, setChildrenCount] = useState(0);
   const [showPassengerModal, setShowPassengerModal] = useState(false);
-  const roomsCount = useMemo(() => {
+  const minRoomsCount = useMemo(() => {
     const roomsForAdults = Math.ceil(adults / (room.capacityPerRoom || 3));
     const roomsForChildren = room.maxChildren > 0 ? Math.ceil(childrenCount / room.maxChildren) : 0;
     return Math.max(1, Math.max(roomsForAdults, roomsForChildren));
   }, [adults, childrenCount, room.capacityPerRoom, room.maxChildren]);
-  const rooms = roomsCount;
+
+  const [rooms, setRooms] = useState(1);
+
+  // Keep rooms updated to be at least minRoomsCount
+  useEffect(() => {
+    setRooms((v) => Math.max(v, minRoomsCount));
+  }, [minRoomsCount]);
+
+  const roomsCount = rooms;
 
   const [activeImg, setActiveImg] = useState(0);
   const [showGallery, setShowGallery] = useState(false);
@@ -364,6 +372,13 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
     }
   }, [maxAvailableForSelectedSlot, childrenCount, room.maxChildren]);
 
+  // Keep rooms capped by availability
+  useEffect(() => {
+    if (maxAvailableForSelectedSlot > 0 && rooms > maxAvailableForSelectedSlot) {
+      setRooms(maxAvailableForSelectedSlot);
+    }
+  }, [maxAvailableForSelectedSlot, rooms]);
+
   useEffect(() => {
     if (bookingError) {
       setBookingError('');
@@ -640,6 +655,30 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
                   <Plus className="h-4 w-4" />
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* Rooms Counter */}
+          <div>
+            <span className="block text-[10px] font-bold text-stone-400 uppercase mb-1.5">Rooms</span>
+            <div className={`flex items-center justify-between rounded-xl border border-stone-200 px-3 py-1.5 shadow-sm ${maxAvailableForSelectedSlot === 0 ? 'bg-stone-100 opacity-70' : 'bg-white'}`}>
+              <button
+                type="button"
+                disabled={maxAvailableForSelectedSlot === 0 || rooms <= minRoomsCount}
+                onClick={() => setRooms((v) => Math.max(minRoomsCount, v - 1))}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-stone-500 hover:text-amber-700 hover:bg-stone-50 active:scale-95 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Minus className="h-4 w-4" />
+              </button>
+              <span className="text-sm font-black text-stone-800">{rooms} {rooms === 1 ? 'Room' : 'Rooms'}</span>
+              <button
+                type="button"
+                disabled={maxAvailableForSelectedSlot === 0 || rooms >= maxAvailableForSelectedSlot}
+                onClick={() => setRooms((v) => Math.min(maxAvailableForSelectedSlot, v + 1))}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-stone-500 hover:text-amber-700 hover:bg-stone-50 active:scale-95 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
             </div>
           </div>
 
