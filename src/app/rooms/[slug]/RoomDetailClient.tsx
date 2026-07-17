@@ -6,8 +6,9 @@ import { useRouter } from 'next/navigation';
 import {
   Wifi, Wind, Car, Flame, Tv, UtensilsCrossed, CheckCircle2, Star, MapPin,
   Clock, Users, BedDouble, CalendarDays, ChevronLeft, ChevronRight, X,
-  ChevronDown, Shield, Sparkles, Minus, Plus, Calendar,
+  ChevronDown, Shield, Sparkles, Minus, Plus, Calendar, Loader2,
 } from 'lucide-react';
+import CouponPopup from '@/components/ui/CouponPopup';
 import { format, addDays, addMonths } from 'date-fns';
 import { getTodayIST, isAfter6amIST } from '@/lib/ist';
 import { calculateStayTotal, calculateGST, formatCurrency } from '@/lib/utils';
@@ -139,6 +140,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
   const [agentProfile, setAgentProfile] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
+  const [isAvailabilityLoaded, setIsAvailabilityLoaded] = useState(false);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -246,6 +248,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
           });
           return next;
         });
+        setIsAvailabilityLoaded(true);
       }
     } catch (e) {
       console.error('Failed to fetch room availability', e);
@@ -268,6 +271,19 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
     return () => clearInterval(interval);
   }, [room.id, room.slug]);
 
+  // Automatically fetch room availability when checkIn or checkOut dates change
+  useEffect(() => {
+    if (checkIn) {
+      fetchAvailability(format(checkIn, 'yyyy-MM'));
+    }
+  }, [checkIn, room.slug]);
+
+  useEffect(() => {
+    if (checkOut) {
+      fetchAvailability(format(checkOut, 'yyyy-MM'));
+    }
+  }, [checkOut, room.slug]);
+
   const currentSlot = slots[selectedSlotIndex] || slots[0];
 
   const availableDatesSet = useMemo(() => {
@@ -282,13 +298,13 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
       const key = keys[i];
       if (key.endsWith(suffix)) {
         const info = availability[key];
-        if (isAdmin || (!info.isClosed && (info.totalRooms - info.bookedRooms - info.reservedRooms) > 0)) {
+        if (!info.isClosed && (info.totalRooms - info.bookedRooms - info.reservedRooms) > 0) {
           available.add(key.slice(0, 10)); // Extract 'YYYY-MM-DD' directly using slice instead of split
         }
       }
     }
     return available;
-  }, [availability, currentSlot, isAdmin]);
+  }, [availability, currentSlot]);
 
   useEffect(() => {
     const prof = localStorage.getItem('punnami_agent_profile');
@@ -364,10 +380,6 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
       );
       const defaultCapacity = slotConfig?.totalRooms ?? slotConfig?.total_rooms ?? room.totalInventory ?? 5;
 
-      if (isAdmin) {
-        return 999;
-      }
-
       const current = new Date(checkIn.getTime());
       let limit = new Date(checkOut.getTime());
       if (checkIn.getTime() === checkOut.getTime()) {
@@ -397,7 +409,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
       }
       return Math.max(0, minCapacity);
     });
-  }, [checkIn, checkOut, slots, availability, room, isAdmin]);
+  }, [checkIn, checkOut, slots, availability, room]);
 
   const maxAvailableForSelectedSlot = useMemo(() => {
     return slotsAvailability[selectedSlotIndex] ?? 0;
@@ -429,6 +441,53 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
       setBookingError('');
     }
   }, [checkIn, checkOut, rooms, adults, childrenCount, selectedSlotIndex]);
+
+  // Coupon states & handlers
+  const [couponCode, setCouponCode] = useState('');
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountAmount: number } | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [couponSuccess, setCouponSuccess] = useState<string | null>(null);
+
+  const validateCoupon = async (code: string, currentSubtotal: number) => {
+    setValidatingCoupon(true);
+    setCouponError(null);
+    setCouponSuccess(null);
+    try {
+      const res = await fetch('/api/v1/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code,
+          bookingAmount: currentSubtotal,
+          targetId: room.id.toString(),
+          travelDate: format(checkIn, 'yyyy-MM-dd')
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.valid) {
+          setAppliedCoupon({
+            code,
+            discountAmount: data.discountAmount
+          });
+          setCouponSuccess(`Coupon applied! You saved ₹${data.discountAmount}`);
+        } else {
+          setAppliedCoupon(null);
+          setCouponError(data.reason || 'Invalid coupon');
+        }
+      } else {
+        setAppliedCoupon(null);
+        setCouponError('Invalid coupon');
+      }
+    } catch (err) {
+      console.error(err);
+      setAppliedCoupon(null);
+      setCouponError('Failed to validate coupon');
+    } finally {
+      setValidatingCoupon(false);
+    }
+  };
 
   const pricing = useMemo(() => {
     let subtotal = 0;
@@ -490,8 +549,10 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
       current.setDate(current.getDate() + 1);
     }
 
-    const gst = calculateGST(subtotal);
-    const gatewayFee = Math.round((subtotal + gst) * 0.01);
+    const couponDiscount = appliedCoupon ? appliedCoupon.discountAmount : 0;
+    const taxableSubtotal = Math.max(0, subtotal - couponDiscount);
+    const gst = calculateGST(taxableSubtotal);
+    const gatewayFee = Math.round((taxableSubtotal + gst) * 0.01);
 
     let agentDiscount = 0;
     if (agentProfile) {
@@ -500,15 +561,87 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
       if (agentProfile.commissionType === 'FIXED') {
         agentDiscount = fixed;
       } else {
-        agentDiscount = Math.round((subtotal * pct) / 100);
+        agentDiscount = Math.round((taxableSubtotal * pct) / 100);
       }
     }
 
-    const total = Math.max(0, subtotal + gst + gatewayFee - agentDiscount);
+    const total = Math.max(0, taxableSubtotal + gst + gatewayFee - agentDiscount);
     // Compute a representative per-room price for the label (average across nights, per room)
     const avgPricePerRoom = breakdown.length > 0 ? Math.round(pureBaseSubtotal / rooms / breakdown.length) : 0;
-    return { subtotal, pureBaseSubtotal, surgeSubtotal, discountSubtotal, gst, gatewayFee, total, nights: breakdown.length, breakdown, agentDiscount, avgPricePerRoom };
-  }, [checkIn, checkOut, rooms, room.weekdayPrice, room.weekendPrice, agentProfile, availability, selectedSlotIndex, slots]);
+    return { subtotal, pureBaseSubtotal, surgeSubtotal, discountSubtotal, gst, gatewayFee, total, nights: breakdown.length, breakdown, agentDiscount, avgPricePerRoom, couponDiscount };
+  }, [checkIn, checkOut, rooms, room.weekdayPrice, room.weekendPrice, agentProfile, availability, selectedSlotIndex, slots, appliedCoupon]);
+
+  const handleApplyCoupon = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!couponCode.trim()) return;
+    validateCoupon(couponCode.trim(), pricing?.subtotal || 0);
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
+    setCouponSuccess(null);
+    setCouponError(null);
+  };
+
+  // Re-validate coupon when booking configurations or dates change to prevent invalid discount application
+  useEffect(() => {
+    if (appliedCoupon) {
+      const revalidate = async () => {
+        try {
+          const res = await fetch('/api/v1/coupons/validate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              code: appliedCoupon.code,
+              bookingAmount: pricing.subtotal,
+              targetId: room.id.toString(),
+              travelDate: format(checkIn, 'yyyy-MM-dd')
+            })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.valid) {
+              setAppliedCoupon({
+                code: appliedCoupon.code,
+                discountAmount: data.discountAmount
+              });
+            } else {
+              setAppliedCoupon(null);
+              setCouponCode('');
+              setCouponSuccess(null);
+              setCouponError(data.reason || 'Coupon removed: no longer valid for selected stay details.');
+            }
+          }
+        } catch {
+          setAppliedCoupon(null);
+        }
+      };
+      revalidate();
+    }
+  }, [checkIn, checkOut, rooms, selectedSlotIndex]);
+
+  // Auto-fill and apply coupons when copied from Popup
+  useEffect(() => {
+    const handleApplyCouponEvent = (e: any) => {
+      const code = e.detail?.code;
+      if (code) {
+        setCouponCode(code);
+        validateCoupon(code, pricing?.subtotal || 0);
+      }
+    };
+    window.addEventListener('apply-coupon', handleApplyCouponEvent);
+    
+    // Also check localStorage in case it was copied before mounting
+    const pendingCode = localStorage.getItem('pending_coupon');
+    if (pendingCode) {
+      localStorage.removeItem('pending_coupon');
+      setCouponCode(pendingCode);
+      validateCoupon(pendingCode, pricing?.subtotal || 0);
+    }
+
+    return () => window.removeEventListener('apply-coupon', handleApplyCouponEvent);
+  }, [checkIn, pricing?.subtotal]);
 
   const executeCheckout = async (
     passengersList?: any[],
@@ -541,6 +674,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
           quickBooking: quickBookingVal,
           isAdmin,
           paymentPercentage,
+          couponCode: appliedCoupon ? appliedCoupon.code : null,
         }),
       });
       const data = await res.json();
@@ -640,7 +774,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
             }}
             options={slots.map((s, idx) => {
               const avail = slotsAvailability[idx] ?? 0;
-              const availText = avail === 0 ? 'Sold Out' : avail === 1 ? 'Only 1 Room Left!' : `${avail} Rooms Left`;
+              const availText = !isAvailabilityLoaded ? 'Checking...' : avail === 0 ? 'Sold Out' : avail === 1 ? 'Only 1 Room Left!' : `${avail} Rooms Left`;
               return {
                 value: idx,
                 label: `${s.title} (${formatSlotTime(s.slotStart)} - ${formatSlotTime(s.slotEnd)}) - ${availText}`,
@@ -650,8 +784,8 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
           />
         )}
 
-        {maxAvailableForSelectedSlot === 0 && slots.length > 0 && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-750 font-bold">
+        {isAvailabilityLoaded && maxAvailableForSelectedSlot === 0 && slots.length > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-750 font-bold animate-fade-in">
             ⚠️ Slot sold out or blocked on these dates. Please try another timing slot or check-in date.
           </div>
         )}
@@ -746,6 +880,43 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
           </div>
         </div>
 
+      {/* Coupon Section */}
+      {nights > 0 && (
+        <div className="pt-3 border-t border-stone-200">
+          <form onSubmit={handleApplyCoupon} className="flex flex-col gap-2 relative">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Have a promo code?"
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                disabled={validatingCoupon || !!appliedCoupon}
+                className="flex-1 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-xs font-bold uppercase tracking-wider text-stone-700 outline-none transition focus:border-amber-600 focus:bg-white disabled:opacity-60"
+              />
+              {appliedCoupon ? (
+                <button
+                  type="button"
+                  onClick={handleRemoveCoupon}
+                  className="flex items-center justify-center rounded-lg bg-red-50 px-3 py-2 text-xs font-black text-red-650 transition hover:bg-red-100 cursor-pointer"
+                >
+                  Remove
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={!couponCode || validatingCoupon}
+                  className="flex w-16 items-center justify-center rounded-lg bg-stone-900 px-3 py-2 text-xs font-black text-white transition hover:bg-stone-850 disabled:opacity-50 cursor-pointer"
+                >
+                  {validatingCoupon ? <Loader2 className="h-3 w-3 animate-spin mx-auto text-white" /> : 'Apply'}
+                </button>
+              )}
+            </div>
+            {couponError && <p className="text-[10px] font-bold text-red-500">{couponError}</p>}
+            {couponSuccess && <p className="text-[10px] font-bold text-green-650">{couponSuccess}</p>}
+          </form>
+        </div>
+      )}
+
       {/* Price Breakdown */}
       {nights > 0 && (
         <div className="bg-stone-50 rounded-xl p-4 space-y-2">
@@ -763,6 +934,12 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
             <div className="flex justify-between text-xs">
               <span className="text-stone-500">Special Discount</span>
               <span className="font-bold text-emerald-600">-₹{pricing.discountSubtotal.toLocaleString('en-IN')}</span>
+            </div>
+          )}
+          {pricing.couponDiscount > 0 && (
+            <div className="flex justify-between text-xs text-green-650 font-bold">
+              <span>Coupon Discount ({appliedCoupon?.code})</span>
+              <span>-{formatCurrency(pricing.couponDiscount)}</span>
             </div>
           )}
           <div className="flex justify-between text-xs">
@@ -1125,7 +1302,9 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
                 </div>
                 <div className="flex items-center gap-1.5 font-bold">
                   <BedDouble className="h-4 w-4 text-amber-600" />
-                  {maxAvailableForSelectedSlot === 0 ? (
+                  {!isAvailabilityLoaded ? (
+                    <span className="text-stone-400 font-semibold animate-pulse">Checking availability...</span>
+                  ) : maxAvailableForSelectedSlot === 0 ? (
                     <span className="text-red-600 font-extrabold uppercase">Sold Out</span>
                   ) : maxAvailableForSelectedSlot === 1 ? (
                     <span className="text-rose-600 font-black uppercase animate-pulse">🔥 Only 1 Room Left!</span>
@@ -1195,7 +1374,11 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
 
                         {/* Availability Pill */}
                         <div className="mb-2">
-                          {slotsAvailability[idx] === 0 ? (
+                          {!isAvailabilityLoaded ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-stone-150 text-stone-500 border border-stone-200 animate-pulse">
+                              Checking...
+                            </span>
+                          ) : slotsAvailability[idx] === 0 ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-red-50 text-red-700 border border-red-200">
                               Sold Out
                             </span>
@@ -1441,6 +1624,9 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
           <p className="text-stone-400 text-xs mt-2 font-semibold">Setting up secure checkout details. Please wait.</p>
         </div>
       )}
+
+      {/* Premium coupon popup */}
+      <CouponPopup targetId={room.id.toString()} checkInDate={checkIn} />
     </div>
   );
 }

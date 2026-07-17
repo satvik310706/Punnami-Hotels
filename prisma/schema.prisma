@@ -185,19 +185,22 @@ model Booking {
 }
 
 model Coupon {
-  id             BigInt    @id @default(autoincrement())
-  code           String    @unique
-  discountType   String    // PERCENTAGE | FIXED
-  discountValue  Decimal   @db.Decimal(12,2)
-  maxDiscount    Decimal?  @db.Decimal(12,2)
-  minBookingAmt  Decimal?  @db.Decimal(12,2)
-  usageLimit     Int?
-  usageCount     Int       @default(0)
-  validFrom      DateTime?
-  validUntil     DateTime?
-  isActive       Boolean   @default(true)
-  applicableTo   String    @default("ALL")
-  createdAt      DateTime  @default(now())
+  id                 BigInt    @id @default(autoincrement())
+  code               String    @unique
+  discountType       String    // PERCENTAGE | FLAT
+  discountValue      Decimal   @db.Decimal(12,2)
+  maxDiscount        Decimal?  @db.Decimal(12,2)
+  minBookingAmt      Decimal?  @db.Decimal(12,2)
+  usageLimit         Int?
+  usageCount         Int       @default(0)
+  validFrom          DateTime?
+  validUntil         DateTime?
+  isActive           Boolean   @default(true)
+  isWeekendOnly      Boolean   @default(false)
+  isWeekdayOnly      Boolean   @default(false)
+  applicableRoomIds  String?   // Comma-separated roomType IDs or null for ALL
+  createdAt          DateTime  @default(now())
+  deletedAt          DateTime?
 }
 
 model User {

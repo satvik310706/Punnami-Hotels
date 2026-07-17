@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { 
-  KeyRound, LayoutDashboard, Sliders, LogOut, Bed, Calendar, Users, Menu, X, AlertTriangle 
+  KeyRound, LayoutDashboard, Sliders, LogOut, Bed, Calendar, Users, Menu, X, AlertTriangle, Tag 
 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -77,7 +77,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/bookings', label: 'Bookings', icon: Calendar },
     { href: '/admin/cancellations', label: 'Cancellations', icon: AlertTriangle },
     { href: '/admin/postpones', label: 'Postponements', icon: Calendar },
-    { href: '/admin/agents', label: 'Travel Agents', icon: Users },
+    { href: '/admin/coupons', label: 'Coupons', icon: Tag },
   ];
 
   return (

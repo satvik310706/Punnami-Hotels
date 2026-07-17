@@ -146,7 +146,6 @@ export default function Footer() {
           </div>
           <div className="flex gap-4">
             <Link href="/admin" className="hover:text-amber-400 transition-colors">Admin Portal</Link>
-            <Link href="/agent/login" className="hover:text-amber-400 transition-colors">Agent Portal</Link>
           </div>
           {/* <p className="flex items-center gap-1">
             Made with <Heart className="h-3 w-3 fill-red-500 text-red-500 shrink-0" /> by{' '}

@@ -327,6 +327,74 @@ export async function POST(req: NextRequest) {
       let discountAmount = 0;
       let commissionVal = 0;
 
+      // Validate and apply coupon if provided
+      if (couponCode) {
+        const codeUpper = couponCode.toUpperCase().trim();
+        const coupon = await tx.coupon.findFirst({
+          where: {
+            code: codeUpper,
+            deletedAt: null,
+            isActive: true,
+          },
+        });
+
+        if (coupon) {
+          // Perform basic checks
+          const now = new Date();
+          let isCouponValid = true;
+          if (coupon.validFrom && new Date(coupon.validFrom) > now) isCouponValid = false;
+          if (coupon.validUntil) {
+            const validUntilDate = new Date(coupon.validUntil);
+            if (validUntilDate.getHours() === 0 && validUntilDate.getMinutes() === 0) {
+              validUntilDate.setHours(23, 59, 59, 999);
+            }
+            if (validUntilDate < now) isCouponValid = false;
+          }
+          if (coupon.usageLimit !== null && coupon.usageCount >= coupon.usageLimit) isCouponValid = false;
+          if (coupon.minBookingAmt !== null && subtotal < Number(coupon.minBookingAmt)) isCouponValid = false;
+
+          // Weekend/weekday check
+          if (isCouponValid) {
+            const dayOfWeek = checkIn.getDay(); // 0 = Sun, 6 = Sat, 1-5 = Mon-Fri
+            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+            if (coupon.isWeekendOnly && !isWeekend) isCouponValid = false;
+            if (coupon.isWeekdayOnly && isWeekend) isCouponValid = false;
+          }
+
+          // Room applicability check
+          if (isCouponValid && coupon.applicableRoomIds) {
+            const applicableIds = coupon.applicableRoomIds.split(',').map(id => id.trim());
+            if (!applicableIds.includes('ALL') && !applicableIds.includes(String(roomTypeId))) {
+              isCouponValid = false;
+            }
+          }
+
+          if (isCouponValid) {
+            const val = Number(coupon.discountValue);
+            if (coupon.discountType === 'FLAT') {
+              discountAmount = Math.min(val, subtotal);
+            } else if (coupon.discountType === 'PERCENTAGE') {
+              let pctDiscount = subtotal * (val / 100);
+              if (coupon.maxDiscount !== null) {
+                pctDiscount = Math.min(pctDiscount, Number(coupon.maxDiscount));
+              }
+              discountAmount = pctDiscount;
+            }
+            discountAmount = Math.round(discountAmount);
+
+            // Increment usage count of the coupon
+            await tx.coupon.update({
+              where: { id: coupon.id },
+              data: { usageCount: { increment: 1 } },
+            });
+          } else {
+            throw new Error('Provided coupon code criteria not met or coupon invalid');
+          }
+        } else {
+          throw new Error('Provided coupon code is not found or invalid');
+        }
+      }
+
       // Calculate agent commission if booked by active agent
       if (agentId) {
         const dbAgent = await tx.user.findUnique({ where: { id: agentId } });
