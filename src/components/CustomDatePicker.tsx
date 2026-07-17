@@ -120,7 +120,11 @@ export default function CustomDatePicker({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
               transition={{ duration: 0.15 }}
-              className="fixed inset-x-4 top-1/2 -translate-y-1/2 sm:absolute sm:top-full sm:left-1/2 sm:-translate-x-1/2 sm:translate-y-0 sm:mt-2 sm:inset-x-auto sm:w-[288px] bg-white rounded-2xl border border-stone-200 shadow-2xl p-4 z-[999]"
+              className={`fixed inset-x-4 top-1/2 -translate-y-1/2 sm:absolute sm:top-full sm:translate-y-0 sm:mt-2 sm:inset-x-auto sm:w-[288px] bg-white rounded-2xl border border-stone-200 shadow-2xl p-4 z-[999] ${
+                align === 'right' 
+                  ? 'sm:right-0 sm:left-auto sm:translate-x-0' 
+                  : 'sm:left-0 sm:right-auto sm:translate-x-0'
+              }`}
             >
             {/* Header */}
             <div className="flex items-center justify-between mb-4">

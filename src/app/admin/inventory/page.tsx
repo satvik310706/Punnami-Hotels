@@ -65,8 +65,8 @@ export default function AdminInventoryPage() {
   // Bulk modal state
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [bulkRoomId, setBulkRoomId] = useState('');
-  const [bulkSlotStart, setBulkSlotStart] = useState('12:00:00');
-  const [bulkSlotEnd, setBulkSlotEnd] = useState('11:00:00');
+  const [bulkSlotStart, setBulkSlotStart] = useState('ALL');
+  const [bulkSlotEnd, setBulkSlotEnd] = useState('ALL');
   const [bulkStartDate, setBulkStartDate] = useState<Date>(new Date());
   const [bulkEndDate, setBulkEndDate] = useState<Date>(new Date());
   const [bulkIsClosed, setBulkIsClosed] = useState(true);
@@ -266,7 +266,9 @@ export default function AdminInventoryPage() {
     const rt = roomTypes.find((r) => r.id === bulkRoomId);
     if (!rt) return [];
     
-    const combined: { title: string; slotStart: string; slotEnd: string }[] = [];
+    const combined: { title: string; slotStart: string; slotEnd: string }[] = [
+      { title: 'All Timing Slots', slotStart: 'ALL', slotEnd: 'ALL' }
+    ];
     const customSlots = rt.bookingSlots;
     if (Array.isArray(customSlots)) {
       customSlots.forEach((s: any) => {
@@ -773,8 +775,8 @@ export default function AdminInventoryPage() {
                   value={bulkRoomId}
                   onChange={(val) => {
                     setBulkRoomId(val);
-                    setBulkSlotStart('12:00:00');
-                    setBulkSlotEnd('11:00:00');
+                    setBulkSlotStart('ALL');
+                    setBulkSlotEnd('ALL');
                   }}
                   options={roomTypes.map(rt => ({ value: rt.id, label: rt.name }))}
                   label="Select Room Variant"
@@ -792,7 +794,7 @@ export default function AdminInventoryPage() {
                   }}
                   options={bulkRoomSlots.map((s) => ({
                     value: `${s.slotStart}_${s.slotEnd}`,
-                    label: `${s.title} (${s.slotStart.slice(0, 5)} - ${s.slotEnd.slice(0, 5)})`,
+                    label: s.slotStart === 'ALL' ? s.title : `${s.title} (${s.slotStart.slice(0, 5)} - ${s.slotEnd.slice(0, 5)})`,
                   }))}
                   label="Select Timing Slot"
                 />

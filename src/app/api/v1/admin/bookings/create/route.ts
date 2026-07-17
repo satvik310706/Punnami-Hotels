@@ -79,6 +79,11 @@ export async function POST(req: NextRequest) {
     const targetSlotEnd = normalizeTime(slotEnd);
     const isOvernight = targetSlotStart > targetSlotEnd;
 
+    const customSlots = (roomType.bookingSlots || []) as any[];
+    const slotConfig = customSlots.find(
+      (s) => normalizeTime(s.slotStart || s.slot_start) === targetSlotStart && normalizeTime(s.slotEnd || s.slot_end) === targetSlotEnd
+    );
+
     let limit = new Date(checkOut);
     if (checkIn.getTime() === checkOut.getTime()) {
       limit = addDays(checkIn, 1);
@@ -101,10 +106,6 @@ export async function POST(req: NextRequest) {
     for (const d of stayDates) {
       const isWeekendDay = d.getDay() === 0 || d.getDay() === 6;
       // Get base price for the slot or category
-      const customSlots = (roomType.bookingSlots || []) as any[];
-      const slotConfig = customSlots.find(
-        (s) => normalizeTime(s.slotStart || s.slot_start) === targetSlotStart && normalizeTime(s.slotEnd || s.slot_end) === targetSlotEnd
-      );
       const slotWeekdayPrice = slotConfig?.priceWeekday ?? slotConfig?.price_weekday ?? roomType.weekdayPrice;
       const slotWeekendPrice = slotConfig?.priceWeekend ?? slotConfig?.price_weekend ?? roomType.weekendPrice;
       const pricePerRoom = isWeekendDay ? Number(slotWeekendPrice) : Number(slotWeekdayPrice);
@@ -141,33 +142,26 @@ export async function POST(req: NextRequest) {
           },
         });
 
+        const defaultSlotCapacity = Number(slotConfig?.totalRooms ?? slotConfig?.total_rooms ?? roomType.totalInventory);
+
         if (inv) {
-          // If bookedRooms + newRooms exceeds totalRooms, scale up totalRooms (Admin direct bypass)
-          if (inv.bookedRooms + roomsCount > inv.totalRooms) {
-            await tx.roomInventory.update({
-              where: { id: inv.id },
-              data: {
-                totalRooms: inv.bookedRooms + inv.reservedRooms + roomsCount,
-                bookedRooms: { increment: roomsCount },
-              },
-            });
-          } else {
-            await tx.roomInventory.update({
-              where: { id: inv.id },
-              data: {
-                bookedRooms: { increment: roomsCount },
-              },
-            });
-          }
+          // Admin booking always adds capacity on top of existing capacity
+          await tx.roomInventory.update({
+            where: { id: inv.id },
+            data: {
+              totalRooms: { increment: roomsCount },
+              bookedRooms: { increment: roomsCount },
+            },
+          });
         } else {
-          // Create new inventory with scaled capacity
+          // Create new inventory with default capacity + admin rooms
           await tx.roomInventory.create({
             data: {
               roomTypeId: roomType.id,
               date: d,
               slotStart: targetSlotStart,
               slotEnd: targetSlotEnd,
-              totalRooms: roomsCount,
+              totalRooms: defaultSlotCapacity + roomsCount,
               bookedRooms: roomsCount,
               reservedRooms: 0,
               isClosed: false,

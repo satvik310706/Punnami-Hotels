@@ -28,6 +28,51 @@ function getFacilityIcon(name: string): React.ElementType {
   return FACILITY_ICONS[name.toLowerCase().trim()] || CheckCircle2;
 }
 
+function formatSlotTime(timeStr?: string | null, fallback: string = '12:00 PM') {
+  if (!timeStr) return fallback;
+  try {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) return fallback;
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 === 0 ? 12 : hours % 12;
+    const displayMinutes = minutes.toString().padStart(2, '0');
+    return `${displayHours}:${displayMinutes} ${period}`;
+  } catch {
+    return fallback;
+  }
+}
+
+// Time helper/normalizer (converts 12-hour AM/PM and other inputs to standard HH:mm:ss 24-hour time)
+const normalizeTime = (timeStr: string) => {
+  if (!timeStr) return '12:00:00';
+  
+  // Check if it already matches HH:mm:ss (24-hour format)
+  if (/^\d{2}:\d{2}:\d{2}$/.test(timeStr)) {
+    return timeStr;
+  }
+  
+  // Check if it is HH:mm (24-hour format)
+  if (/^\d{2}:\d{2}$/.test(timeStr)) {
+    return `${timeStr}:00`;
+  }
+
+  // Try to parse AM/PM format (e.g., "12:00 PM" or "11:00 AM")
+  const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (match) {
+    let hours = parseInt(match[1], 10);
+    const minutes = match[2];
+    const ampm = match[3].toUpperCase();
+
+    if (ampm === 'PM' && hours < 12) hours += 12;
+    if (ampm === 'AM' && hours === 12) hours = 0;
+
+    const paddedHours = hours.toString().padStart(2, '0');
+    return `${paddedHours}:${minutes}:00`;
+  }
+
+  return timeStr; // Fallback
+};
+
 interface RoomDetailClientProps {
   room: any;
   initialCheckIn?: string;
@@ -45,11 +90,19 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
   const initialDate = parsedInitialCheckIn && parsedInitialCheckIn >= earliestCheckIn ? parsedInitialCheckIn : earliestCheckIn;
 
   const [checkIn, setCheckIn] = useState<Date>(initialDate);
-  const [checkOut, setCheckOut] = useState<Date>(
-    initialCheckOut && new Date(initialCheckOut + 'T00:00:00') > initialDate 
+  const [checkOut, setCheckOut] = useState<Date>(() => {
+    const customSlots = room.bookingSlots || room.booking_slots;
+    const firstSlot = Array.isArray(customSlots) ? customSlots[0] : null;
+    const isOvernight = firstSlot 
+      ? (normalizeTime(firstSlot.slotStart || firstSlot.slot_start) > normalizeTime(firstSlot.slotEnd || firstSlot.slot_end) ||
+         (firstSlot.title || '').toLowerCase().includes('overnight') ||
+         (firstSlot.title || '').toLowerCase().includes('night') ||
+         (firstSlot.title || '').toLowerCase().includes('24'))
+      : true;
+    return initialCheckOut && new Date(initialCheckOut + 'T00:00:00') > initialDate 
       ? new Date(initialCheckOut + 'T00:00:00') 
-      : addDays(initialDate, 1)
-  );
+      : (isOvernight ? addDays(initialDate, 1) : initialDate);
+  });
   
   const [adults, setAdults] = useState(1);
   const [childrenCount, setChildrenCount] = useState(0);
@@ -124,36 +177,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
     checkSession();
   }, []);
 
-  // Time helper/normalizer (converts 12-hour AM/PM and other inputs to standard HH:mm:ss 24-hour time)
-  const normalizeTime = (timeStr: string) => {
-    if (!timeStr) return '12:00:00';
-    
-    // Check if it already matches HH:mm:ss (24-hour format)
-    if (/^\d{2}:\d{2}:\d{2}$/.test(timeStr)) {
-      return timeStr;
-    }
-    
-    // Check if it is HH:mm (24-hour format)
-    if (/^\d{2}:\d{2}$/.test(timeStr)) {
-      return `${timeStr}:00`;
-    }
 
-    // Try to parse AM/PM format (e.g., "12:00 PM" or "11:00 AM")
-    const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-    if (match) {
-      let hours = parseInt(match[1], 10);
-      const minutes = match[2];
-      const ampm = match[3].toUpperCase();
-
-      if (ampm === 'PM' && hours < 12) hours += 12;
-      if (ampm === 'AM' && hours === 12) hours = 0;
-
-      const paddedHours = hours.toString().padStart(2, '0');
-      return `${paddedHours}:${minutes}:00`;
-    }
-
-    return timeStr; // Fallback
-  };
 
   // Define Timing slots matching ts-tours
   const slots = useMemo(() => {
@@ -175,6 +199,27 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
   }, [room.bookingSlots, room.totalInventory]);
 
   const [selectedSlotIndex, setSelectedSlotIndex] = useState(0);
+
+  // Synchronize checkOut date when selectedSlotIndex or checkIn changes
+  useEffect(() => {
+    const targetSlot = slots[selectedSlotIndex];
+    if (!targetSlot) return;
+    const slotOvernight = 
+      normalizeTime(targetSlot.slotStart) > normalizeTime(targetSlot.slotEnd) ||
+      (targetSlot.title || '').toLowerCase().includes('overnight') ||
+      (targetSlot.title || '').toLowerCase().includes('night') ||
+      (targetSlot.title || '').toLowerCase().includes('24');
+      
+    if (slotOvernight) {
+      if (checkOut <= checkIn) {
+        setCheckOut(addDays(checkIn, 1));
+      }
+    } else {
+      if (checkOut.getTime() === addDays(checkIn, 1).getTime() || checkOut < checkIn) {
+        setCheckOut(checkIn);
+      }
+    }
+  }, [selectedSlotIndex, checkIn, slots]);
 
   // Real-time Availability & Price Overrides State mapped by date_slotStart_slotEnd
   const [availability, setAvailability] = useState<Record<string, { totalRooms: number; bookedRooms: number; reservedRooms: number; isClosed: boolean; priceOverride: number | null }>>({});
@@ -581,11 +626,16 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
               const idx = Number(val);
               setSelectedSlotIndex(idx);
               const targetSlot = slots[idx];
-              const slotOvernight = targetSlot ? normalizeTime(targetSlot.slotStart) > normalizeTime(targetSlot.slotEnd) : true;
+              const slotOvernight = targetSlot 
+                ? (normalizeTime(targetSlot.slotStart) > normalizeTime(targetSlot.slotEnd) ||
+                   (targetSlot.title || '').toLowerCase().includes('overnight') ||
+                   (targetSlot.title || '').toLowerCase().includes('night') ||
+                   (targetSlot.title || '').toLowerCase().includes('24'))
+                : true;
               if (slotOvernight) {
-                if (checkOut <= checkIn) setCheckOut(addDays(checkIn, 1));
+                setCheckOut(addDays(checkIn, 1));
               } else {
-                if (checkOut < checkIn) setCheckOut(checkIn);
+                setCheckOut(checkIn);
               }
             }}
             options={slots.map((s, idx) => {
@@ -593,7 +643,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
               const availText = avail === 0 ? 'Sold Out' : avail === 1 ? 'Only 1 Room Left!' : `${avail} Rooms Left`;
               return {
                 value: idx,
-                label: `${s.title} (${s.slotStart.slice(0, 5)} - ${s.slotEnd.slice(0, 5)}) - ${availText}`,
+                label: `${s.title} (${formatSlotTime(s.slotStart)} - ${formatSlotTime(s.slotEnd)}) - ${availText}`,
               };
             })}
             label="Timing Slot"
