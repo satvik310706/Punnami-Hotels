@@ -134,8 +134,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         },
       });
 
-      // If transitioning to CONFIRMED, assign sequenceId
-      if (newStatus === 'CONFIRMED' && previousStatus !== 'CONFIRMED') {
+      // If transitioning to CONFIRMED or PARTIAL_PAID, assign sequenceId
+      if (['CONFIRMED', 'PARTIAL_PAID'].includes(newStatus) && !['CONFIRMED', 'PARTIAL_PAID'].includes(previousStatus)) {
         await assignSequentialId(tx, booking.id);
       }
     });

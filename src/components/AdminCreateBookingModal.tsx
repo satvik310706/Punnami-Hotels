@@ -37,24 +37,11 @@ export default function AdminCreateBookingModal({ isOpen, onClose, onSuccess }: 
   const [guestEmail, setGuestEmail] = useState('');
   const [adultCount, setAdultCount] = useState(2);
   const [childCount, setChildCount] = useState(0);
+  const [manualRoomCount, setManualRoomCount] = useState(1);
   const [amountPaid, setAmountPaid] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BANK_TRANSFER' | 'UPI'>('CASH');
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchRooms();
-      setErrorMsg('');
-      setGuestName('');
-      setGuestPhone('');
-      setGuestEmail('');
-      setAdultCount(2);
-      setChildCount(0);
-      setAmountPaid('');
-      setPaymentMethod('CASH');
-    }
-  }, [isOpen]);
-
-  const fetchRooms = async () => {
+  async function fetchRooms() {
     setIsLoadingRooms(true);
     try {
       const res = await fetch('/api/v1/admin/rooms');
@@ -73,6 +60,23 @@ export default function AdminCreateBookingModal({ isOpen, onClose, onSuccess }: 
     }
   };
 
+  useEffect(() => {
+    if (isOpen) {
+      fetchRooms();
+      setErrorMsg('');
+      setGuestName('');
+      setGuestPhone('');
+      setGuestEmail('');
+      setAdultCount(2);
+      setChildCount(0);
+      setManualRoomCount(1);
+      setAmountPaid('');
+      setPaymentMethod('CASH');
+    }
+  }, [isOpen]);
+
+
+
   const selectedRoomType = useMemo(() => {
     return roomsList.find((r) => r.id === roomTypeId) || null;
   }, [roomTypeId, roomsList]);
@@ -81,6 +85,52 @@ export default function AdminCreateBookingModal({ isOpen, onClose, onSuccess }: 
     if (!selectedRoomType) return [];
     return selectedRoomType.bookingSlots || [];
   }, [selectedRoomType]);
+
+  const isOvernightSlot = (slot: { title?: string; slotStart?: string; slotEnd?: string; slot_start?: string; slot_end?: string }) => {
+    if (!slot) return false;
+    const start = slot.slotStart || slot.slot_start || '12:00:00';
+    const end = slot.slotEnd || slot.slot_end || '11:00:00';
+    const normalizeTime = (t: string) => {
+      const p = t.split(':');
+      if (p.length === 2) return `${t}:00`;
+      return t;
+    };
+    const sStart = normalizeTime(start);
+    const sEnd = normalizeTime(end);
+    return sStart > sEnd || 
+      (slot.title || '').toLowerCase().includes('overnight') || 
+      (slot.title || '').toLowerCase().includes('night') || 
+      (slot.title || '').toLowerCase().includes('24');
+  };
+
+  // Synchronize check-out date when timing slot or check-in date changes
+  useEffect(() => {
+    const currentSlot = slots[selectedSlotIndex];
+    if (!currentSlot) return;
+    const isOvernight = isOvernightSlot(currentSlot);
+
+    try {
+      const cIn = new Date(checkInDate + 'T00:00:00');
+      const cOut = new Date(checkOutDate + 'T00:00:00');
+
+      if (isOvernight) {
+        if (cOut <= cIn || isNaN(cOut.getTime())) {
+          const nextDay = new Date(cIn.getTime());
+          nextDay.setDate(nextDay.getDate() + 1);
+          setCheckOutDate(format(nextDay, 'yyyy-MM-dd'));
+        }
+      } else {
+        const tomorrow = new Date(cIn.getTime());
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        // If checkout is set to tomorrow (default) or is before check-in, set to same-day checkout for day stay
+        if (cOut < cIn || isNaN(cOut.getTime()) || cOut.getTime() === tomorrow.getTime()) {
+          setCheckOutDate(checkInDate);
+        }
+      }
+    } catch (err) {
+      console.error('Date sync error:', err);
+    }
+  }, [selectedSlotIndex, checkInDate, slots]);
 
   const pricingSummary = useMemo(() => {
     if (!selectedRoomType) return { subtotal: 0, gst: 0, total: 0, rooms: 0, nights: 0 };
@@ -108,7 +158,7 @@ export default function AdminCreateBookingModal({ isOpen, onClose, onSuccess }: 
       current.setDate(current.getDate() + 1);
     }
 
-    const requiredRooms = Math.max(1, Math.ceil(adultCount / (selectedRoomType.capacityPerRoom || 3)));
+    const requiredRooms = Math.max(1, manualRoomCount);
 
     let subtotal = 0;
     for (const d of stayDates) {
@@ -123,7 +173,7 @@ export default function AdminCreateBookingModal({ isOpen, onClose, onSuccess }: 
     const gatewayFee = Math.round((subtotal + gst) * 0.01);
     const total = subtotal + gst + gatewayFee;
     return { subtotal, gst, total, rooms: requiredRooms, nights: stayDates.length };
-  }, [selectedRoomType, checkInDate, checkOutDate, selectedSlotIndex, slots, adultCount]);
+  }, [selectedRoomType, checkInDate, checkOutDate, selectedSlotIndex, slots, adultCount, manualRoomCount]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,6 +203,7 @@ export default function AdminCreateBookingModal({ isOpen, onClose, onSuccess }: 
         slotEnd: slot ? slot.slotEnd : '11:00:00',
         adultCount,
         childCount,
+        roomCount: manualRoomCount,
         guestName: guestName.trim(),
         guestPhone: guestPhone.trim(),
         guestEmail: guestEmail.trim(),
@@ -333,28 +384,72 @@ export default function AdminCreateBookingModal({ isOpen, onClose, onSuccess }: 
           {/* Occupancy Counters */}
           <div className="space-y-4">
             <h4 className="text-[10px] font-black uppercase tracking-widest text-stone-400 border-b border-stone-100 pb-1">Stay Occupancy</h4>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <AdminSelect
-                  label="Adults"
-                  value={adultCount}
-                  onChange={(val) => setAdultCount(Number(val))}
-                  options={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20].map((num) => ({
-                    value: num,
-                    label: `${num} Adult${num > 1 ? 's' : ''}`,
-                  }))}
-                />
+                <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-2">Rooms</label>
+                <div className="flex items-center justify-between border-2 border-stone-200 rounded-2xl p-1 bg-stone-50">
+                  <button
+                    type="button"
+                    onClick={() => setManualRoomCount(Math.max(1, manualRoomCount - 1))}
+                    className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-stone-200 transition-colors text-stone-500 font-bold"
+                  >
+                    -
+                  </button>
+                  <span className="text-sm font-black text-stone-900">
+                    {manualRoomCount} Room{manualRoomCount > 1 ? 's' : ''}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setManualRoomCount(manualRoomCount + 1)}
+                    className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-stone-200 transition-colors text-stone-500 font-bold"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
               <div>
-                <AdminSelect
-                  label="Children (Ages 0-10)"
-                  value={childCount}
-                  onChange={(val) => setChildCount(Number(val))}
-                  options={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => ({
-                    value: num,
-                    label: `${num} Child${num > 1 ? 'ren' : ''}`,
-                  }))}
-                />
+                <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-2">Adults</label>
+                <div className="flex items-center justify-between border-2 border-stone-200 rounded-2xl p-1 bg-stone-50">
+                  <button
+                    type="button"
+                    onClick={() => setAdultCount(Math.max(1, adultCount - 1))}
+                    className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-stone-200 transition-colors text-stone-500 font-bold"
+                  >
+                    -
+                  </button>
+                  <span className="text-sm font-black text-stone-900">
+                    {adultCount} Adult{adultCount > 1 ? 's' : ''}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setAdultCount(adultCount + 1)}
+                    className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-stone-200 transition-colors text-stone-500 font-bold"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-2">Children (Ages 0-10)</label>
+                <div className="flex items-center justify-between border-2 border-stone-200 rounded-2xl p-1 bg-stone-50">
+                  <button
+                    type="button"
+                    onClick={() => setChildCount(Math.max(0, childCount - 1))}
+                    className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-stone-200 transition-colors text-stone-500 font-bold"
+                  >
+                    -
+                  </button>
+                  <span className="text-sm font-black text-stone-900">
+                    {childCount} Child{childCount !== 1 ? 'ren' : ''}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setChildCount(childCount + 1)}
+                    className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-stone-200 transition-colors text-stone-500 font-bold"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -366,7 +461,19 @@ export default function AdminCreateBookingModal({ isOpen, onClose, onSuccess }: 
             <div className="bg-stone-50 rounded-2xl p-4.5 space-y-2 text-xs font-semibold">
               <div className="flex justify-between text-stone-500">
                 <span>Calculated Nights & Room allocation:</span>
-                <span>{pricingSummary.nights} night{pricingSummary.nights > 1 ? 's' : ''} × {pricingSummary.rooms} room{pricingSummary.rooms > 1 ? 's' : ''}</span>
+                <span>{pricingSummary.nights} {checkInDate === checkOutDate ? 'day' : 'night'}{pricingSummary.nights > 1 ? 's' : ''} × {pricingSummary.rooms} room{pricingSummary.rooms > 1 ? 's' : ''}</span>
+              </div>
+              <div className="flex justify-between text-stone-500">
+                <span>Base Price (Subtotal):</span>
+                <span>₹{pricingSummary.subtotal.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="flex justify-between text-stone-500">
+                <span>Taxes & GST (5%):</span>
+                <span>₹{pricingSummary.gst.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="flex justify-between text-stone-500">
+                <span>Processing Fee (1%):</span>
+                <span>₹{(pricingSummary.total - pricingSummary.subtotal - pricingSummary.gst).toLocaleString('en-IN')}</span>
               </div>
               <div className="flex justify-between text-stone-900 font-bold border-t border-stone-200/50 pt-2 text-sm">
                 <span>Total Calculated Stay Price:</span>

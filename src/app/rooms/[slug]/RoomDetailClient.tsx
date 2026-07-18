@@ -329,7 +329,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
   }
 
   // ── Keyboard navigation for lightbox (needs galleries to be defined first) ──
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+   
   useEffect(() => {
     if (!showGallery) return;
     const n = galleries.length;
@@ -340,7 +340,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [showGallery, galleries.length]);
 
   // ── Touch / swipe helpers (also needs galleries) ───────────────────────────

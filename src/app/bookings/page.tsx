@@ -606,6 +606,10 @@ function BookingTicket({ booking, onRefresh }: { booking: BookingLookup; onRefre
                   <span>{booking.hotel.address}</span>
                 </div>
                 <div className="flex items-center gap-2 text-stone-600 font-semibold">
+                  <Hotel className="h-3.5 w-3.5 text-amber-600" />
+                  <span>GSTIN: 36AWFPN4986M2ZO</span>
+                </div>
+                <div className="flex items-center gap-2 text-stone-600 font-semibold">
                   <Clock className="h-3.5 w-3.5 text-amber-600" />
                   <span>Check-in from {formatSlotTime(booking.slotStart, '12:00 PM')} · Check-out by {formatSlotTime(booking.slotEnd, '11:00 AM')}</span>
                 </div>

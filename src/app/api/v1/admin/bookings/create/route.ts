@@ -3,6 +3,8 @@ import prisma from '@/lib/db';
 import { jwtVerify } from 'jose';
 import { assignSequentialId } from '@/lib/booking-sequence';
 import { format, addDays } from 'date-fns';
+import { sendRoomConfirmationSMS } from '@/lib/sms';
+import { sendBookingConfirmationEmail, sendAdminBookingConfirmationEmail } from '@/lib/zohoMail';
 
 function formatSlotTime(timeStr?: string | null, fallback: string = '12:00 PM') {
   if (!timeStr) return fallback;
@@ -49,6 +51,7 @@ export async function POST(req: NextRequest) {
       slotEnd,
       adultCount = 1,
       childCount = 0,
+      roomCount,
       guestName,
       guestPhone,
       guestEmail = '',
@@ -98,8 +101,10 @@ export async function POST(req: NextRequest) {
     }
     const totalNights = stayDates.length;
 
-    // Calculate required rooms based on passenger occupancy
-    const roomsCount = Math.max(1, Math.ceil(adultCount / (roomType.capacityPerRoom || 3)));
+    // Calculate required rooms based on manual input OR passenger occupancy
+    const roomsCount = roomCount && Number(roomCount) > 0
+      ? Number(roomCount)
+      : Math.max(1, Math.ceil(adultCount / (roomType.capacityPerRoom || 3)));
 
     // Calculate pricing (using base slot prices or room category prices)
     let subtotal = 0;
@@ -125,7 +130,7 @@ export async function POST(req: NextRequest) {
     const randomHex = Math.random().toString(36).substring(2, 7).toUpperCase();
     const publicId = `HTL-${dateStr}-${randomHex}`;
 
-    let createdBookingId: bigint;
+    let createdBookingId: bigint = 0n;
 
     // Run transaction
     await prisma.$transaction(async (tx) => {
@@ -220,10 +225,85 @@ export async function POST(req: NextRequest) {
       }
 
       // 4. Assign sequenceId
-      if (bookingStatus === 'CONFIRMED') {
+      if (bookingStatus === 'CONFIRMED' || bookingStatus === 'PARTIAL_PAID') {
         await assignSequentialId(tx, booking.id);
       }
     });
+
+    if (bookingStatus === 'CONFIRMED' || bookingStatus === 'PARTIAL_PAID') {
+      try {
+        const freshBooking = await prisma.booking.findUnique({
+          where: { id: createdBookingId },
+          include: { roomType: { include: { hotel: true } } }
+        });
+        
+        if (freshBooking) {
+          const displayId = freshBooking.sequenceId || freshBooking.publicId;
+          const hotel = freshBooking.roomType.hotel as { name: string };
+          const slotCheckInTime = formatSlotTime(freshBooking.slotStart, '12:00 PM');
+          const slotCheckOutTime = formatSlotTime(freshBooking.slotEnd, '11:00 AM');
+          
+          try {
+            await sendRoomConfirmationSMS({
+              customerName: freshBooking.guestName,
+              customerPhone: freshBooking.guestPhone,
+              publicId: displayId,
+              hotelName: hotel.name,
+              roomName: freshBooking.roomType.name,
+              checkInDate: format(freshBooking.checkInDate, 'dd MMM yyyy'),
+              checkInTime: slotCheckInTime,
+              checkOutDate: format(freshBooking.checkOutDate, 'dd MMM yyyy'),
+              checkOutTime: slotCheckOutTime,
+              paidAmount: `₹${Number(freshBooking.paidAmount || freshBooking.totalAmount).toLocaleString('en-IN')}`,
+              totalAmount: `₹${Number(freshBooking.totalAmount).toLocaleString('en-IN')}`,
+            });
+          } catch (smsErr) {
+            console.error('[Admin Direct Create] SMS send failed:', smsErr);
+          }
+          
+          try {
+            await sendBookingConfirmationEmail({
+              guestEmail: freshBooking.guestEmail,
+              guestName: freshBooking.guestName,
+              publicId: displayId,
+              roomName: freshBooking.roomType.name,
+              checkInDate: format(freshBooking.checkInDate, 'dd MMM yyyy'),
+              checkInTime: slotCheckInTime,
+              checkOutDate: format(freshBooking.checkOutDate, 'dd MMM yyyy'),
+              checkOutTime: slotCheckOutTime,
+              nights: freshBooking.totalNights,
+              rooms: freshBooking.roomsBooked,
+              paidAmount: (freshBooking.paidAmount || freshBooking.totalAmount).toString(),
+              totalAmount: freshBooking.totalAmount.toString(),
+            });
+          } catch (mailErr) {
+            console.error('[Admin Direct Create] Email send failed:', mailErr);
+          }
+          
+          try {
+            await sendAdminBookingConfirmationEmail({
+              publicId: displayId,
+              guestName: freshBooking.guestName,
+              guestPhone: freshBooking.guestPhone,
+              guestEmail: freshBooking.guestEmail,
+              roomName: freshBooking.roomType.name,
+              checkInDate: format(freshBooking.checkInDate, 'dd MMM yyyy'),
+              checkInTime: slotCheckInTime,
+              checkOutDate: format(freshBooking.checkOutDate, 'dd MMM yyyy'),
+              checkOutTime: slotCheckOutTime,
+              rooms: freshBooking.roomsBooked,
+              nights: freshBooking.totalNights,
+              paidAmount: (freshBooking.paidAmount || freshBooking.totalAmount).toString(),
+              totalAmount: freshBooking.totalAmount.toString(),
+            });
+          } catch (adminMailErr) {
+            console.error('[Admin Direct Create] Admin Email send failed:', adminMailErr);
+          }
+        }
+      } catch (notifyErr) {
+        console.error('[Admin Direct Create] Failed to fetch booking for notifications:', notifyErr);
+      }
+    }
 
     return NextResponse.json({ success: true, message: 'Booking created successfully', publicId });
   } catch (err: any) {

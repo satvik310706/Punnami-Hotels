@@ -201,7 +201,7 @@ function generateInvoiceHTML(booking: InvoiceDownloadProps['booking']): string {
   <div class="gold-bar"></div>
 
   <!-- Hotel Banner -->
-  <img class="banner" src="/hotel-banner.jpg" alt="Punnami Southern Residency" onerror="this.style.display='none'" />
+  <img class="banner" src="/hotel-banner.jpg?v=5" alt="Punnami Southern Residency" onerror="this.style.display='none'" />
 
   <!-- Header -->
   <div class="header">
@@ -234,7 +234,7 @@ function generateInvoiceHTML(booking: InvoiceDownloadProps['booking']): string {
     <div class="billing-col" style="text-align:right;">
       <div class="billing-label">Billed By (Hotel)</div>
       <div class="billing-name" style="font-size:13px;">Punnami Southern Residency</div>
-      <div class="billing-detail">GSTIN: Not Applicable</div>
+      <div class="billing-detail">GSTIN: 36AWFPN4986M2ZO</div>
       <div class="billing-detail">Bhadrachalam, Telangana</div>
     </div>
   </div>

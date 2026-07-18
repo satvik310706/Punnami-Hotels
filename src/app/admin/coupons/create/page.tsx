@@ -31,8 +31,8 @@ export default function CreateCouponPage() {
   
   // Date range toggles
   const [useDateRange, setUseDateRange] = useState(false);
-  const [validFrom, setValidFrom] = useState<Date>(new Date());
-  const [validUntil, setValidUntil] = useState<Date>(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
+  const [validFrom, setValidFrom] = useState<Date>(() => new Date());
+  const [validUntil, setValidUntil] = useState<Date>(() => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
 
   // Weekday / Weekend constraint
   const [isWeekendOnly, setIsWeekendOnly] = useState(false);

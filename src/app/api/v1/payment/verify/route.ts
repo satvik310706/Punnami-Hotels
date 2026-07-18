@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
 
         if (currentBooking && currentBooking.status !== 'CONFIRMED') {
           let targetStatus = currentBooking.status;
-          let updateData: any = { transactionId };
+          const updateData: any = { transactionId };
 
           if (currentBooking.status === 'PARTIAL_PAID') {
             targetStatus = 'CONFIRMED';

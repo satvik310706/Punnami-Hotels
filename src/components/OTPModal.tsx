@@ -18,18 +18,6 @@ export default function OTPModal({ phone, onSuccess, onClose }: OTPModalProps) {
   const [countdown, setCountdown] = useState(0);
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Send OTP on mount
-  useEffect(() => {
-    sendOTP();
-  }, []);
-
-  // Countdown timer
-  useEffect(() => {
-    if (countdown <= 0) return;
-    const timer = setInterval(() => setCountdown((c) => c - 1), 1000);
-    return () => clearInterval(timer);
-  }, [countdown]);
-
   async function sendOTP() {
     setSending(true);
     setError('');
@@ -53,6 +41,19 @@ export default function OTPModal({ phone, onSuccess, onClose }: OTPModalProps) {
       setSending(false);
     }
   }
+
+  // Send OTP on mount
+  useEffect(() => {
+    sendOTP();
+  }, []);
+
+  // Countdown timer
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const timer = setInterval(() => setCountdown((c) => c - 1), 1000);
+    return () => clearInterval(timer);
+  }, [countdown]);
+
 
   function handleInput(i: number, value: string) {
     if (!/^\d*$/.test(value)) return;

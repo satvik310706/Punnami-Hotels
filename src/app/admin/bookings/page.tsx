@@ -459,7 +459,9 @@ export default function AdminBookingsPage() {
             {/* Header */}
             <div className="bg-stone-900 px-6 py-5 text-white flex items-center justify-between shrink-0">
               <div>
-                <h3 className="text-lg font-bold" style={{ fontFamily: 'Georgia, serif' }}>Review Booking Ticket</h3>
+                <h3 className="text-lg font-bold" style={{ fontFamily: 'Georgia, serif' }}>
+                  Review Booking #{selectedBooking.sequenceId || selectedBooking.publicId}
+                </h3>
                 <p className="text-xs text-stone-400 mt-1">Audit guest payments and verification proofs</p>
               </div>
               <button 
@@ -529,11 +531,11 @@ export default function AdminBookingsPage() {
                                   <span>Payment #{idx + 1} (₹{p.amount.toLocaleString('en-IN')})</span>
                                   <span className="text-emerald-700 font-extrabold uppercase text-[9px]">✓ Success</span>
                                 </div>
-                                <div className="grid grid-cols-2 gap-y-0.5 text-[10px] text-stone-500 font-medium">
+                                <div className="grid grid-cols-[auto_1fr] gap-x-3 text-[10px] text-stone-500 font-medium">
                                   <div>Merchant Ref:</div>
-                                  <div className="text-stone-750 text-right font-mono truncate select-all">{p.merchantTransactionId}</div>
+                                  <div className="text-stone-750 text-right font-mono break-all select-all">{p.merchantTransactionId}</div>
                                   <div>Gateway Ref:</div>
-                                  <div className="text-stone-750 text-right font-mono truncate select-all">{p.gatewayTransactionId || '—'}</div>
+                                  <div className="text-stone-750 text-right font-mono break-all select-all">{p.gatewayTransactionId || '—'}</div>
                                   <div>Date:</div>
                                   <div className="text-stone-700 text-right">{format(new Date(p.createdAt), 'dd MMM yyyy, hh:mm a')}</div>
                                 </div>

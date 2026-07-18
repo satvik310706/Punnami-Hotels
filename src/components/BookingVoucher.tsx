@@ -405,7 +405,7 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
         {/* Hotel Banner Image — shown as full image, no crop */}
         <div className="w-full bg-stone-900 print-banner-container">
           <img
-            src="/hotel-banner.jpg"
+            src="/hotel-banner.jpg?v=5"
             alt="Punnami Southern Residency - Best Stay in Bhadrachalam"
             className="w-full block"
             style={{ display: 'block', width: '100%', height: 'auto' }}
@@ -433,6 +433,9 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
                   <p className="text-stone-500 text-xs mt-1.5 flex items-center gap-1 font-medium">
                     <MapPin className="h-3.5 w-3.5 text-amber-600 shrink-0" />
                     <span>Punnami southern residency, Shilpinagar, 10-1-34, Ramalayam Road, beside Kodanda, Bhadrachalam, BHADRACHALAM, Telangana 507111</span>
+                  </p>
+                  <p className="text-stone-400 text-[10px] mt-1 font-bold tracking-wide">
+                    GSTIN: <span className="text-stone-600 font-black">36AWFPN4986M2ZO</span>
                   </p>
                 </div>
               </div>
@@ -681,11 +684,11 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
                               <span>Payment #{idx + 1} ({formatCurrency(p.amount)})</span>
                               <span className="text-emerald-700 font-extrabold uppercase text-[9px]">✓ Success</span>
                             </div>
-                            <div className="grid grid-cols-2 gap-x-2 text-[10px] text-stone-500 font-medium">
+                            <div className="grid grid-cols-[auto_1fr] gap-x-3 text-[10px] text-stone-500 font-medium">
                               <div>Merchant Ref:</div>
-                              <div className="text-stone-750 text-right font-mono truncate select-all">{p.merchantTransactionId}</div>
+                              <div className="text-stone-750 text-right font-mono break-all select-all">{p.merchantTransactionId}</div>
                               <div>Gateway Ref:</div>
-                              <div className="text-stone-750 text-right font-mono truncate select-all">{p.gatewayTransactionId || '—'}</div>
+                              <div className="text-stone-750 text-right font-mono break-all select-all">{p.gatewayTransactionId || '—'}</div>
                               <div>Date:</div>
                               <div className="text-stone-700 text-right">{format(new Date(p.createdAt), 'dd MMM yyyy, hh:mm a')}</div>
                             </div>
