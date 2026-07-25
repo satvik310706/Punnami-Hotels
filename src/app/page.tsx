@@ -512,27 +512,10 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* ─── Guest Reviews ───────────────────────────────────────── */}
-        <section className="py-20 sm:py-28 border-t border-stone-100 bg-white overflow-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <ScrollReveal className="text-center mb-14 sm:mb-18">
-              <p
-                className="text-xs font-medium text-amber-600 uppercase mb-4"
-                style={{ letterSpacing: '0.22em' }}
-              >
-                Guest Experiences
-              </p>
-              <h2
-                className="text-stone-900 text-4xl md:text-5xl lg:text-6xl font-light leading-tight mb-3"
-                style={{ fontFamily: 'var(--font-cormorant), Georgia, serif', fontWeight: 300 }}
-              >
-                What Our Guests Say
-              </h2>
-              <div className="w-10 h-px bg-amber-500/60 mx-auto" />
-            </ScrollReveal>
-            <ReviewsCarousel />
-          </div>
-        </section>
+        {/* ─── Google Reviews + Map ────────────────────────────────── */}
+        <div className="border-t border-stone-100">
+          <ReviewsCarousel />
+        </div>
 
         {/* ─── CTA Banner ──────────────────────────────────────────── */}
         <section className="relative py-28 sm:py-36 overflow-hidden bg-stone-100 border-t border-stone-200/60">

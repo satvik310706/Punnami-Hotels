@@ -105,23 +105,26 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
       : (isOvernight ? addDays(initialDate, 1) : initialDate);
   });
   
-  const [adults, setAdults] = useState(1);
-  const [childrenCount, setChildrenCount] = useState(0);
   const [showPassengerModal, setShowPassengerModal] = useState(false);
-  const minRoomsCount = useMemo(() => {
-    const roomsForAdults = Math.ceil(adults / (room.capacityPerRoom || 3));
-    const roomsForChildren = room.maxChildren > 0 ? Math.ceil(childrenCount / room.maxChildren) : 0;
-    return Math.max(1, Math.max(roomsForAdults, roomsForChildren));
-  }, [adults, childrenCount, room.capacityPerRoom, room.maxChildren]);
-
   const [rooms, setRooms] = useState(1);
-
-  // Keep rooms updated to be at least minRoomsCount
-  useEffect(() => {
-    setRooms((v) => Math.max(v, minRoomsCount));
-  }, [minRoomsCount]);
-
   const roomsCount = rooms;
+
+  // Derive adults/children from rooms × room capacity (for API payload)
+  const adults = rooms * (room.capacityPerRoom || 3);
+  const childrenCount = rooms * (room.maxChildren || 0);
+
+  // Capacity popup — shown once on page load
+  const [showCapacityPopup, setShowCapacityPopup] = useState(false);
+  const [capacityPopupDismissed, setCapacityPopupDismissed] = useState(false);
+
+  useEffect(() => {
+    // Show popup shortly after page loads (not immediately — let things settle)
+    const timer = setTimeout(() => {
+      if (!capacityPopupDismissed) setShowCapacityPopup(true);
+    }, 600);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [activeImg, setActiveImg] = useState(0);
   const [showGallery, setShowGallery] = useState(false);
@@ -415,20 +418,6 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
     return slotsAvailability[selectedSlotIndex] ?? 0;
   }, [slotsAvailability, selectedSlotIndex]);
 
-  useEffect(() => {
-    const maxAdultsAllowed = maxAvailableForSelectedSlot * (room.maxAdults || room.capacityPerRoom || 3);
-    if (adults > maxAdultsAllowed && maxAvailableForSelectedSlot > 0) {
-      setAdults(maxAdultsAllowed);
-    }
-  }, [maxAvailableForSelectedSlot, adults, room.maxAdults, room.capacityPerRoom]);
-
-  useEffect(() => {
-    const maxChildrenAllowed = maxAvailableForSelectedSlot * (room.maxChildren || 2);
-    if (childrenCount > maxChildrenAllowed && maxAvailableForSelectedSlot > 0) {
-      setChildrenCount(maxChildrenAllowed);
-    }
-  }, [maxAvailableForSelectedSlot, childrenCount, room.maxChildren]);
-
   // Keep rooms capped by availability
   useEffect(() => {
     if (maxAvailableForSelectedSlot > 0 && rooms > maxAvailableForSelectedSlot) {
@@ -440,7 +429,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
     if (bookingError) {
       setBookingError('');
     }
-  }, [checkIn, checkOut, rooms, adults, childrenCount, selectedSlotIndex]);
+  }, [checkIn, checkOut, rooms, selectedSlotIndex]);
 
   // Coupon states & handlers
   const [couponCode, setCouponCode] = useState('');
@@ -790,91 +779,49 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
           </div>
         )}
 
-        {/* Guests Counters */}
+        {/* Rooms Counter */}
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            {/* Adults Counter */}
-            <div>
-              <span className="block text-[10px] font-bold text-stone-400 uppercase mb-1.5">Adults</span>
-              <div className={`flex items-center justify-between rounded-xl border border-stone-200 px-3 py-1.5 shadow-sm ${maxAvailableForSelectedSlot === 0 ? 'bg-stone-100 opacity-70' : 'bg-white'}`}>
-                <button
-                  type="button"
-                  disabled={maxAvailableForSelectedSlot === 0 || adults <= 1}
-                  onClick={() => setAdults((v) => Math.max(1, v - 1))}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-stone-500 hover:text-amber-700 hover:bg-stone-50 active:scale-95 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Minus className="h-4 w-4" />
-                </button>
-                <span className="text-sm font-black text-stone-800">{adults}</span>
-                <button
-                  type="button"
-                  disabled={maxAvailableForSelectedSlot === 0 || adults >= maxAvailableForSelectedSlot * (room.maxAdults || room.capacityPerRoom || 3)}
-                  onClick={() => setAdults((v) => Math.min(maxAvailableForSelectedSlot * (room.maxAdults || room.capacityPerRoom || 3), v + 1))}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-stone-500 hover:text-amber-700 hover:bg-stone-50 active:scale-95 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Children Counter */}
-            <div>
-              <span className="block text-[10px] font-bold text-stone-400 uppercase mb-1.5">Children (Ages 0 - 10)</span>
-              <div className={`flex items-center justify-between rounded-xl border border-stone-200 px-3 py-1.5 shadow-sm ${maxAvailableForSelectedSlot === 0 ? 'bg-stone-100 opacity-70' : 'bg-white'}`}>
-                <button
-                  type="button"
-                  disabled={maxAvailableForSelectedSlot === 0 || childrenCount <= 0}
-                  onClick={() => setChildrenCount((v) => Math.max(0, v - 1))}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-stone-500 hover:text-amber-700 hover:bg-stone-50 active:scale-95 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Minus className="h-4 w-4" />
-                </button>
-                <span className="text-sm font-black text-stone-800">{childrenCount}</span>
-                <button
-                  type="button"
-                  disabled={maxAvailableForSelectedSlot === 0 || childrenCount >= maxAvailableForSelectedSlot * (room.maxChildren || 2)}
-                  onClick={() => setChildrenCount((v) => Math.min(maxAvailableForSelectedSlot * (room.maxChildren || 2), v + 1))}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-stone-500 hover:text-amber-700 hover:bg-stone-50 active:scale-95 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Rooms Counter */}
           <div>
-            <span className="block text-[10px] font-bold text-stone-400 uppercase mb-1.5">Rooms</span>
-            <div className={`flex items-center justify-between rounded-xl border border-stone-200 px-3 py-1.5 shadow-sm ${maxAvailableForSelectedSlot === 0 ? 'bg-stone-100 opacity-70' : 'bg-white'}`}>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10px] font-bold text-stone-400 uppercase">Number of Rooms</span>
               <button
                 type="button"
-                disabled={maxAvailableForSelectedSlot === 0 || rooms <= minRoomsCount}
-                onClick={() => setRooms((v) => Math.max(minRoomsCount, v - 1))}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-stone-500 hover:text-amber-700 hover:bg-stone-50 active:scale-95 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => setShowCapacityPopup(true)}
+                className="flex items-center gap-1 text-[10px] font-bold text-amber-600 hover:text-amber-700 transition-colors cursor-pointer group"
+              >
+                <Users className="h-3 w-3" />
+                <span className="group-hover:underline">Room Capacity Info</span>
+              </button>
+            </div>
+            <div className={`flex items-center justify-between rounded-xl border border-stone-200 px-3 py-2 shadow-sm ${maxAvailableForSelectedSlot === 0 ? 'bg-stone-100 opacity-70' : 'bg-white'}`}>
+              <button
+                type="button"
+                disabled={maxAvailableForSelectedSlot === 0 || rooms <= 1}
+                onClick={() => setRooms((v) => Math.max(1, v - 1))}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-stone-500 hover:text-amber-700 hover:bg-amber-50 active:scale-95 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Minus className="h-4 w-4" />
               </button>
-              <span className="text-sm font-black text-stone-800">{rooms} {rooms === 1 ? 'Room' : 'Rooms'}</span>
+              <div className="text-center">
+                <span className="text-lg font-black text-stone-800">{rooms}</span>
+                <span className="text-xs font-bold text-stone-500 ml-1">{rooms === 1 ? 'Room' : 'Rooms'}</span>
+              </div>
               <button
                 type="button"
                 disabled={maxAvailableForSelectedSlot === 0 || rooms >= maxAvailableForSelectedSlot}
                 onClick={() => setRooms((v) => Math.min(maxAvailableForSelectedSlot, v + 1))}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-stone-500 hover:text-amber-700 hover:bg-stone-50 active:scale-95 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-stone-500 hover:text-amber-700 hover:bg-amber-50 active:scale-95 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Plus className="h-4 w-4" />
               </button>
             </div>
-          </div>
-
-          <div className="flex flex-col gap-1 text-[10px] font-bold mt-2 border-t border-stone-100 pt-2">
-            <div className="flex justify-between items-center">
-              <span className="text-stone-400 uppercase tracking-wider">Max Occupancy Per Room:</span>
-              <span className="text-stone-700 font-extrabold">{room.capacityPerRoom} Adults & {room.maxChildren} Child{room.maxChildren > 1 ? 'ren' : ''} (Ages 0-10)</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-stone-400 uppercase tracking-wider">Required Rooms:</span>
-              <span className="text-amber-750 font-extrabold uppercase">
-                {roomsCount} Room{roomsCount > 1 ? 's' : ''}
+            {/* Capacity hint below counter */}
+            <div className="mt-2 flex items-center gap-1.5 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1.5">
+              <span className="text-[10px] text-amber-800 font-bold leading-tight">
+                Each room fits up to <span className="text-amber-900 font-extrabold">{room.capacityPerRoom} adults</span>
+                {room.maxChildren > 0 && (
+                  <> &amp; <span className="text-amber-900 font-extrabold">{room.maxChildren} child{room.maxChildren > 1 ? 'ren' : ''}</span></>
+                )}
               </span>
             </div>
           </div>
@@ -1599,6 +1546,89 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
 
 
 
+      {/* ═══════════════════════════════════════════════════════
+          ROOM CAPACITY NOTE POPUP
+          ═══════════════════════════════════════════════════════ */}
+      {showCapacityPopup && (
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-stone-900/70 backdrop-blur-md animate-in fade-in duration-200">
+          {/* Backdrop click closes */}
+          <div className="absolute inset-0" onClick={() => { setShowCapacityPopup(false); setCapacityPopupDismissed(true); }} />
+          
+          <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden border border-amber-100 animate-in slide-in-from-bottom-4 duration-300">
+            {/* Top gradient accent */}
+            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600" />
+
+            {/* Close button */}
+            <button
+              type="button"
+              onClick={() => { setShowCapacityPopup(false); setCapacityPopupDismissed(true); }}
+              className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-700 transition-all cursor-pointer z-10"
+              aria-label="Close popup"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            {/* Content */}
+            <div className="p-7 pt-8">
+              {/* Icon */}
+              <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-amber-50 to-amber-100 rounded-2xl border border-amber-200 shadow-sm mb-5 mx-auto">
+                <BedDouble className="h-8 w-8 text-amber-600" />
+              </div>
+
+              {/* Heading */}
+              <h3
+                className="text-xl font-black text-stone-900 text-center mb-1"
+                style={{ fontFamily: 'var(--font-cormorant), Georgia, serif' }}
+              >
+                Room Capacity Guide
+              </h3>
+              <p className="text-xs text-stone-500 text-center font-semibold mb-5">
+                Please read before selecting rooms
+              </p>
+
+              {/* Capacity Cards */}
+              <div className="grid grid-cols-2 gap-3 mb-5">
+                {/* Adults */}
+                <div className="flex flex-col items-center bg-amber-50 border border-amber-100 rounded-2xl p-4">
+                  <Users className="h-6 w-6 text-amber-600 mb-2" />
+                  <span className="text-3xl font-black text-amber-700 leading-none">{room.capacityPerRoom}</span>
+                  <span className="text-[10px] font-extrabold text-amber-800 uppercase tracking-widest mt-1">Adults</span>
+                  <span className="text-[9px] text-amber-600 font-semibold mt-0.5">per room</span>
+                </div>
+                {/* Children */}
+                <div className="flex flex-col items-center bg-stone-50 border border-stone-150 rounded-2xl p-4">
+                  <span className="text-2xl mb-1">🧒</span>
+                  <span className="text-3xl font-black text-stone-700 leading-none">{room.maxChildren}</span>
+                  <span className="text-[10px] font-extrabold text-stone-600 uppercase tracking-widest mt-1">Children</span>
+                  <span className="text-[9px] text-stone-500 font-semibold mt-0.5">ages 0–10 / room</span>
+                </div>
+              </div>
+
+              {/* Note */}
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 mb-5">
+                <p className="text-xs text-amber-800 font-semibold leading-relaxed text-center">
+                  <span className="font-black text-amber-900">Each room</span> accommodates up to{' '}
+                  <span className="font-black text-amber-900">{room.capacityPerRoom} adult{room.capacityPerRoom > 1 ? 's' : ''}</span>
+                  {room.maxChildren > 0 && (
+                    <> and <span className="font-black text-amber-900">{room.maxChildren} child{room.maxChildren > 1 ? 'ren' : ''}</span> (ages 0–10)</>
+                  )}.{' '}
+                  Book the appropriate number of rooms for your group size.
+                </p>
+              </div>
+
+              {/* CTA */}
+              <button
+                type="button"
+                onClick={() => { setShowCapacityPopup(false); setCapacityPopupDismissed(true); }}
+                className="w-full bg-amber-600 hover:bg-amber-700 text-white font-black rounded-xl py-3.5 text-sm transition-all shadow-lg hover:shadow-amber-600/30 cursor-pointer active:scale-[0.98]"
+              >
+                Got it — Start Booking
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Checkout Passenger Modal */}
       <CheckoutPassengerModal
         isOpen={showPassengerModal}
@@ -1606,6 +1636,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
         onSubmit={handlePassengerSubmit}
         adults={adults}
         children={childrenCount}
+        rooms={rooms}
         isProcessing={bookingLoading}
         guestName={guestName}
         guestPhone={guestPhone}

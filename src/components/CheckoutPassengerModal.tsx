@@ -61,6 +61,7 @@ interface CheckoutPassengerModalProps {
   ) => Promise<void>;
   adults: number;
   children: number;
+  rooms: number;
   isProcessing: boolean;
   guestName?: string;
   guestPhone?: string;
@@ -74,13 +75,15 @@ export default function CheckoutPassengerModal({
   onSubmit,
   adults,
   children: childrenCount,
+  rooms,
   isProcessing,
   guestName = '',
   guestPhone = '',
   totalAmount,
   isAdmin = false,
 }: CheckoutPassengerModalProps) {
-  const totalGuests = adults + childrenCount;
+  // In rooms-based booking: one entry per room booked (primary contact per room)
+  const totalGuests = Math.max(1, rooms);
 
   const [leadName, setLeadName] = useState(guestName);
   const [leadPhone, setLeadPhone] = useState(guestPhone);
@@ -159,21 +162,11 @@ export default function CheckoutPassengerModal({
           isPrimary: true,
         }
       ];
-      // Generate placeholders for other guests
-      for (let i = 1; i < adults; i++) {
+      // Generate placeholders for other rooms
+      for (let i = 1; i < rooms; i++) {
         payload.push({
-          fullName: `Guest Adult ${i + 1}`,
+          fullName: `Guest for Room ${i + 1}`,
           age: 25,
-          gender: 'MALE',
-          phone: '',
-          aadhaar: '',
-          isPrimary: false,
-        });
-      }
-      for (let i = 0; i < childrenCount; i++) {
-        payload.push({
-          fullName: `Guest Child ${i + 1}`,
-          age: 6,
           gender: 'MALE',
           phone: '',
           aadhaar: '',
@@ -205,25 +198,19 @@ export default function CheckoutPassengerModal({
       return ageOk && genderOk && aadhaarOk;
     } else {
       return passengers.every((p, i) => {
-        const isChild = i >= adults;
-        // The first passenger name and phone are synced to leadName and leadPhone, so they are always ok
+        // The first passenger name and phone are synced to leadName and leadPhone
         const nameOk = i === 0 ? true : p.fullName.trim() !== '';
         
-        // Age validation
+        // Age validation — all entries in rooms-based mode are adults (primary contacts)
         let ageOk = false;
         if (typeof p.age === 'number') {
-          ageOk = isChild ? p.age <= 10 && p.age >= 0 : p.age >= 11;
+          ageOk = p.age >= 11;
         }
 
         const genderOk = p.gender !== '';
 
-        // Aadhaar validation: Mandatory for adults (>=11), optional for children (<=10)
-        let aadhaarOk = true;
-        if (!isChild) {
-          aadhaarOk = p.aadhaar.length === 12 && isValidAadhaar(p.aadhaar);
-        } else if (p.aadhaar.trim().length > 0) {
-          aadhaarOk = p.aadhaar.length === 12 && isValidAadhaar(p.aadhaar);
-        }
+        // Aadhaar validation: Mandatory for all primary contacts
+        const aadhaarOk = p.aadhaar.length === 12 && isValidAadhaar(p.aadhaar);
 
         // Phone validation: Mandatory for primary contact (index 0)
         let phoneOk = true;
@@ -248,7 +235,7 @@ export default function CheckoutPassengerModal({
             </div>
             <div>
               <h2 className="text-base font-black text-stone-900" style={{ fontFamily: 'Georgia, serif' }}>Guest Details Verification</h2>
-              <p className="text-xs font-semibold text-stone-500">Provide details for {totalGuests} guest(s).</p>
+              <p className="text-xs font-semibold text-stone-500">Provide details for {totalGuests} room{totalGuests > 1 ? 's' : ''} booked.</p>
             </div>
           </div>
           <button
@@ -298,7 +285,7 @@ export default function CheckoutPassengerModal({
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 flex gap-2 items-start">
                   <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
                   <p className="text-xs font-semibold text-amber-700 leading-relaxed">
-                    Quick Booking Mode: Provide details for the <strong>lead adult guest</strong>. Other stays will be generated under generic guest placeholders.
+                    Quick Booking Mode: Provide details for the <strong>primary lead guest</strong>. Other room entries will be generated as generic placeholders.
                   </p>
                 </div>
 
@@ -399,11 +386,10 @@ export default function CheckoutPassengerModal({
             ) : (
               <div className="space-y-5">
                 {passengers.map((p, idx) => {
-                  const isChild = idx >= adults;
                   return (
                     <div key={idx} className="rounded-xl border border-stone-250 bg-white p-5 space-y-4 hover:border-amber-500/30 transition-all shadow-sm">
-                      <p className="text-xs font-black text-amber-700 uppercase tracking-wider flex items-center justify-between">
-                        <span>{isChild ? `Child ${idx - adults + 1} Details` : `Adult ${idx + 1} Details`}</span>
+                    <p className="text-xs font-black text-amber-700 uppercase tracking-wider flex items-center justify-between">
+                        <span>{idx === 0 ? 'Primary Guest (Lead Contact)' : `Guest for Room ${idx + 1}`}</span>
                         {idx === 0 && <span className="rounded bg-amber-100 border border-amber-200 px-1.5 py-0.5 text-[9px] text-amber-700 font-bold uppercase">Primary Contact</span>}
                       </p>
 
@@ -461,18 +447,18 @@ export default function CheckoutPassengerModal({
                         )}
 
                         <div className="space-y-1">
-                          <label className="text-xs font-bold text-stone-655">{isChild ? 'Age (0 - 10) *' : 'Age (11+) *'}</label>
-                          <input
-                            type="number"
-                            required
-                            min={isChild ? 0 : 11}
-                            max={isChild ? 10 : 120}
-                            value={p.age}
-                            onChange={(e) => handleChange(idx, 'age', e.target.value === '' ? '' : parseInt(e.target.value))}
-                            className="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm font-semibold text-stone-855 outline-none focus:border-amber-500"
-                            placeholder="Age"
-                          />
-                        </div>
+                           <label className="text-xs font-bold text-stone-655">{`Age (11+) *`}</label>
+                           <input
+                             type="number"
+                             required
+                             min={11}
+                             max={120}
+                             value={p.age}
+                             onChange={(e) => handleChange(idx, 'age', e.target.value === '' ? '' : parseInt(e.target.value))}
+                             className="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm font-semibold text-stone-855 outline-none focus:border-amber-500"
+                             placeholder="Age (min 11)"
+                           />
+                         </div>
 
                         <div className="space-y-1">
                           <CustomSelect
@@ -488,28 +474,27 @@ export default function CheckoutPassengerModal({
                         </div>
 
                         <div className="space-y-1">
-                          <label className="text-xs font-bold text-stone-655 flex items-center gap-1.5">
-                            <span>Aadhaar Number</span>
-                            {isChild && <span className="text-[10px] text-stone-400 font-bold uppercase">(Optional)</span>}
-                          </label>
-                          <input
-                            type="text"
-                            required={!isChild}
-                            pattern="[0-9]{12}"
-                            title="12 digit Aadhaar number"
-                            value={p.aadhaar}
-                            onChange={(e) => handleChange(idx, 'aadhaar', e.target.value.replace(/\D/g, '').slice(0, 12))}
-                            className={`w-full rounded-lg border px-3 py-2.5 text-sm font-semibold text-stone-850 outline-none focus:border-amber-500 ${
-                              p.aadhaar.length === 12 && !isValidAadhaar(p.aadhaar)
-                                ? 'border-red-400 bg-red-50'
-                                : 'border-stone-300'
-                            }`}
-                            placeholder="12 digit number"
-                          />
-                          {p.aadhaar.length === 12 && !isValidAadhaar(p.aadhaar) && (
-                            <p className="text-[10px] font-bold text-red-650 mt-1">Checksum validation failed</p>
-                          )}
-                        </div>
+                           <label className="text-xs font-bold text-stone-655 flex items-center gap-1.5">
+                             <span>Aadhaar Number</span>
+                           </label>
+                           <input
+                             type="text"
+                             required
+                             pattern="[0-9]{12}"
+                             title="12 digit Aadhaar number"
+                             value={p.aadhaar}
+                             onChange={(e) => handleChange(idx, 'aadhaar', e.target.value.replace(/\D/g, '').slice(0, 12))}
+                             className={`w-full rounded-lg border px-3 py-2.5 text-sm font-semibold text-stone-850 outline-none focus:border-amber-500 ${
+                               p.aadhaar.length === 12 && !isValidAadhaar(p.aadhaar)
+                                 ? 'border-red-400 bg-red-50'
+                                 : 'border-stone-300'
+                             }`}
+                             placeholder="12 digit number"
+                           />
+                           {p.aadhaar.length === 12 && !isValidAadhaar(p.aadhaar) && (
+                             <p className="text-[10px] font-bold text-red-650 mt-1">Checksum validation failed</p>
+                           )}
+                         </div>
 
                         {idx > 0 && (
                           <div className="space-y-1">
