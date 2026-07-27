@@ -90,7 +90,7 @@ export default function Navbar() {
     : [
         { href: '/', label: 'Home' },
         { href: '/rooms', label: 'Rooms' },
-        { href: 'https://www.tsboattourism.org/boat-rides', label: 'Papikondalu' },
+        // { href: 'https://www.tsboattourism.org/boat-rides', label: 'Papikondalu' },
         { href: '/about', label: 'About' },
         { href: '/contact', label: 'Contact' },
       ];
