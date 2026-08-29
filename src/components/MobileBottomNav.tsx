@@ -1,7 +1,9 @@
 'use client';
  
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Home, Hotel, Ticket, Info, Star } from 'lucide-react';
+
 import { usePathname } from 'next/navigation';
  
 const NAV_ITEMS = [
@@ -14,15 +16,23 @@ const NAV_ITEMS = [
  
 export default function MobileBottomNav() {
   const pathname = usePathname();
- 
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
   // Hide on admin/agent routes
   if (pathname?.startsWith('/admin') || pathname?.startsWith('/agent')) return null;
- 
+
   // Hide on room details pages to prevent overlapping the sticky Book CTA bar
   if (pathname?.startsWith('/rooms/') && pathname.split('/').length > 2) return null;
- 
+
   return (
     <nav
+
       aria-label="Mobile navigation"
       className="mobile-bottom-nav print:hidden fixed bottom-0 left-0 right-0 z-50 md:hidden"
       style={{

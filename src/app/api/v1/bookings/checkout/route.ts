@@ -315,11 +315,22 @@ export async function POST(req: NextRequest) {
         const slotWeekdayPrice = slotConfig?.priceWeekday ?? slotConfig?.price_weekday ?? roomType.weekdayPrice;
         const slotWeekendPrice = slotConfig?.priceWeekend ?? slotConfig?.price_weekend ?? roomType.weekendPrice;
         const basePrice = isWeekendDay ? Number(slotWeekendPrice) : Number(slotWeekdayPrice);
-        const dayPrice = inv.priceOverride !== null && inv.priceOverride !== undefined
-          ? Number(inv.priceOverride)
-          : basePrice;
+
+        let dayPrice = basePrice;
+        if (inv.priceOverride !== null && inv.priceOverride !== undefined) {
+          const val = Number(inv.priceOverride);
+          if (val < 0) {
+            dayPrice = Math.max(0, basePrice + val);
+          } else if (val > 0 && val <= 1000) {
+            dayPrice = basePrice + val;
+          } else if (val > 1000) {
+            dayPrice = val;
+          }
+        }
+
 
         subtotal += dayPrice * rooms;
+
       }
 
       const nights = Math.max(1, dateRange.length);
@@ -416,7 +427,7 @@ export async function POST(req: NextRequest) {
 
       const expiresAt = isAdmin 
         ? new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours for admin
-        : new Date(Date.now() + 5 * 60 * 1000);     // 5 minutes for public online checkout
+        : new Date(Date.now() + 20 * 60 * 1000);     // 20 minutes for public (15 min PhonePe session + 5 min buffer)
       const publicId = generatePublicId();
 
       // Guest info is stored on the booking record itself — no user account created

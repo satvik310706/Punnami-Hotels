@@ -68,8 +68,8 @@ export default function PaymentPageClient({ bookingId, initialData }: PaymentPag
         console.error('Error polling payment status:', err);
       }
 
-      // Expiry fallback (timeout after 2 minutes)
-      if (attempts > 24) {
+      // Expiry fallback (timeout after 5 minutes — must exceed PhonePe's webhook delay)
+      if (attempts > 60) {
         clearInterval(interval);
         setStatus('failed');
       }
@@ -141,24 +141,30 @@ export default function PaymentPageClient({ bookingId, initialData }: PaymentPag
     );
   }
 
-  if (isExpired) {
+  if (isExpired && status !== 'verifying') {
     return (
       <div className="min-h-screen bg-stone-50 py-12 px-4 flex items-center justify-center">
-        <div className="max-w-md w-full bg-white rounded-3xl border border-red-200 p-8 shadow-xl text-center space-y-5">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
-            <AlertCircle className="h-8 w-8 text-red-500" />
+        <div className="max-w-md w-full bg-white rounded-3xl border border-amber-200 p-8 shadow-xl text-center space-y-5">
+          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto">
+            <AlertCircle className="h-8 w-8 text-amber-600" />
           </div>
           <h1 className="text-2xl font-bold text-stone-900" style={{ fontFamily: 'var(--font-cormorant), Georgia, serif' }}>
-            Reservation Expired
+            Hold Timer Expired
           </h1>
           <p className="text-stone-500 text-sm leading-relaxed">
-            Your 5-minute hold has expired and this reservation has been automatically released. Please go back and start a new booking.
+            The room hold has expired. If you already completed payment on PhonePe, your booking will still be confirmed automatically — please check your payment status.
           </p>
           <button
-            onClick={() => router.push('/rooms')}
-            className="w-full bg-amber-600 hover:bg-amber-700 text-white font-black rounded-2xl py-4 text-sm uppercase tracking-wider transition-all cursor-pointer"
+            onClick={() => setStatus('verifying')}
+            className="w-full bg-[#5f259f] hover:bg-[#4a1d7d] text-white font-black rounded-2xl py-4 text-sm uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2"
           >
-            Browse Rooms
+            <RefreshCw className="h-4 w-4" /> Check Payment Status
+          </button>
+          <button
+            onClick={() => router.push('/rooms')}
+            className="w-full bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold rounded-2xl py-3 text-sm transition-all cursor-pointer"
+          >
+            Browse Rooms Again
           </button>
         </div>
       </div>

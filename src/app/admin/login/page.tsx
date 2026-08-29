@@ -71,6 +71,22 @@ export default function AdminLoginPage() {
     }
   };
 
+  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasteData = e.clipboardData.getData('text/plain').replace(/\D/g, '').slice(0, 6);
+    if (!pasteData) return;
+
+    const newOtp = [...otp];
+    for (let i = 0; i < pasteData.length; i++) {
+      newOtp[i] = pasteData[i];
+    }
+    setOtp(newOtp);
+
+    // Focus the next empty input or the last one
+    const nextIndex = Math.min(pasteData.length, 5);
+    inputRefs.current[nextIndex]?.focus();
+  };
+
   const verifyOtp = async () => {
     const fullOtp = otp.join('');
     if (fullOtp.length !== 6) {
@@ -241,6 +257,7 @@ export default function AdminLoginPage() {
                       value={digit}
                       onChange={(e) => handleOtpChange(i, e.target.value)}
                       onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                      onPaste={handleOtpPaste}
                       className="h-14 w-12 rounded-2xl border border-white/10 bg-black/45 text-center text-2xl font-black text-white outline-none transition-all duration-300 focus:border-violet-400 focus:bg-black/60 focus:ring-4 focus:ring-violet-400/15 shadow-lg"
                     />
                   ))}

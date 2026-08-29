@@ -427,7 +427,7 @@ function BookingTicket({ booking, onRefresh }: { booking: BookingLookup; onRefre
   return (
     <>
       {/* ── Ticket Card ─────────────────────────────────────────────────────── */}
-      <div className="max-w-4xl mx-auto space-y-5">
+      <div className="max-w-6xl mx-auto space-y-5">
 
         {/* Header strip */}
         <div className="bg-stone-950 rounded-3xl p-5 sm:p-7 text-white relative overflow-hidden">
@@ -532,10 +532,10 @@ function BookingTicket({ booking, onRefresh }: { booking: BookingLookup; onRefre
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
 
           {/* ── Main ticket info ── */}
-          <div className="lg:col-span-2 space-y-5">
+          <div className="lg:col-span-3 space-y-5">
 
             {/* Guest & Passengers */}
             <div className="bg-white rounded-3xl p-6 border border-stone-100 shadow-sm">
@@ -679,7 +679,7 @@ function BookingTicket({ booking, onRefresh }: { booking: BookingLookup; onRefre
           </div>
 
           {/* ── Sidebar — Payment Summary ── */}
-          <div className="space-y-5">
+          <div className="space-y-5 lg:col-span-2">
             <div className="bg-white rounded-3xl p-6 border border-stone-100 shadow-sm">
               <h3 className="text-xs font-black text-stone-500 uppercase tracking-widest mb-4 flex items-center gap-2">
                 <CreditCard className="h-4 w-4" /> Payment Summary
@@ -932,7 +932,7 @@ export default function BookingsPage() {
       </div>
 
       {/* Results */}
-      <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Error */}
         {error && (
           <div className="max-w-lg mx-auto p-5 rounded-3xl bg-white border border-red-200 text-center shadow-sm">

@@ -14,15 +14,16 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
-  display: "optional",
+  display: "swap",
 });
 
 const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
-  display: "optional",
+  display: "swap",
 });
+
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://punnamihotels.com"),
@@ -148,8 +149,9 @@ export default function RootLayout({
   };
 
   return (
-    <html lang="en" suppressHydrationWarning className="scroll-smooth">
+    <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
       <head>
+
         <link rel="preconnect" href="https://res.cloudinary.com" />
         <link rel="dns-prefetch" href="https://res.cloudinary.com" />
         <link rel="preconnect" href="https://images.unsplash.com" crossOrigin="anonymous" />
@@ -161,17 +163,6 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                window.deferredPrompt = e;
-                window.dispatchEvent(new Event('deferredpromptavailable'));
-              });
-            `
-          }}
-        />
       </head>
       <body
         className={`${inter.variable} ${cormorant.variable} antialiased min-h-screen flex flex-col bg-stone-50 text-stone-900`}
@@ -179,11 +170,12 @@ export default function RootLayout({
       >
         <Navbar />
         <main className="flex-1 pb-16 md:pb-0">{children}</main>
-        <div className="print:hidden">
+        <div className="print:hidden" suppressHydrationWarning>
           <Footer />
           <WhatsAppFAB />
           <MobileBottomNav />
         </div>
+
         <InstallPromptModal />
         <Suspense fallback={null}>
           <NavigationLoader />

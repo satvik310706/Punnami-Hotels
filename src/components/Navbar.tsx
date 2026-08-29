@@ -30,8 +30,17 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Admin session check
+  // Admin session check — only runs if admin cookie or flag exists
   useEffect(() => {
+    // Fast local check first: don't make network requests for regular users
+    const hasAdminCookie = typeof document !== 'undefined' && document.cookie.includes('punnami_admin_token=');
+    const hasAdminLocal = typeof window !== 'undefined' && localStorage.getItem('punnami_admin_auth') === 'true';
+
+    if (!hasAdminCookie && !hasAdminLocal) {
+      setIsAdmin(false);
+      return;
+    }
+
     const check = async () => {
       try {
         const res = await fetch('/api/v1/auth/admin/me');
@@ -50,7 +59,8 @@ export default function Navbar() {
       }
     };
     check();
-  }, [pathname]);
+  }, []);
+
 
   // Lock body scroll when mobile menu is open — use data attribute to avoid hydration mismatch
   useEffect(() => {

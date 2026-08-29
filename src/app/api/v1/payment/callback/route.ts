@@ -139,13 +139,13 @@ export async function GET(req: NextRequest) {
       });
       const activeBooking = freshBooking || booking;
       const displayId = activeBooking.sequenceId || activeBooking.publicId;
-
-      // Send confirmation notifications (best-effort, non-blocking)
       const hotel = activeBooking.roomType.hotel as { name: string };
       const slotCheckInTime = formatSlotTime(activeBooking.slotStart, '12:00 PM');
       const slotCheckOutTime = formatSlotTime(activeBooking.slotEnd, '11:00 AM');
-      try {
-        await sendRoomConfirmationSMS({
+
+      // Fire all notifications non-blocking (no await) — redirect user immediately
+      Promise.all([
+        sendRoomConfirmationSMS({
           customerName: activeBooking.guestName,
           customerPhone: activeBooking.guestPhone,
           publicId: displayId,
@@ -157,12 +157,8 @@ export async function GET(req: NextRequest) {
           checkOutTime: slotCheckOutTime,
           paidAmount: `₹${Number(activeBooking.paidAmount || activeBooking.totalAmount).toLocaleString('en-IN')}`,
           totalAmount: `₹${Number(activeBooking.totalAmount).toLocaleString('en-IN')}`,
-        });
-      } catch (smsErr) {
-        console.error('[Callback Approve] SMS send failed:', smsErr);
-      }
-      try {
-        await sendBookingConfirmationEmail({
+        }).catch(e => console.error('[Callback GET] SMS failed:', e)),
+        sendBookingConfirmationEmail({
           guestEmail: activeBooking.guestEmail,
           guestName: activeBooking.guestName,
           publicId: displayId,
@@ -175,12 +171,8 @@ export async function GET(req: NextRequest) {
           rooms: activeBooking.roomsBooked,
           paidAmount: (activeBooking.paidAmount || activeBooking.totalAmount).toString(),
           totalAmount: activeBooking.totalAmount.toString(),
-        });
-      } catch (mailErr) {
-        console.error('[Callback Approve] Email send failed:', mailErr);
-      }
-      try {
-        await sendAdminBookingConfirmationEmail({
+        }).catch(e => console.error('[Callback GET] Email failed:', e)),
+        sendAdminBookingConfirmationEmail({
           guestName: activeBooking.guestName,
           guestEmail: activeBooking.guestEmail,
           guestPhone: activeBooking.guestPhone,
@@ -194,10 +186,8 @@ export async function GET(req: NextRequest) {
           rooms: activeBooking.roomsBooked,
           paidAmount: (activeBooking.paidAmount || activeBooking.totalAmount).toString(),
           totalAmount: activeBooking.totalAmount.toString(),
-        });
-      } catch (adminMailErr) {
-        console.error('[Callback Approve] Admin Email send failed:', adminMailErr);
-      }
+        }).catch(e => console.error('[Callback GET] Admin email failed:', e)),
+      ]);
 
       // Broadcast inventory updates to SSE clients
       const dateRange: Date[] = [];
@@ -371,7 +361,7 @@ export async function POST(req: NextRequest) {
         }
       });
 
-      // Send confirmation notifications (best-effort, non-blocking)
+      // Fetch fresh booking state for notifications
       const freshBooking = await prisma.booking.findUnique({
         where: { id: booking.id },
         include: { roomType: { include: { hotel: true } } }
@@ -381,8 +371,10 @@ export async function POST(req: NextRequest) {
       const hotel = activeBooking.roomType.hotel as { name: string };
       const slotCheckInTime = formatSlotTime(activeBooking.slotStart, '12:00 PM');
       const slotCheckOutTime = formatSlotTime(activeBooking.slotEnd, '11:00 AM');
-      try {
-        await sendRoomConfirmationSMS({
+
+      // Fire all notifications non-blocking (no await) — redirect user immediately
+      Promise.all([
+        sendRoomConfirmationSMS({
           customerName: activeBooking.guestName,
           customerPhone: activeBooking.guestPhone,
           publicId: displayId,
@@ -394,12 +386,8 @@ export async function POST(req: NextRequest) {
           checkOutTime: slotCheckOutTime,
           paidAmount: `₹${Number(activeBooking.paidAmount || activeBooking.totalAmount).toLocaleString('en-IN')}`,
           totalAmount: `₹${Number(activeBooking.totalAmount).toLocaleString('en-IN')}`,
-        });
-      } catch (smsErr) {
-        console.error('[Callback Approve] SMS send failed:', smsErr);
-      }
-      try {
-        await sendBookingConfirmationEmail({
+        }).catch(e => console.error('[Callback POST] SMS failed:', e)),
+        sendBookingConfirmationEmail({
           guestEmail: activeBooking.guestEmail,
           guestName: activeBooking.guestName,
           publicId: displayId,
@@ -412,12 +400,8 @@ export async function POST(req: NextRequest) {
           rooms: activeBooking.roomsBooked,
           paidAmount: (activeBooking.paidAmount || activeBooking.totalAmount).toString(),
           totalAmount: activeBooking.totalAmount.toString(),
-        });
-      } catch (mailErr) {
-        console.error('[Callback Approve] Email send failed:', mailErr);
-      }
-      try {
-        await sendAdminBookingConfirmationEmail({
+        }).catch(e => console.error('[Callback POST] Email failed:', e)),
+        sendAdminBookingConfirmationEmail({
           guestName: activeBooking.guestName,
           guestEmail: activeBooking.guestEmail,
           guestPhone: activeBooking.guestPhone,
@@ -431,10 +415,8 @@ export async function POST(req: NextRequest) {
           rooms: activeBooking.roomsBooked,
           paidAmount: (activeBooking.paidAmount || activeBooking.totalAmount).toString(),
           totalAmount: activeBooking.totalAmount.toString(),
-        });
-      } catch (adminMailErr) {
-        console.error('[Callback Approve] Admin Email send failed:', adminMailErr);
-      }
+        }).catch(e => console.error('[Callback POST] Admin email failed:', e)),
+      ]);
 
       // Broadcast inventory updates to SSE clients
       const dateRange: Date[] = [];

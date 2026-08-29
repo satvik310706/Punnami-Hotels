@@ -517,8 +517,23 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
       const slotWeekdayPrice = slot?.priceWeekday ?? room.weekdayPrice;
       const slotWeekendPrice = slot?.priceWeekend ?? room.weekendPrice;
       const basePrice = isWeekendDay ? Number(slotWeekendPrice) : Number(slotWeekdayPrice);
-      // If inventory has an admin price override, use that; otherwise use slot/category base price
-      const pricePerRoom = inv && inv.priceOverride !== null && inv.priceOverride !== undefined ? Number(inv.priceOverride) : basePrice;
+      // If inventory has an admin price adjustment, compute effective price (supports +surge and -discount deltas or explicit overrides)
+      let pricePerRoom = basePrice;
+      if (inv && inv.priceOverride !== null && inv.priceOverride !== undefined) {
+        const val = Number(inv.priceOverride);
+        if (val < 0) {
+          // Negative value represents discount delta (e.g. -100 means -₹100 discount, capped at base price)
+          pricePerRoom = Math.max(0, basePrice + val);
+        } else if (val > 0 && val <= 1000) {
+          // Positive value up to 1000 represents surge delta (e.g. +100 means +₹100 surge)
+          pricePerRoom = basePrice + val;
+        } else if (val > 1000) {
+          // Values > 1000 represent explicit room price override (e.g. ₹2,500)
+          pricePerRoom = val;
+        }
+      }
+
+
 
       breakdown.push({
         date: dateStr,

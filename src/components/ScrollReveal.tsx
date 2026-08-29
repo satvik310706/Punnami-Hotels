@@ -42,17 +42,17 @@ export default function ScrollReveal({
   return (
     <div
       ref={ref}
-      className={`transition-all duration-1000 ${
+      className={`transition-[opacity,transform] duration-700 ease-out will-change-[opacity,transform] transform-gpu ${
         isVisible
-          ? 'opacity-100 translate-y-0 scale-100 blur-0'
-          : 'opacity-0 translate-y-8 scale-[0.97] blur-[2px]'
+          ? 'opacity-100 translate-y-0'
+          : 'opacity-0 translate-y-6'
       } ${className}`}
       style={{
         transitionDelay: `${delay}ms`,
-        transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
       }}
     >
       {children}
     </div>
   );
 }
+

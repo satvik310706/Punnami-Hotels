@@ -30,20 +30,27 @@ export async function POST(req: NextRequest) {
     }
     const amountInPaise = Math.round(paymentAmount * 100);
     const merchantTransactionId = `TXN-PUN-${booking.publicId}-${Date.now()}`;
-    const originUrl = req.headers.get('origin') || new URL(req.url).origin;
-    const appUrl = originUrl.includes('localhost') ? originUrl : (process.env.NEXT_PUBLIC_SITE_URL || originUrl);
+    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.punnamihotels.com').replace(/\/+$/, '');
+    const redirectUrl = `${siteUrl}/api/v1/payment/callback?bookingId=${booking.publicId}`;
 
     const client = getPhonePeClient();
-    const userPhone = booking.guestPhone?.replace(/[^0-9]/g, '').slice(-10) || '9999999999';
+    const userPhone = booking.guestPhone?.replace(/[^0-9]/g, '').slice(-10);
+    const isValidPhone = userPhone && /^[6-9]\d{9}$/.test(userPhone);
 
-    const prefillDetails = PrefillUserLoginDetails.builder().phoneNumber(userPhone).build();
-    const payRequest = StandardCheckoutPayRequest.builder()
+    const builder = StandardCheckoutPayRequest.builder()
       .merchantOrderId(merchantTransactionId)
       .amount(amountInPaise)
-      .redirectUrl(`${appUrl}/api/v1/payment/callback?bookingId=${booking.publicId}`)
-      .prefillUserLoginDetails(prefillDetails)
-      .expireAfter(900) // 15 minutes timeout (inactivity lock protection)
-      .build();
+      .redirectUrl(redirectUrl)
+      .expireAfter(900); // 15 minutes timeout
+
+
+    if (isValidPhone) {
+      const prefillDetails = PrefillUserLoginDetails.builder().phoneNumber(userPhone).build();
+      builder.prefillUserLoginDetails(prefillDetails);
+    }
+
+    const payRequest = builder.build();
+
 
     const result = await client.pay(payRequest);
 

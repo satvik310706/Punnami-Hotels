@@ -670,8 +670,18 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
                   )}
 
                   <div className="border-t border-stone-200 pt-3 flex justify-between items-center">
-                    <span className="font-extrabold text-stone-900 text-sm">Paid Total Amount</span>
-                    <span className="font-black text-amber-700 text-xl">{formatCurrency(booking.totalAmount)}</span>
+                    <span className="font-extrabold text-stone-900 text-sm">
+                      {booking.paidAmount && booking.paidAmount < booking.totalAmount
+                        ? 'Advance Paid'
+                        : 'Total Amount Paid'}
+                    </span>
+                    <span className="font-black text-amber-700 text-xl">
+                      {formatCurrency(
+                        booking.paidAmount && booking.paidAmount < booking.totalAmount
+                          ? booking.paidAmount
+                          : booking.totalAmount
+                      )}
+                    </span>
                   </div>
 
                    {booking.completedPayments && booking.completedPayments.length > 0 ? (

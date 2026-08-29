@@ -84,6 +84,11 @@
   * {
     @apply border-border;
   }
+  html {
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
   body {
     @apply bg-background text-foreground font-sans antialiased selection:bg-brand-gold selection:text-white;
   }
@@ -94,6 +99,7 @@
     cursor: pointer;
   }
 }
+
 
 @layer utilities {
   .render-optimized {

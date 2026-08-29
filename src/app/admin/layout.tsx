@@ -18,12 +18,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const isLoginPage = pathname === '/admin/login';
 
   useEffect(() => {
+    if (isLoginPage) {
+      setCheckingAuth(false);
+      return;
+    }
+
+    // If already verified as authenticated in state, avoid re-triggering full-screen loading on tab switches
+    if (isAuthenticated) {
+      setCheckingAuth(false);
+      return;
+    }
+
     const verifySession = async () => {
       try {
         const res = await fetch('/api/v1/auth/admin/me');
         if (res.ok) {
           const data = await res.json();
-          setIsAuthenticated(true);
+          if (data.authenticated) {
+            setIsAuthenticated(true);
+          } else {
+            router.push('/admin/login');
+          }
         } else {
           router.push('/admin/login');
         }
@@ -34,7 +49,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       }
     };
     verifySession();
-  }, [pathname, isLoginPage, router]);
+  }, [isLoginPage, isAuthenticated, router]);
+
 
   const handleLogout = async () => {
     try {
