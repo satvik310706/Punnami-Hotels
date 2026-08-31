@@ -500,55 +500,64 @@ export default function BookingVoucher({ booking }: BookingVoucherProps) {
             </div>
 
             {/* Check-In & Check-Out Card */}
-            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6 border-b border-stone-150">
-              <div className="bg-stone-50/50 border border-stone-200 rounded-2xl p-5 flex items-start gap-4">
-                <div className="w-10 h-10 bg-amber-600/10 text-amber-700 rounded-xl flex items-center justify-center shrink-0 print:border print:border-amber-100">
-                  <Calendar className="h-5 w-5" />
+            <div className="px-8 pt-6 pb-6 grid grid-cols-2 gap-4 border-b border-stone-150">
+              {/* Check-In */}
+              <div className="bg-stone-50/50 border border-stone-200 rounded-2xl px-5 py-4 flex items-center gap-3">
+                <div className="w-8 h-8 bg-amber-600/10 text-amber-700 rounded-xl flex items-center justify-center shrink-0">
+                  <Calendar className="h-4 w-4" />
                 </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-wider text-stone-400 mb-0.5">Check-In Date & Time</p>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1"
+                     style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif' }}>Check-In</p>
                   {booking.status === 'POSTPONED' && booking.originalCheckInDate ? (
                     <>
-                      <p className="text-stone-400 line-through text-xs font-semibold">
-                        {format(new Date(booking.originalCheckInDate), 'dd MMMM yyyy')} @ {checkInTime}
+                      <p className="text-stone-400 line-through text-[11px] font-semibold truncate"
+                         style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif' }}>
+                        {format(new Date(booking.originalCheckInDate), 'dd MMM yyyy')} · {checkInTime}
                       </p>
-                      <h4 className="font-black text-amber-700 text-base leading-tight">
-                        {checkInDateFormatted} @ {checkInTime}
-                      </h4>
-                      <p className="text-[10px] font-bold text-amber-600 mt-0.5">↑ Rescheduled Date & Time</p>
+                      <p className="font-extrabold text-amber-700 text-sm truncate"
+                         style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif' }}>
+                        {checkInDateFormatted} <span className="text-amber-600 font-semibold">· {checkInTime}</span>
+                      </p>
                     </>
                   ) : (
-                    <h4 className="font-black text-stone-800 text-base leading-tight">
-                      {checkInDateFormatted} <span className="text-amber-700 font-extrabold">@ {checkInTime}</span>
-                    </h4>
+                    <p className="font-extrabold text-stone-850 text-sm truncate"
+                       style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif' }}>
+                      {checkInDateFormatted} <span className="text-amber-700 font-semibold">· {checkInTime}</span>
+                    </p>
                   )}
                 </div>
               </div>
 
-              <div className="bg-stone-50/50 border border-stone-200 rounded-2xl p-5 flex items-start gap-4">
-                <div className="w-10 h-10 bg-amber-600/10 text-amber-700 rounded-xl flex items-center justify-center shrink-0 print:border print:border-amber-100">
-                  <Calendar className="h-5 w-5" />
+              {/* Check-Out */}
+              <div className="bg-stone-50/50 border border-stone-200 rounded-2xl px-5 py-4 flex items-center gap-3">
+                <div className="w-8 h-8 bg-amber-600/10 text-amber-700 rounded-xl flex items-center justify-center shrink-0">
+                  <Calendar className="h-4 w-4" />
                 </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-wider text-stone-400 mb-0.5">Check-Out Date & Time</p>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1"
+                     style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif' }}>Check-Out</p>
                   {booking.status === 'POSTPONED' && booking.originalCheckOutDate ? (
                     <>
-                      <p className="text-stone-400 line-through text-xs font-semibold">
-                        {format(new Date(booking.originalCheckOutDate), 'dd MMMM yyyy')} @ {checkOutTime}
+                      <p className="text-stone-400 line-through text-[11px] font-semibold truncate"
+                         style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif' }}>
+                        {format(new Date(booking.originalCheckOutDate), 'dd MMM yyyy')} · {checkOutTime}
                       </p>
-                      <h4 className="font-black text-amber-700 text-base leading-tight">
-                        {checkOutDateFormatted} @ {checkOutTime}
-                      </h4>
-                      <p className="text-[10px] font-bold text-amber-600 mt-0.5">↑ Rescheduled Date & Time</p>
+                      <p className="font-extrabold text-amber-700 text-sm truncate"
+                         style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif' }}>
+                        {checkOutDateFormatted} <span className="text-amber-600 font-semibold">· {checkOutTime}</span>
+                      </p>
                     </>
                   ) : (
-                    <h4 className="font-black text-stone-800 text-base leading-tight">
-                      {checkOutDateFormatted} <span className="text-amber-700 font-extrabold">@ {checkOutTime}</span>
-                    </h4>
+                    <p className="font-extrabold text-stone-850 text-sm truncate"
+                       style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif' }}>
+                      {checkOutDateFormatted} <span className="text-amber-700 font-semibold">· {checkOutTime}</span>
+                    </p>
                   )}
                 </div>
               </div>
             </div>
+
 
             {/* Office Location & Key Pickup Card */}
             <div className="mx-8 mb-4 mt-2 bg-gradient-to-br from-amber-50/70 to-stone-50 border border-amber-200 rounded-2xl p-6 shadow-sm print-card">
