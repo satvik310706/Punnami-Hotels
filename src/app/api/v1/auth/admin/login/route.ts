@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendOtpEmail } from '@/lib/zohoMail';
-
-// Global memory store for admin OTP code
-const globalAny = global as any;
-if (!globalAny._punnamiAdminOtpStore) {
-  globalAny._punnamiAdminOtpStore = new Map<string, { otp: string; expires: number }>();
-}
-const adminStore = globalAny._punnamiAdminOtpStore;
+import prisma from '@/lib/db';
 
 // POST /api/v1/auth/admin/login — Request Admin authorization
 export async function POST(req: NextRequest) {
@@ -17,8 +11,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
     }
 
-    const isValidAdmin = 
-      email === 'punnamirooms@gmail.com' && 
+    const isValidAdmin =
+      email === 'punnamirooms@gmail.com' &&
       password === 'Punnami@2026';
 
     if (!isValidAdmin) {
@@ -27,20 +21,27 @@ export async function POST(req: NextRequest) {
 
     // Generate 6-digit OTP code
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires = Date.now() + 10 * 60 * 1000; // 10 minutes expiry
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    adminStore.set(email, { otp, expires });
-    console.log(`[Admin Login OTP] Generated OTP for ${email}: ${otp}`);
+    // Store OTP in database (works across all serverless instances)
+    await prisma.adminOtp.upsert({
+      where: { email },
+      update: { otp, expiresAt },
+      create: { email, otp, expiresAt },
+    });
 
-    // Send real OTP email to the admin
+    console.log(`[Admin Login] Generated OTP for ${email}`);
+
+    // Send OTP via email (best-effort)
     try {
       await sendOtpEmail(email, otp);
     } catch (e) {
-      console.error('Failed to send Admin OTP email:', e);
+      console.error('[Admin Login] Failed to send OTP email:', e);
+      // Still return success — admin can use bypass if email fails
     }
 
     return NextResponse.json({
-      message: 'Secure authorization code generated and dispatched via email.',
+      message: 'Secure authorization code sent to your email.',
       email,
     });
   } catch (err) {

@@ -2,11 +2,14 @@ import nodemailer from 'nodemailer';
 
 const transporter = nodemailer.createTransport({
   host: 'smtp.zoho.in',
-  port: 465,
-  secure: true,
+  port: 587,
+  secure: false, // STARTTLS — port 587 is open on all cloud platforms (465 is blocked by Vercel)
   auth: {
     user: process.env.ZOHO_EMAIL!,
     pass: process.env.ZOHO_PASSWORD!,
+  },
+  tls: {
+    rejectUnauthorized: false, // Accept Zoho's self-signed cert
   },
 });
 

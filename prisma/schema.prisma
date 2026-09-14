@@ -239,3 +239,13 @@ model Payment {
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 }
+
+model AdminOtp {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  otp       String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}

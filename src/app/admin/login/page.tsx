@@ -294,11 +294,7 @@ export default function AdminLoginPage() {
                 </button>
               </div>
 
-              <div className="text-center">
-                <p className="text-[10px] text-stone-500 font-semibold uppercase tracking-wider">
-                  Master Bypass Verification Code: 915420
-                </p>
-              </div>
+
             </div>
           )}
         </div>
