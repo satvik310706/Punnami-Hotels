@@ -1,12 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { generatePublicId } from '@/lib/utils';
-import { calculateStayTotal, calculateGST, calculateGatewayFee } from '@/lib/utils';
+import { generatePublicId, calculateStayTotal, calculateGST, calculateGatewayFee, formatDate } from '@/lib/utils';
 import { jwtVerify } from 'jose';
 import { broadcastRoomInventoryUpdate } from '@/lib/sse';
 import { cleanupExpiredBookings } from '@/lib/booking-cleanup';
 import { getTodayISTUTC, isAfter6amIST } from '@/lib/ist';
 import { assignSequentialId } from '@/lib/booking-sequence';
+import { sendBookingConfirmationEmail, sendAdminBookingConfirmationEmail } from '@/lib/zohoMail';
+import { sendRoomConfirmationSMS } from '@/lib/sms';
+
+function formatSlotTime(timeStr?: string | null, fallback: string = '12:00 PM') {
+  if (!timeStr) return fallback;
+  try {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) return fallback;
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 === 0 ? 12 : hours % 12;
+    const displayMinutes = minutes.toString().padStart(2, '0');
+    return `${displayHours.toString().padStart(2, '0')}:${displayMinutes} ${period}`;
+  } catch {
+    return fallback;
+  }
+}
 
 // Verhoeff Checksum Algorithm matrices for Aadhaar validation
 const VERHOEFF_D = [
@@ -500,6 +515,76 @@ export async function POST(req: NextRequest) {
     // Broadcast availability update to SSE clients
     for (const date of dateRange) {
       broadcastRoomInventoryUpdate(BigInt(roomTypeId), date, normalizedSlotStart, normalizedSlotEnd);
+    }
+
+    // For admin bookings that are auto-confirmed, send confirmation emails immediately
+    if (isAdmin && booking.status === 'CONFIRMED') {
+      const fullBooking = await prisma.booking.findUnique({
+        where: { id: booking.id },
+        include: { roomType: { include: { hotel: true } } },
+      });
+      if (fullBooking) {
+        const hotel = fullBooking.roomType.hotel as { name: string };
+        const displayId = fullBooking.sequenceId || fullBooking.publicId;
+        const slotCheckInTime = formatSlotTime(fullBooking.slotStart, '12:00 PM');
+        const slotCheckOutTime = formatSlotTime(fullBooking.slotEnd, '11:00 AM');
+        try {
+          await sendRoomConfirmationSMS({
+            customerName: fullBooking.guestName,
+            customerPhone: fullBooking.guestPhone,
+            publicId: displayId,
+            hotelName: hotel.name,
+            roomName: fullBooking.roomType.name,
+            checkInDate: formatDate(fullBooking.checkInDate),
+            checkInTime: slotCheckInTime,
+            checkOutDate: formatDate(fullBooking.checkOutDate),
+            checkOutTime: slotCheckOutTime,
+            paidAmount: `₹${Number(fullBooking.paidAmount || fullBooking.totalAmount).toLocaleString('en-IN')}`,
+            totalAmount: `₹${Number(fullBooking.totalAmount).toLocaleString('en-IN')}`,
+          });
+        } catch (smsErr) {
+          console.error('[Admin Checkout] SMS send failed:', smsErr);
+        }
+        if (fullBooking.guestEmail) {
+          try {
+            await sendBookingConfirmationEmail({
+              guestEmail: fullBooking.guestEmail,
+              guestName: fullBooking.guestName,
+              publicId: displayId,
+              roomName: fullBooking.roomType.name,
+              checkInDate: formatDate(fullBooking.checkInDate),
+              checkInTime: slotCheckInTime,
+              checkOutDate: formatDate(fullBooking.checkOutDate),
+              checkOutTime: slotCheckOutTime,
+              nights: fullBooking.totalNights,
+              rooms: fullBooking.roomsBooked,
+              paidAmount: (fullBooking.paidAmount || fullBooking.totalAmount).toString(),
+              totalAmount: fullBooking.totalAmount.toString(),
+            });
+          } catch (mailErr) {
+            console.error('[Admin Checkout] Guest email send failed:', mailErr);
+          }
+        }
+        try {
+          await sendAdminBookingConfirmationEmail({
+            guestName: fullBooking.guestName,
+            guestEmail: fullBooking.guestEmail,
+            guestPhone: fullBooking.guestPhone,
+            publicId: displayId,
+            roomName: fullBooking.roomType.name,
+            checkInDate: formatDate(fullBooking.checkInDate),
+            checkInTime: slotCheckInTime,
+            checkOutDate: formatDate(fullBooking.checkOutDate),
+            checkOutTime: slotCheckOutTime,
+            nights: fullBooking.totalNights,
+            rooms: fullBooking.roomsBooked,
+            paidAmount: (fullBooking.paidAmount || fullBooking.totalAmount).toString(),
+            totalAmount: fullBooking.totalAmount.toString(),
+          });
+        } catch (adminMailErr) {
+          console.error('[Admin Checkout] Admin email send failed:', adminMailErr);
+        }
+      }
     }
 
     return NextResponse.json({

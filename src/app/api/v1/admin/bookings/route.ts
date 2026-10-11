@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { cleanupExpiredBookings } from '@/lib/booking-cleanup';
 
 // GET /api/v1/admin/bookings — Fetch all bookings for admin review
 export async function GET(req: NextRequest) {
   try {
+    // Proactively clean up expired reservations
+    cleanupExpiredBookings().catch((err) => {
+      console.error('[Admin Bookings] Cleanup error:', err);
+    });
+
     const bookings = await prisma.booking.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
@@ -15,8 +21,7 @@ export async function GET(req: NextRequest) {
           },
         },
         payments: {
-          where: { status: 'COMPLETED' },
-          orderBy: { createdAt: 'asc' },
+          orderBy: { createdAt: 'desc' },
         },
       },
     });
@@ -24,7 +29,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       bookings.map((b) => {
         const latestPayment = b.payments?.[0] ?? null;
+        const completedPayment = b.payments.find((p) => p.status === 'COMPLETED') ?? null;
         const { payments, ...bookingData } = b;
+
+        let resolvedGatewayTxnId = b.transactionId || null;
+        if (!resolvedGatewayTxnId && latestPayment?.providerResponse) {
+          try {
+            const resp = JSON.parse(latestPayment.providerResponse);
+            resolvedGatewayTxnId = resp.data?.transactionId || resp.paymentDetails?.[0]?.transactionId || null;
+          } catch {}
+        }
+
         return {
           ...bookingData,
           id: b.id.toString(),
@@ -38,11 +53,10 @@ export async function GET(req: NextRequest) {
           refundAmount: b.refundAmount ? Number(b.refundAmount) : null,
           paidAmount: b.paidAmount ? Number(b.paidAmount) : null,
           paymentPercentage: b.paymentPercentage ? Number(b.paymentPercentage) : null,
-          // PhonePe gateway txn ID — prefer the one stored directly on the booking,
-          // fallback to the Payment record's merchantTransactionId if booking.transactionId is null
-          gatewayTransactionId: b.transactionId || null,
+          gatewayTransactionId: resolvedGatewayTxnId || latestPayment?.merchantTransactionId || null,
           merchantTransactionId: latestPayment?.merchantTransactionId || null,
-          completedPayments: b.payments.map((p) => {
+          paymentStatus: latestPayment?.status || (b.status === 'CONFIRMED' ? 'COMPLETED' : 'PENDING'),
+          completedPayments: b.payments.filter((p) => p.status === 'COMPLETED').map((p) => {
             let pgTxnId = p.merchantTransactionId;
             try {
               if (p.providerResponse) {

@@ -1,17 +1,23 @@
 import nodemailer from 'nodemailer';
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.zoho.in',
-  port: 587,
-  secure: false, // STARTTLS — port 587 is open on all cloud platforms (465 is blocked by Vercel)
-  auth: {
-    user: process.env.ZOHO_EMAIL!,
-    pass: process.env.ZOHO_PASSWORD!,
-  },
-  tls: {
-    rejectUnauthorized: false, // Accept Zoho's self-signed cert
-  },
-});
+// Create a fresh transporter per-send to avoid stale TCP connections in serverless environments
+function createTransporter() {
+  return nodemailer.createTransport({
+    host: 'smtp.zoho.in',
+    port: 587,
+    secure: false, // STARTTLS — port 587 is open on all cloud platforms (465 is blocked by Vercel)
+    auth: {
+      user: process.env.ZOHO_EMAIL!,
+      pass: process.env.ZOHO_PASSWORD!,
+    },
+    tls: {
+      rejectUnauthorized: false, // Accept Zoho's self-signed cert
+    },
+    connectionTimeout: 10000, // 10s connection timeout
+    greetingTimeout: 10000,   // 10s greeting timeout
+    socketTimeout: 30000,     // 30s socket timeout
+  });
+}
 
 const FROM = `"Punnami Hotels" <${process.env.ZOHO_EMAIL}>`;
 const BRAND_COLOR = '#C9A84C';
@@ -258,6 +264,7 @@ export async function sendEmail({
   preview?: string;
   cc?: string;
 }): Promise<boolean> {
+  const transporter = createTransporter();
   try {
     await transporter.sendMail({
       from: FROM,
@@ -271,6 +278,8 @@ export async function sendEmail({
   } catch (err) {
     console.error(`[Email] Failed to send "${subject}" to ${to}:`, err);
     return false;
+  } finally {
+    transporter.close();
   }
 }
 

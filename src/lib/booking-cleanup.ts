@@ -43,21 +43,16 @@ export async function cleanupExpiredBookings() {
           }
         }
 
-        // Release the reservation count date-by-date
+        // Release the reservation count date-by-date (ensure reservedRooms never goes below 0)
         for (const date of dateRange) {
-          await tx.roomInventory.updateMany({
-            where: {
-              roomTypeId: booking.roomTypeId,
-              date,
-              slotStart: booking.slotStart,
-              slotEnd: booking.slotEnd,
-            },
-            data: {
-              reservedRooms: {
-                decrement: booking.roomsBooked,
-              },
-            },
-          });
+          await tx.$executeRaw`
+            UPDATE "RoomInventory"
+            SET "reservedRooms" = GREATEST(0, "reservedRooms" - ${booking.roomsBooked})
+            WHERE "roomTypeId" = ${booking.roomTypeId}
+              AND "date" = ${date}
+              AND "slotStart" = ${booking.slotStart}
+              AND "slotEnd" = ${booking.slotEnd}
+          `;
 
           broadcasts.push({
             roomTypeId: booking.roomTypeId,
@@ -67,9 +62,10 @@ export async function cleanupExpiredBookings() {
           });
         }
 
-        // Delete the expired booking from database completely (cascade deletes payment logs)
-        await tx.booking.delete({
+        // Mark booking as EXPIRED instead of hard-deleting, preserving transaction logs and history
+        await tx.booking.update({
           where: { id: booking.id },
+          data: { status: 'EXPIRED' },
         });
       }
     });

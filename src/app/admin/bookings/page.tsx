@@ -84,6 +84,36 @@ export default function AdminBookingsPage() {
   const [showRescheduleInput, setShowRescheduleInput] = useState(false);
   const [directPostponeDate, setDirectPostponeDate] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [reconciling, setReconciling] = useState(false);
+
+  const handleReconcilePayments = async () => {
+    const confirmed = await showConfirm(
+      'Reconcile Payments',
+      'This will check all PENDING and PARTIAL PAID bookings against PhonePe and fix any payment mismatches. Confirmation emails will be sent to affected guests. Proceed?'
+    );
+    if (!confirmed) return;
+    setReconciling(true);
+    try {
+      const res = await fetch('/api/v1/admin/bookings/reconcile', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        const fixed = data.results?.filter((r: any) => r.action === 'FIXED').length || 0;
+        showAlert(
+          'Reconciliation Complete',
+          `Checked ${data.checked} bookings. Fixed ${fixed} payment mismatches and sent confirmation emails.`,
+          'success'
+        );
+        fetchBookings();
+      } else {
+        showAlert('Error', data.error || 'Reconciliation failed', 'error');
+      }
+    } catch {
+      showAlert('Error', 'Network request failed.', 'error');
+    } finally {
+      setReconciling(false);
+    }
+  };
+
 
   const handleRecordPayment = async (amount: number | null, paymentMethod: string, collectedBy: string) => {
     setActionLoading(true);
@@ -270,6 +300,15 @@ export default function AdminBookingsPage() {
           >
             <Plus className="h-4.5 w-4.5" />
             <span>Create Booking</span>
+          </button>
+          <button 
+            type="button"
+            onClick={handleReconcilePayments}
+            disabled={reconciling}
+            className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-300 hover:bg-amber-100 px-4 py-2.5 text-xs font-bold text-amber-800 shadow-sm cursor-pointer disabled:opacity-50 transition-all active:scale-95"
+          >
+            <RefreshCw className={`h-4 w-4 text-amber-600 ${reconciling ? 'animate-spin' : ''}`} />
+            <span>{reconciling ? 'Reconciling...' : 'Reconcile Payments'}</span>
           </button>
           <button 
             type="button"
@@ -543,22 +582,28 @@ export default function AdminBookingsPage() {
                             ))}
                           </div>
                         </div>
-                      ) : (selectedBooking.gatewayTransactionId || selectedBooking.transactionId) ? (
-                        <div className="mt-2 text-stone-600 border-t border-stone-200 pt-2 space-y-1">
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-[10px] uppercase tracking-wider font-bold text-stone-400">PhonePe Gateway Transaction ID</span>
-                            <span className="font-black text-stone-900 text-sm break-all">
-                              {selectedBooking.gatewayTransactionId || selectedBooking.transactionId}
-                            </span>
-                          </div>
+                      ) : (selectedBooking.gatewayTransactionId || selectedBooking.transactionId || selectedBooking.merchantTransactionId) ? (
+                        <div className="mt-2 text-stone-600 border-t border-stone-200 pt-2 space-y-2">
+                          {(selectedBooking.gatewayTransactionId || selectedBooking.transactionId) && (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[10px] uppercase tracking-wider font-bold text-stone-400">PhonePe Gateway Transaction ID</span>
+                              <span className="font-black text-stone-900 text-sm break-all font-mono select-all">
+                                {selectedBooking.gatewayTransactionId || selectedBooking.transactionId}
+                              </span>
+                            </div>
+                          )}
                           {selectedBooking.merchantTransactionId && selectedBooking.merchantTransactionId !== selectedBooking.gatewayTransactionId && (
                             <div className="flex flex-col gap-0.5">
                               <span className="text-[10px] uppercase tracking-wider font-bold text-stone-400">Internal Merchant Ref</span>
-                              <span className="font-mono text-xs text-stone-600 break-all">{selectedBooking.merchantTransactionId}</span>
+                              <span className="font-mono text-xs text-stone-700 break-all select-all">{selectedBooking.merchantTransactionId}</span>
                             </div>
                           )}
                         </div>
-                      ) : null}
+                      ) : (
+                        <div className="mt-2 text-stone-400 border-t border-stone-200 pt-2 text-xs italic">
+                          No transaction reference recorded yet
+                        </div>
+                      )}
                     </div>
                   </div>
 

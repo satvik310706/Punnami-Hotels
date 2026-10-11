@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { addMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { cleanupExpiredBookings } from '@/lib/booking-cleanup';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,6 +10,11 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    // Proactively clean up any expired reservations so room availability is accurate
+    cleanupExpiredBookings().catch((err) => {
+      console.error('[Availability API] Background cleanup error:', err);
+    });
+
     const { slug } = await params;
     const { searchParams } = new URL(req.url);
     const monthStr = searchParams.get('month'); // e.g. "2026-06" or empty for next 6 months

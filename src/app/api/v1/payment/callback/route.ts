@@ -101,18 +101,32 @@ export async function GET(req: NextRequest) {
             }
 
             for (const date of dateRange) {
-              await tx.roomInventory.updateMany({
-                where: {
-                  roomTypeId: booking.roomTypeId,
-                  date,
-                  slotStart: booking.slotStart,
-                  slotEnd: booking.slotEnd,
-                },
-                data: {
-                  reservedRooms: { decrement: booking.roomsBooked },
-                  bookedRooms: { increment: booking.roomsBooked },
-                },
-              });
+              if (currentBooking.status === 'EXPIRED') {
+                await tx.roomInventory.updateMany({
+                  where: {
+                    roomTypeId: booking.roomTypeId,
+                    date,
+                    slotStart: booking.slotStart,
+                    slotEnd: booking.slotEnd,
+                  },
+                  data: {
+                    bookedRooms: { increment: booking.roomsBooked },
+                  },
+                });
+              } else {
+                await tx.roomInventory.updateMany({
+                  where: {
+                    roomTypeId: booking.roomTypeId,
+                    date,
+                    slotStart: booking.slotStart,
+                    slotEnd: booking.slotEnd,
+                  },
+                  data: {
+                    reservedRooms: { decrement: booking.roomsBooked },
+                    bookedRooms: { increment: booking.roomsBooked },
+                  },
+                });
+              }
             }
           }
 
@@ -143,8 +157,8 @@ export async function GET(req: NextRequest) {
       const slotCheckInTime = formatSlotTime(activeBooking.slotStart, '12:00 PM');
       const slotCheckOutTime = formatSlotTime(activeBooking.slotEnd, '11:00 AM');
 
-      // Fire all notifications non-blocking (no await) — redirect user immediately
-      Promise.all([
+      // Fire all notifications — MUST await before redirecting so they complete in serverless
+      await Promise.all([
         sendRoomConfirmationSMS({
           customerName: activeBooking.guestName,
           customerPhone: activeBooking.guestPhone,
@@ -214,6 +228,37 @@ export async function GET(req: NextRequest) {
           providerResponse: JSON.stringify(statusResult)
         }
       });
+
+      // If hold has expired or was pending, release reserved inventory so it is not still counted
+      if ((!booking.expiresAt || new Date() > new Date(booking.expiresAt)) && 
+          (booking.status === 'PENDING_PROOF' || booking.status === 'PENDING_CONFIRMATION')) {
+        const dateRange: Date[] = [];
+        const current = new Date(booking.checkInDate);
+        const checkOutTime = new Date(booking.checkOutDate).getTime();
+        if (booking.checkInDate.getTime() === checkOutTime) {
+          dateRange.push(new Date(booking.checkInDate));
+        } else {
+          while (current.getTime() < checkOutTime) {
+            dateRange.push(new Date(current));
+            current.setUTCDate(current.getUTCDate() + 1);
+          }
+        }
+        for (const date of dateRange) {
+          await prisma.$executeRaw`
+            UPDATE "RoomInventory"
+            SET "reservedRooms" = GREATEST(0, "reservedRooms" - ${booking.roomsBooked})
+            WHERE "roomTypeId" = ${booking.roomTypeId}
+              AND "date" = ${date}
+              AND "slotStart" = ${booking.slotStart}
+              AND "slotEnd" = ${booking.slotEnd}
+          `;
+          broadcastRoomInventoryUpdate(booking.roomTypeId, date, booking.slotStart, booking.slotEnd);
+        }
+        await prisma.booking.update({
+          where: { id: booking.id },
+          data: { status: 'EXPIRED' }
+        });
+      }
 
       return NextResponse.redirect(`${appUrl}/booking/${booking.publicId}?status=failed`, { status: 303 });
     }
@@ -327,18 +372,32 @@ export async function POST(req: NextRequest) {
             }
 
             for (const date of dateRange) {
-              await tx.roomInventory.updateMany({
-                where: {
-                  roomTypeId: booking.roomTypeId,
-                  date,
-                  slotStart: booking.slotStart,
-                  slotEnd: booking.slotEnd,
-                },
-                data: {
-                  reservedRooms: { decrement: booking.roomsBooked },
-                  bookedRooms: { increment: booking.roomsBooked },
-                },
-              });
+              if (currentBooking.status === 'EXPIRED') {
+                await tx.roomInventory.updateMany({
+                  where: {
+                    roomTypeId: booking.roomTypeId,
+                    date,
+                    slotStart: booking.slotStart,
+                    slotEnd: booking.slotEnd,
+                  },
+                  data: {
+                    bookedRooms: { increment: booking.roomsBooked },
+                  },
+                });
+              } else {
+                await tx.roomInventory.updateMany({
+                  where: {
+                    roomTypeId: booking.roomTypeId,
+                    date,
+                    slotStart: booking.slotStart,
+                    slotEnd: booking.slotEnd,
+                  },
+                  data: {
+                    reservedRooms: { decrement: booking.roomsBooked },
+                    bookedRooms: { increment: booking.roomsBooked },
+                  },
+                });
+              }
             }
           }
 
@@ -372,8 +431,8 @@ export async function POST(req: NextRequest) {
       const slotCheckInTime = formatSlotTime(activeBooking.slotStart, '12:00 PM');
       const slotCheckOutTime = formatSlotTime(activeBooking.slotEnd, '11:00 AM');
 
-      // Fire all notifications non-blocking (no await) — redirect user immediately
-      Promise.all([
+      // Fire all notifications — MUST await before redirecting so they complete in serverless
+      await Promise.all([
         sendRoomConfirmationSMS({
           customerName: activeBooking.guestName,
           customerPhone: activeBooking.guestPhone,
@@ -449,6 +508,38 @@ export async function POST(req: NextRequest) {
           }
         });
       }
+
+      // If hold has expired or was pending, release reserved inventory so it is not still counted
+      if ((!booking.expiresAt || new Date() > new Date(booking.expiresAt)) && 
+          (booking.status === 'PENDING_PROOF' || booking.status === 'PENDING_CONFIRMATION')) {
+        const dateRange: Date[] = [];
+        const current = new Date(booking.checkInDate);
+        const checkOutTime = new Date(booking.checkOutDate).getTime();
+        if (booking.checkInDate.getTime() === checkOutTime) {
+          dateRange.push(new Date(booking.checkInDate));
+        } else {
+          while (current.getTime() < checkOutTime) {
+            dateRange.push(new Date(current));
+            current.setUTCDate(current.getUTCDate() + 1);
+          }
+        }
+        for (const date of dateRange) {
+          await prisma.$executeRaw`
+            UPDATE "RoomInventory"
+            SET "reservedRooms" = GREATEST(0, "reservedRooms" - ${booking.roomsBooked})
+            WHERE "roomTypeId" = ${booking.roomTypeId}
+              AND "date" = ${date}
+              AND "slotStart" = ${booking.slotStart}
+              AND "slotEnd" = ${booking.slotEnd}
+          `;
+          broadcastRoomInventoryUpdate(booking.roomTypeId, date, booking.slotStart, booking.slotEnd);
+        }
+        await prisma.booking.update({
+          where: { id: booking.id },
+          data: { status: 'EXPIRED' }
+        });
+      }
+
       return NextResponse.redirect(`${appUrl}/booking/${booking.publicId}?status=failed`, { status: 303 });
     }
 

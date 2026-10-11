@@ -155,18 +155,32 @@ export async function POST(req: NextRequest) {
         }
 
         for (const date of dateRange) {
-          await tx.roomInventory.updateMany({
-            where: {
-              roomTypeId: booking.roomTypeId,
-              date,
-              slotStart: booking.slotStart,
-              slotEnd: booking.slotEnd,
-            },
-            data: {
-              reservedRooms: { decrement: booking.roomsBooked },
-              bookedRooms: { increment: booking.roomsBooked },
-            },
-          });
+          if (currentBooking.status === 'EXPIRED') {
+            await tx.roomInventory.updateMany({
+              where: {
+                roomTypeId: booking.roomTypeId,
+                date,
+                slotStart: booking.slotStart,
+                slotEnd: booking.slotEnd,
+              },
+              data: {
+                bookedRooms: { increment: booking.roomsBooked },
+              },
+            });
+          } else {
+            await tx.roomInventory.updateMany({
+              where: {
+                roomTypeId: booking.roomTypeId,
+                date,
+                slotStart: booking.slotStart,
+                slotEnd: booking.slotEnd,
+              },
+              data: {
+                reservedRooms: { decrement: booking.roomsBooked },
+                bookedRooms: { increment: booking.roomsBooked },
+              },
+            });
+          }
         }
       }
 

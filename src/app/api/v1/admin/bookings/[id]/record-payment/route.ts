@@ -2,6 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { jwtVerify } from 'jose';
 import { assignSequentialId } from '@/lib/booking-sequence';
+import { sendBookingConfirmationEmail, sendAdminBookingConfirmationEmail } from '@/lib/zohoMail';
+import { sendRoomConfirmationSMS } from '@/lib/sms';
+import { formatDate } from '@/lib/utils';
+import { broadcastRoomInventoryUpdate } from '@/lib/sse';
+
+function formatSlotTime(timeStr?: string | null, fallback: string = '12:00 PM') {
+  if (!timeStr) return fallback;
+  try {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) return fallback;
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 === 0 ? 12 : hours % 12;
+    const displayMinutes = minutes.toString().padStart(2, '0');
+    return `${displayHours.toString().padStart(2, '0')}:${displayMinutes} ${period}`;
+  } catch {
+    return fallback;
+  }
+}
 
 // POST /api/v1/admin/bookings/[id]/record-payment
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -139,6 +157,92 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         await assignSequentialId(tx, booking.id);
       }
     });
+
+    const updatedBooking = await prisma.booking.findUnique({
+      where: { id: booking.id },
+      include: { roomType: { include: { hotel: true } } },
+    });
+
+    // Send confirmation/partial-payment notifications
+    if (updatedBooking) {
+      const hotel = updatedBooking.roomType.hotel as { name: string };
+      const displayId = updatedBooking.sequenceId || updatedBooking.publicId;
+      const slotCheckInTime = formatSlotTime(updatedBooking.slotStart, '12:00 PM');
+      const slotCheckOutTime = formatSlotTime(updatedBooking.slotEnd, '11:00 AM');
+
+      // Broadcast SSE inventory update
+      const dateRange: Date[] = [];
+      const current = new Date(updatedBooking.checkInDate);
+      const checkOutTimeMs = new Date(updatedBooking.checkOutDate).getTime();
+      if (updatedBooking.checkInDate.getTime() === checkOutTimeMs) {
+        dateRange.push(new Date(updatedBooking.checkInDate));
+      } else {
+        while (current.getTime() < checkOutTimeMs) {
+          dateRange.push(new Date(current));
+          current.setUTCDate(current.getUTCDate() + 1);
+        }
+      }
+      for (const date of dateRange) {
+        broadcastRoomInventoryUpdate(updatedBooking.roomTypeId, date, updatedBooking.slotStart, updatedBooking.slotEnd);
+      }
+
+      try {
+        await sendRoomConfirmationSMS({
+          customerName: updatedBooking.guestName,
+          customerPhone: updatedBooking.guestPhone,
+          publicId: displayId,
+          hotelName: hotel.name,
+          roomName: updatedBooking.roomType.name,
+          checkInDate: formatDate(updatedBooking.checkInDate),
+          checkInTime: slotCheckInTime,
+          checkOutDate: formatDate(updatedBooking.checkOutDate),
+          checkOutTime: slotCheckOutTime,
+          paidAmount: `₹${Number(updatedBooking.paidAmount || updatedBooking.totalAmount).toLocaleString('en-IN')}`,
+          totalAmount: `₹${Number(updatedBooking.totalAmount).toLocaleString('en-IN')}`,
+        });
+      } catch (smsErr) {
+        console.error('[Record Payment] SMS send failed:', smsErr);
+      }
+      if (updatedBooking.guestEmail) {
+        try {
+          await sendBookingConfirmationEmail({
+            guestEmail: updatedBooking.guestEmail,
+            guestName: updatedBooking.guestName,
+            publicId: displayId,
+            roomName: updatedBooking.roomType.name,
+            checkInDate: formatDate(updatedBooking.checkInDate),
+            checkInTime: slotCheckInTime,
+            checkOutDate: formatDate(updatedBooking.checkOutDate),
+            checkOutTime: slotCheckOutTime,
+            nights: updatedBooking.totalNights,
+            rooms: updatedBooking.roomsBooked,
+            paidAmount: (updatedBooking.paidAmount || updatedBooking.totalAmount).toString(),
+            totalAmount: updatedBooking.totalAmount.toString(),
+          });
+        } catch (mailErr) {
+          console.error('[Record Payment] Guest email send failed:', mailErr);
+        }
+      }
+      try {
+        await sendAdminBookingConfirmationEmail({
+          guestName: updatedBooking.guestName,
+          guestEmail: updatedBooking.guestEmail,
+          guestPhone: updatedBooking.guestPhone,
+          publicId: displayId,
+          roomName: updatedBooking.roomType.name,
+          checkInDate: formatDate(updatedBooking.checkInDate),
+          checkInTime: slotCheckInTime,
+          checkOutDate: formatDate(updatedBooking.checkOutDate),
+          checkOutTime: slotCheckOutTime,
+          nights: updatedBooking.totalNights,
+          rooms: updatedBooking.roomsBooked,
+          paidAmount: (updatedBooking.paidAmount || updatedBooking.totalAmount).toString(),
+          totalAmount: updatedBooking.totalAmount.toString(),
+        });
+      } catch (adminMailErr) {
+        console.error('[Record Payment] Admin email send failed:', adminMailErr);
+      }
+    }
 
     return NextResponse.json({ success: true, message: 'Payment recorded successfully' });
   } catch (err: any) {
