@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isBefore, getDay } from 'date-fns';
-import { getTodayIST, isISTToday, isAfter6amIST, addDays as addDaysIST } from '@/lib/ist';
+import { getTodayIST, isISTToday, addDays as addDaysIST } from '@/lib/ist';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -29,10 +29,10 @@ export default function CustomDatePicker({
   closedDates,
   onMonthChange,
   align = 'left',
-  allowToday = false,
+  allowToday = true,
 }: CustomDatePickerProps) {
-  // If it's after 6 AM IST, today is blocked — minimum selectable date is tomorrow
-  const effectiveMinDate = minDate ?? ((isAfter6amIST() && !allowToday) ? addDaysIST(getTodayIST(), 1) : getTodayIST());
+  // If minDate is provided, use it. Otherwise, default to today in IST.
+  const effectiveMinDate = minDate ?? getTodayIST();
   const [isOpen, setIsOpen] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(selected);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -167,7 +167,6 @@ export default function CustomDatePicker({
               {/* Day cells */}
               {(() => {
                 const todayIST = getTodayIST();
-                const isTodayAfter6 = isAfter6amIST();
 
                 return days.map((day) => {
                   const dateStr = format(day, 'yyyy-MM-dd');
@@ -178,14 +177,11 @@ export default function CustomDatePicker({
                     day.getFullYear() === todayIST.getFullYear() &&
                     day.getMonth() === todayIST.getMonth() &&
                     day.getDate() === todayIST.getDate();
-
-                  // Today is blocked if we're past 6 AM IST
-                  const isTodayBlocked = !allowToday && isTodayAfter6 && isCurrentToday;
                   
                   // Closed if in closedDates OR if availableDates is set and doesn't contain this date
                   const isClosed = closedDates?.has(dateStr) || (availableDates !== undefined && !availableDates.has(dateStr));
                   
-                  const isDisabled = isPast || isTodayBlocked || isClosed;
+                  const isDisabled = isPast || isClosed;
                   const isSelected = isSameDay(day, selected);
                   const dayOfWeek = getDay(day);
                   const isWeekendDay = dayOfWeek === 0 || dayOfWeek === 6;
@@ -199,7 +195,7 @@ export default function CustomDatePicker({
                       className={`w-full aspect-square rounded-xl flex items-center justify-center text-xs font-bold transition-all ${
                         isSelected
                           ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
-                          : isClosed || isTodayBlocked
+                          : isClosed
                           ? 'bg-red-100 text-red-500 border border-red-200 cursor-not-allowed hover:bg-red-100'
                           : isPast
                           ? 'text-stone-300 cursor-not-allowed line-through'

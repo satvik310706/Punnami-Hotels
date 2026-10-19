@@ -3,6 +3,7 @@ import { Suspense } from 'react';
 import RoomsListClient from './RoomsListClient';
 import prisma from '@/lib/db';
 import { cleanupExpiredBookings } from '@/lib/booking-cleanup';
+import { isISTToday, isSlotPassedToday } from '@/lib/ist';
 
 export const metadata: Metadata = {
   title: 'Browse Rooms',
@@ -116,6 +117,11 @@ async function getRoomsWithInventory(checkIn?: string, checkOut?: string) {
         const sEnd = slot.slotEnd;
 
         return dates.every((dateStr) => {
+          const isToday = isISTToday(new Date(dateStr + 'T00:00:00'));
+          if (isToday && isSlotPassedToday(sStart)) {
+            return false;
+          }
+
           const key = `${room.id}_${dateStr}_${sStart}_${sEnd}`;
           const invRecord = inventoryMap.get(key);
 

@@ -81,7 +81,7 @@ async function resendEmails() {
       adminEmailSent = await sendAdminBookingConfirmationEmail({
         adminEmail: 'punnamirooms@gmail.com',
         guestName: b.guestName,
-        guestEmail: b.guestEmail || undefined,
+        guestEmail: b.guestEmail || '',
         guestPhone: b.guestPhone,
         publicId: displayId,
         roomName: b.roomType.name,

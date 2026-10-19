@@ -55,6 +55,80 @@ export function isAfter6amIST(): boolean {
   return getISTParts().hour >= 6;
 }
 
+/**
+ * Parses any time string ("20:00", "20:00:00", "8:00 PM", "08:00 PM", "12:00")
+ * into total minutes from midnight (0 - 1439).
+ */
+export function parseTimeToMinutes(timeStr: string): number {
+  if (!timeStr) return 12 * 60; // fallback to 12:00 PM (720 min)
+
+  const trimmed = timeStr.trim();
+
+  // Check for 12-hour format with AM/PM (e.g. "8:00 PM", "10:30 AM")
+  const ampmMatch = trimmed.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)$/i);
+  if (ampmMatch) {
+    let hours = parseInt(ampmMatch[1], 10);
+    const minutes = parseInt(ampmMatch[2], 10);
+    const period = ampmMatch[3].toUpperCase();
+    if (period === 'PM' && hours < 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+    return hours * 60 + minutes;
+  }
+
+  // Check for 24-hour format (e.g. "20:00", "20:00:00", "08:00")
+  const match24 = trimmed.match(/^(\d{1,2}):(\d{2})/);
+  if (match24) {
+    const hours = parseInt(match24[1], 10);
+    const minutes = parseInt(match24[2], 10);
+    return hours * 60 + minutes;
+  }
+
+  return 12 * 60;
+}
+
+/**
+ * Returns true if the slot's check-in start time has already arrived or passed in Asia/Kolkata (IST) today.
+ * For example:
+ * - An 8:00 PM (20:00) slot is bookable until 7:59 PM (19:59).
+ * - At 7:59 PM (1199 min), 1199 < 1200 => returns false (bookable).
+ * - At 8:00 PM (1200 min), 1200 >= 1200 => returns true (passed / closed).
+ */
+export function isSlotPassedToday(slotStart: string): boolean {
+  const { hour, minute } = getISTParts();
+  const currentMinutes = hour * 60 + minute;
+  const slotMinutes = parseTimeToMinutes(slotStart);
+  return currentMinutes >= slotMinutes;
+}
+
+/**
+ * Returns true if at least one slot in the room has NOT passed today in IST.
+ */
+export function hasBookableSlotToday(slots?: Array<{ slotStart?: string; slot_start?: string }>): boolean {
+  if (!slots || slots.length === 0) {
+    return !isSlotPassedToday('12:00:00');
+  }
+  return slots.some((s) => !isSlotPassedToday(s.slotStart || s.slot_start || '12:00:00'));
+}
+
+/**
+ * Checks if a specific date & slot is in the past in IST.
+ * - If date is strictly before today in IST, returns true.
+ * - If date is strictly after today in IST, returns false.
+ * - If date is today in IST, returns isSlotPassedToday(slotStart).
+ */
+export function isDateTimePassedIST(date: Date, slotStart?: string): boolean {
+  const today = getTodayIST();
+  const checkDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+  if (checkDate.getTime() < today.getTime()) {
+    return true;
+  }
+  if (checkDate.getTime() > today.getTime()) {
+    return false;
+  }
+  return isSlotPassedToday(slotStart || '12:00:00');
+}
+
 /** Adds `days` calendar days to a date and returns a new Date. */
 export function addDays(date: Date, days: number): Date {
   const result = new Date(date);
