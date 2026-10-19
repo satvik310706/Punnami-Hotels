@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { cleanupExpiredBookings } from '@/lib/booking-cleanup';
+import { isISTToday, isSlotPassedToday } from '@/lib/ist';
 
 function normalizeTime(timeStr: string) {
   if (!timeStr) return '12:00:00';
@@ -115,6 +116,11 @@ export async function GET(req: NextRequest) {
 
           // Check if this slot is available on all dates in the query range
           return dates.every((dateStr) => {
+            const isToday = isISTToday(new Date(dateStr + 'T00:00:00'));
+            if (!isAdmin && isToday && isSlotPassedToday(sStart)) {
+              return false;
+            }
+
             const key = `${room.id}_${dateStr}_${sStart}_${sEnd}`;
             const invRecord = inventoryMap.get(key);
 

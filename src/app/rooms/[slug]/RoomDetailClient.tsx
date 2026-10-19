@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import CouponPopup from '@/components/ui/CouponPopup';
 import { format, addDays, addMonths } from 'date-fns';
-import { getTodayIST, isAfter6amIST } from '@/lib/ist';
+import { getTodayIST, isSlotPassedToday, hasBookableSlotToday, isISTToday } from '@/lib/ist';
 import { calculateStayTotal, calculateGST, formatCurrency } from '@/lib/utils';
 import OTPModal from '@/components/OTPModal';
 import CustomDatePicker from '@/components/CustomDatePicker';
@@ -84,8 +84,9 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
   const router = useRouter();
   const today = getTodayIST();
   const tomorrow = addDays(today, 1);
-  // If it's already past 6 AM IST, the earliest valid check-in is tomorrow
-  const earliestCheckIn = isAfter6amIST() ? tomorrow : today;
+  // Today is valid if at least one slot has not passed its check-in start time today in IST
+  const canBookToday = hasBookableSlotToday(room.bookingSlots || room.booking_slots);
+  const earliestCheckIn = canBookToday ? today : tomorrow;
 
   const parsedInitialCheckIn = initialCheckIn ? new Date(initialCheckIn + 'T00:00:00') : null;
   const initialDate = parsedInitialCheckIn && parsedInitialCheckIn >= earliestCheckIn ? parsedInitialCheckIn : earliestCheckIn;
@@ -203,7 +204,15 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
     return combined;
   }, [room.bookingSlots, room.totalInventory]);
 
-  const [selectedSlotIndex, setSelectedSlotIndex] = useState(0);
+  const [selectedSlotIndex, setSelectedSlotIndex] = useState(() => {
+    const customSlots = room.bookingSlots || room.booking_slots;
+    if (Array.isArray(customSlots) && customSlots.length > 0) {
+      // Pick first unexpired slot if booking for today
+      const firstValidIdx = customSlots.findIndex((s: any) => !isSlotPassedToday(normalizeTime(s.slotStart || s.slot_start || '12:00:00')));
+      return firstValidIdx >= 0 ? firstValidIdx : 0;
+    }
+    return 0;
+  });
 
   // Synchronize checkOut date when selectedSlotIndex or checkIn changes
   useEffect(() => {
@@ -293,6 +302,8 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
     const available = new Set<string>();
     if (!currentSlot) return available;
     const suffix = `_${currentSlot.slotStart}_${currentSlot.slotEnd}`;
+    const todayStr = format(getTodayIST(), 'yyyy-MM-dd');
+    const isTodaySlotExpired = isSlotPassedToday(currentSlot.slotStart);
     
     // Convert object entries to arrays to avoid Object.entries overhead inside the loop
     const keys = Object.keys(availability);
@@ -300,9 +311,14 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
     for (let i = 0; i < keys.length; i++) {
       const key = keys[i];
       if (key.endsWith(suffix)) {
+        const dateStr = key.slice(0, 10);
+        // If date is today in IST and this slot's start time has already arrived or passed, do not mark today as available
+        if (dateStr === todayStr && isTodaySlotExpired) {
+          continue;
+        }
         const info = availability[key];
         if (!info.isClosed && (info.totalRooms - info.bookedRooms - info.reservedRooms) > 0) {
-          available.add(key.slice(0, 10)); // Extract 'YYYY-MM-DD' directly using slice instead of split
+          available.add(dateStr); // Extract 'YYYY-MM-DD' directly using slice instead of split
         }
       }
     }
@@ -374,9 +390,15 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
   const highlights = Array.isArray(room.highlights) ? room.highlights : [];
 
   const slotsAvailability = useMemo(() => {
+    const isToday = isISTToday(checkIn);
     return slots.map((slot) => {
       const sStart = normalizeTime(slot.slotStart);
       const sEnd = normalizeTime(slot.slotEnd);
+
+      // If check-in is today in IST and this slot's start time has passed, 0 rooms available
+      if (isToday && isSlotPassedToday(sStart)) {
+        return 0;
+      }
       
       const slotConfig = (room.bookingSlots || room.booking_slots || []).find(
         (s: any) => normalizeTime(s.slotStart || s.slot_start) === sStart && normalizeTime(s.slotEnd || s.slot_end) === sEnd
@@ -744,6 +766,7 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
             availableDates={isAdmin ? undefined : availableDatesSet}
             onMonthChange={(m) => fetchAvailability(m)}
             align="left"
+            minDate={earliestCheckIn}
           />
           <CustomDatePicker
             selected={checkOut}
@@ -777,8 +800,17 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
               }
             }}
             options={slots.map((s, idx) => {
+              const isPastToday = isISTToday(checkIn) && isSlotPassedToday(s.slotStart);
               const avail = slotsAvailability[idx] ?? 0;
-              const availText = !isAvailabilityLoaded ? 'Checking...' : avail === 0 ? 'Sold Out' : avail === 1 ? 'Only 1 Room Left!' : `${avail} Rooms Left`;
+              const availText = !isAvailabilityLoaded 
+                ? 'Checking...' 
+                : isPastToday 
+                ? 'Time Passed' 
+                : avail === 0 
+                ? 'Sold Out' 
+                : avail === 1 
+                ? 'Only 1 Room Left!' 
+                : `${avail} Rooms Left`;
               return {
                 value: idx,
                 label: `${s.title} (${formatSlotTime(s.slotStart)} - ${formatSlotTime(s.slotEnd)}) - ${availText}`,
@@ -790,7 +822,9 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
 
         {isAvailabilityLoaded && maxAvailableForSelectedSlot === 0 && slots.length > 0 && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-750 font-bold animate-fade-in">
-            ⚠️ Slot sold out or blocked on these dates. Please try another timing slot or check-in date.
+            {isISTToday(checkIn) && isSlotPassedToday(currentSlot.slotStart)
+              ? '⚠️ Check-in time for this slot has already passed for today. Please select an upcoming timing slot or check-in date.'
+              : '⚠️ Slot sold out or blocked on these dates. Please try another timing slot or check-in date.'}
           </div>
         )}
 
@@ -948,6 +982,8 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
           ? 'Unavailable'
           : slots.length === 0
           ? 'No Slots Configured'
+          : (isISTToday(checkIn) && isSlotPassedToday(currentSlot.slotStart))
+          ? 'Time Passed for Today'
           : maxAvailableForSelectedSlot === 0
           ? 'Sold Out'
           : roomsCount > maxAvailableForSelectedSlot
@@ -1339,6 +1375,10 @@ export default function RoomDetailClient({ room, initialCheckIn, initialCheckOut
                           {!isAvailabilityLoaded ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-stone-150 text-stone-500 border border-stone-200 animate-pulse">
                               Checking...
+                            </span>
+                          ) : (isISTToday(checkIn) && isSlotPassedToday(slot.slotStart)) ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-stone-100 text-stone-600 border border-stone-200">
+                              Time Passed
                             </span>
                           ) : slotsAvailability[idx] === 0 ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-red-50 text-red-700 border border-red-200">

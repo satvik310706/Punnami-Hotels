@@ -4,7 +4,7 @@ import { generatePublicId, calculateStayTotal, calculateGST, calculateGatewayFee
 import { jwtVerify } from 'jose';
 import { broadcastRoomInventoryUpdate } from '@/lib/sse';
 import { cleanupExpiredBookings } from '@/lib/booking-cleanup';
-import { getTodayISTUTC, isAfter6amIST } from '@/lib/ist';
+import { getTodayISTUTC, isSlotPassedToday } from '@/lib/ist';
 import { assignSequentialId } from '@/lib/booking-sequence';
 import { sendBookingConfirmationEmail, sendAdminBookingConfirmationEmail } from '@/lib/zohoMail';
 import { sendRoomConfirmationSMS } from '@/lib/sms';
@@ -159,14 +159,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Check-out cannot be before check-in' }, { status: 400 });
     }
 
-    // Reject today's check-in if it's already past 6:00 AM IST (non-admin only)
+    // Reject check-in if checkIn is in the past, or if today and the slot check-in time has already passed in IST (non-admin only)
     if (!isAdmin) {
       const todayIST = getTodayISTUTC();
       const checkInUTC = new Date(Date.UTC(checkIn.getUTCFullYear(), checkIn.getUTCMonth(), checkIn.getUTCDate()));
 
-      if (checkInUTC.getTime() === todayIST.getTime() && isAfter6amIST()) {
+      if (checkInUTC.getTime() < todayIST.getTime()) {
         return NextResponse.json(
-          { error: 'Check-in for today is closed after 6:00 AM IST. Please select tomorrow or a future date.' },
+          { error: 'Check-in date cannot be in the past. Please select today or a future date.' },
+          { status: 400 }
+        );
+      }
+
+      if (checkInUTC.getTime() === todayIST.getTime() && isSlotPassedToday(normalizedSlotStart)) {
+        return NextResponse.json(
+          { error: `Check-in for this slot (${formatSlotTime(normalizedSlotStart)}) is closed as the check-in time has already passed today. Please select an upcoming timing slot or a future date.` },
           { status: 400 }
         );
       }
