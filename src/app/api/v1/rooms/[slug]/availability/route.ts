@@ -10,11 +10,6 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    // Proactively clean up any expired reservations so room availability is accurate
-    cleanupExpiredBookings().catch((err) => {
-      console.error('[Availability API] Background cleanup error:', err);
-    });
-
     const { slug } = await params;
     const { searchParams } = new URL(req.url);
     const monthStr = searchParams.get('month'); // e.g. "2026-06" or empty for next 6 months

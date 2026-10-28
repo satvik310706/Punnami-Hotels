@@ -1,24 +1,48 @@
 import prisma from './db';
 import { broadcastRoomInventoryUpdate } from './sse';
 
+// Concurrency lock and cooldown to prevent concurrent database storms
+let isCleanupRunning = false;
+let lastCleanupTimestamp = 0;
+const CLEANUP_COOLDOWN_MS = 60 * 1000; // Run at most once every 60 seconds
+
 /**
- * Transactionally releases inventory reservations for all expired PENDING_PROOF bookings
- * and permanently deletes them from the database (cascade-deletes linked payment records).
- * Bookings expire 5 minutes after creation if the guest does not complete payment.
+ * Transactionally releases inventory reservations for all expired PENDING_PROOF bookings.
+ * Protected by an in-memory mutex and cooldown to prevent database OOM crashes.
  */
-export async function cleanupExpiredBookings() {
+export async function cleanupExpiredBookings(force = false) {
+  const nowTime = Date.now();
+
+  // Guard against concurrent executions and too frequent executions
+  if (!force && (isCleanupRunning || (nowTime - lastCleanupTimestamp < CLEANUP_COOLDOWN_MS))) {
+    return { count: 0, skipped: true };
+  }
+
+  isCleanupRunning = true;
+
   try {
     const now = new Date();
     
-    // Find all pending proof bookings that have expired
+    // Select only the minimal fields needed to release inventory (limits memory usage)
     const expiredBookings = await prisma.booking.findMany({
       where: {
         status: 'PENDING_PROOF',
         expiresAt: { lt: now },
       },
+      select: {
+        id: true,
+        roomTypeId: true,
+        checkInDate: true,
+        checkOutDate: true,
+        slotStart: true,
+        slotEnd: true,
+        roomsBooked: true,
+      },
+      take: 50, // Batch limit to protect DB transaction memory
     });
 
     if (expiredBookings.length === 0) {
+      lastCleanupTimestamp = Date.now();
       return { count: 0 };
     }
 
@@ -62,13 +86,15 @@ export async function cleanupExpiredBookings() {
           });
         }
 
-        // Mark booking as EXPIRED instead of hard-deleting, preserving transaction logs and history
+        // Mark booking as EXPIRED
         await tx.booking.update({
           where: { id: booking.id },
           data: { status: 'EXPIRED' },
         });
       }
     });
+
+    lastCleanupTimestamp = Date.now();
 
     // Run broadcasts after commit
     for (const b of broadcasts) {
@@ -82,6 +108,9 @@ export async function cleanupExpiredBookings() {
     return { count: expiredBookings.length };
   } catch (err) {
     console.error('[Inventory Cleanup] Error occurred during cleanup:', err);
-    throw err;
+    return { count: 0, error: err };
+  } finally {
+    isCleanupRunning = false;
   }
 }
+

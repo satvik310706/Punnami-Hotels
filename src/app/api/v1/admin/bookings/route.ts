@@ -5,13 +5,12 @@ import { cleanupExpiredBookings } from '@/lib/booking-cleanup';
 // GET /api/v1/admin/bookings — Fetch all bookings for admin review
 export async function GET(req: NextRequest) {
   try {
-    // Proactively clean up expired reservations
-    cleanupExpiredBookings().catch((err) => {
-      console.error('[Admin Bookings] Cleanup error:', err);
-    });
+    const { searchParams } = new URL(req.url);
+    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!, 10) : 150;
 
     const bookings = await prisma.booking.findMany({
       orderBy: { createdAt: 'desc' },
+      take: Math.min(limit, 500),
       include: {
         roomType: {
           select: { 

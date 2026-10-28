@@ -14,11 +14,6 @@ function normalizeTime(timeStr: string) {
 export async function GET(req: NextRequest) {
   try {
     const isAdmin = req.cookies.has('punnami_admin_token');
-    // Run cleanup of expired pending bookings asynchronously to release locked inventory in real-time
-    cleanupExpiredBookings().catch((cleanupErr) => {
-      console.error('[Rooms List API] Expired bookings cleanup failed:', cleanupErr);
-    });
-
     const { searchParams } = req.nextUrl;
     const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
     const size = Math.min(20, parseInt(searchParams.get('size') || '12'));

@@ -180,6 +180,7 @@ model Booking {
   @@index([roomTypeId])
   @@index([checkInDate])
   @@index([status])
+  @@index([status, expiresAt])
   @@index([agentId])
   @@index([createdAt])
 }
