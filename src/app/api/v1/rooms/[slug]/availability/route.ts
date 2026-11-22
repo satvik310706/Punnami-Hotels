@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { addMonths, startOfMonth, endOfMonth } from 'date-fns';
-import { cleanupExpiredBookings } from '@/lib/booking-cleanup';
 
 export const dynamic = 'force-dynamic';
 

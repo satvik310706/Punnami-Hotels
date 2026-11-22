@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { cleanupExpiredBookings } from '@/lib/booking-cleanup';
 
 // GET /api/v1/admin/bookings — Fetch all bookings for admin review
 export async function GET(req: NextRequest) {

@@ -2,7 +2,6 @@ import { Metadata } from 'next';
 import { Suspense } from 'react';
 import RoomsListClient from './RoomsListClient';
 import prisma from '@/lib/db';
-import { cleanupExpiredBookings } from '@/lib/booking-cleanup';
 import { isISTToday, isSlotPassedToday } from '@/lib/ist';
 
 export const metadata: Metadata = {

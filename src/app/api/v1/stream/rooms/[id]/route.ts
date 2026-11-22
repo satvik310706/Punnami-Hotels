@@ -1,14 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sseManager } from '@/lib/sse';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: roomId } = await params;
 
+  if (!sseManager.canAcceptClient()) {
+    return new Response('Connection limit reached', { status: 429 });
+  }
+
   let clientCallback: ((message: string) => void) | null = null;
   let intervalId: NodeJS.Timeout | null = null;
+  let timeoutId: NodeJS.Timeout | null = null;
+
+  const cleanup = () => {
+    if (intervalId) {
+      clearInterval(intervalId);
+      intervalId = null;
+    }
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+    if (clientCallback) {
+      sseManager.removeClient(roomId, clientCallback);
+      clientCallback = null;
+    }
+  };
 
   const stream = new ReadableStream({
     start(controller) {
@@ -20,42 +42,43 @@ export async function GET(
         try {
           controller.enqueue(new TextEncoder().encode(message));
         } catch (e) {
-          // Stream might be closed
+          cleanup();
         }
       };
 
-      sseManager.addClient(roomId, clientCallback);
+      const added = sseManager.addClient(roomId, clientCallback);
+      if (!added) {
+        controller.close();
+        return;
+      }
 
       // Keep connection alive with pings every 20 seconds
       intervalId = setInterval(() => {
         try {
           controller.enqueue(new TextEncoder().encode("event: ping\ndata: alive\n\n"));
         } catch (e) {
-          // Stream closed
+          cleanup();
+          try { controller.close(); } catch {}
         }
       }, 20000);
 
+      // Gracefully terminate stream after 3 minutes to recycle connections and garbage collect
+      timeoutId = setTimeout(() => {
+        cleanup();
+        try {
+          controller.close();
+        } catch (e) {}
+      }, 180000);
+
       req.signal.addEventListener('abort', () => {
-        if (intervalId) {
-          clearInterval(intervalId);
-          intervalId = null;
-        }
-        if (clientCallback) {
-          sseManager.removeClient(roomId, clientCallback);
-        }
+        cleanup();
         try {
           controller.close();
         } catch (e) {}
       });
     },
     cancel() {
-      if (intervalId) {
-        clearInterval(intervalId);
-        intervalId = null;
-      }
-      if (clientCallback) {
-        sseManager.removeClient(roomId, clientCallback);
-      }
+      cleanup();
     }
   });
 

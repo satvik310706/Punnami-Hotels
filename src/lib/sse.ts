@@ -3,15 +3,33 @@ import { nowIST } from './ist';
 
 type SSEClient = (message: string) => void;
 
+const MAX_TOTAL_SSE_CLIENTS = 25;
+
 class SSEManager {
   // Maps roomTypeId to a set of client callback functions
   private clients = new Map<string, Set<SSEClient>>();
 
-  addClient(roomTypeId: string, client: SSEClient) {
+  getTotalClients(): number {
+    let count = 0;
+    for (const set of this.clients.values()) {
+      count += set.size;
+    }
+    return count;
+  }
+
+  canAcceptClient(): boolean {
+    return this.getTotalClients() < MAX_TOTAL_SSE_CLIENTS;
+  }
+
+  addClient(roomTypeId: string, client: SSEClient): boolean {
+    if (!this.canAcceptClient()) {
+      return false;
+    }
     if (!this.clients.has(roomTypeId)) {
       this.clients.set(roomTypeId, new Set());
     }
     this.clients.get(roomTypeId)!.add(client);
+    return true;
   }
 
   removeClient(roomTypeId: string, client: SSEClient) {
@@ -47,10 +65,10 @@ class SSEManager {
   }
 }
 
-// Prevent multiple instances of SSEManager in development (HMR)
+// Prevent multiple instances across reloads/workers
 const globalForSSE = globalThis as unknown as { sseManager: SSEManager | undefined };
 export const sseManager = globalForSSE.sseManager ?? new SSEManager();
-if (process.env.NODE_ENV !== 'production') globalForSSE.sseManager = sseManager;
+globalForSSE.sseManager = sseManager;
 
 export async function broadcastRoomInventoryUpdate(roomTypeId: bigint, date: Date, slotStart?: string, slotEnd?: string) {
   try {

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { cleanupExpiredBookings } from '@/lib/booking-cleanup';
 import { isISTToday, isSlotPassedToday } from '@/lib/ist';
 
 function normalizeTime(timeStr: string) {
